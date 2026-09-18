@@ -24,12 +24,13 @@ const Tab = createBottomTabNavigator();
 function MainTabs() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const headerOptions = useImmichHeaderOptions();
   return (
     <Tab.Navigator
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
+        ...headerOptions,
         headerShown: true,
-        headerTitleAlign: 'center',
         tabBarShowLabel: true,
       }}
     >
@@ -60,10 +61,26 @@ function MainTabs() {
   );
 }
 
+/**
+ * Immich's AppBar: surface background, primary-colored title, centered, no
+ * elevation (reference/immich/mobile/lib/theme/theme_data.dart:38-48).
+ */
+function useImmichHeaderOptions() {
+  const theme = useTheme();
+  return {
+    headerTitleAlign: 'center' as const,
+    headerShadowVisible: false,
+    headerStyle: { backgroundColor: theme.colors.surface },
+    headerTintColor: theme.colors.primary,
+    headerTitleStyle: { color: theme.colors.primary, fontWeight: '600' as const, fontSize: 18 },
+  };
+}
+
 function OnboardingStack() {
   const Onboarding = createNativeStackNavigator();
+  const headerOptions = useImmichHeaderOptions();
   return (
-    <Onboarding.Navigator>
+    <Onboarding.Navigator screenOptions={headerOptions}>
       <Onboarding.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
       <Onboarding.Screen name="SignIn" component={SignInScreen} options={{ title: 'Sign in with GitHub' }} />
       <Onboarding.Screen name="RepoSetup" component={RepoSetupScreen} options={{ title: 'Repository Setup' }} />
