@@ -1,14 +1,23 @@
 import React, { useCallback, useEffect, useState, useMemo, memo } from 'react';
-import { View, Image, FlatList, RefreshControl, Dimensions, TouchableOpacity, Modal, BackHandler, TouchableWithoutFeedback, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Image, FlatList, SectionList, Dimensions, TouchableOpacity, Modal, BackHandler, Platform, TouchableWithoutFeedback, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button, Text, FAB, ProgressBar, ActivityIndicator, useTheme, SegmentedButtons, Snackbar, Portal, Dialog } from 'react-native-paper';
+import { buildTimelineSections, groupingKey, formatDuration } from '@/components/timeline/grouping';
+import { TimelineSectionHeader } from '@/components/timeline/TimelineSectionHeader';
+import { AssetViewer, type ViewerAction } from '@/components/viewer/AssetViewer';
+import { thumbHashDataUrl } from '@/services/sync/thumbhash';
+import { getMetaEntryFromCache } from '@/services/sync/metaIndex';
+import { hasRemoteChanged } from '@/services/sync/index';
+import { makeFingerprint } from '@/services/sync/utils';
+import { parseCanonicalPath } from '@/services/sync/pathScheme';
+import { formatDayLabel, groupingTimestamp } from '@/components/timeline/grouping';
+import { Button, Text, FAB, ProgressBar, ActivityIndicator, useTheme, SegmentedButtons, Snackbar, Portal, Dialog, TextInput } from 'react-native-paper';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/appState';
 import { getUploadIndex, subscribeUploadIndex, getSyncStatus, subscribeSyncStatus, isAssetUploadedAsset, hydrateRecentMeta, runSyncOnce, runSyncForAssets, getRepoEntryForAsset, deleteRepoFile, deleteRepoFilesBulk, deleteAssets, getCloudEntriesEnsured, downloadRepoFiles, subscribeCompletion, getLastCompletion, verifyAndCleanUploadIndex, subscribeCacheInvalidated, cancelActiveSync } from '@/services/sync/index';
 import type { MetaEntry, RepoInfo } from '@/services/sync/types';
 import { ensurePreviewUri, ensureOriginalUri, warmRepoCache } from '@/services/sync/cloudCache';
-import { ensureMediaLibraryPermissions } from '@/services/mediaPermissions';
+import { ensureMediaLibraryPermissions, mediaPermissionOptions } from '@/services/mediaPermissions';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const SPACING = 2;
@@ -32,6 +41,26 @@ type MaterialDialogState = {
   actions: MaterialDialogAction[];
 };
 
+/**
+ * Turn a raw sync failure into something a person can act on.
+ *
+ * `syncStatus.lastError` holds whatever the API layer threw, e.g.
+ * `PUT /repos/<owner>/<repo>/contents/... - 409`. In development LogBox
+ * happens to show that, which masked the real problem: in a release build the
+ * sync just ends and NOTHING is shown. Going offline and tapping upload looked
+ * like the button did nothing at all.
+ */
+function describeSyncError(raw?: string | null): string {
+  const text = String(raw ?? '');
+  if (/Network request failed|Unable to resolve host|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|getaddrinfo|offline/i.test(text)) {
+    return 'no internet connection';
+  }
+  if (/rate limit/i.test(text)) return 'GitHub rate limit reached, try again shortly';
+  if (/Bad credentials|\b401\b|\b403\b/i.test(text)) return 'GitHub rejected the token, check Settings';
+  if (/does not match|\b409\b|\b422\b/i.test(text)) return 'the library changed during sync, try again';
+  return 'some items could not be uploaded';
+}
+
 function normalizeRepoPath(path: string): string {
   let value = path;
   while (true) {
@@ -46,7 +75,7 @@ function normalizeRepoPath(path: string): string {
     return value.replace(/\/+/g, '/');
 }
 
-export default function GalleryScreen() {
+export default function GalleryScreen({ route }: any) {
   const theme = useTheme();
   const currentRepo = useAppStore((s) => s.currentRepo);
   const autoSyncEnabled = useAppStore((s) => s.autoSync);
@@ -54,8 +83,16 @@ export default function GalleryScreen() {
   const selectionInitialized = useAppStore((s) => s.selectionInitialized ?? false);
   const gallerySource = useAppStore((s) => s.gallerySource);
 
-  const [permission, requestPermission] = MediaLibrary.usePermissions();
+  const [permission, requestPermission] = MediaLibrary.usePermissions(mediaPermissionOptions as any);
   const [assets, setAssets] = useState<MediaLibrary.Asset[]>([]);
+
+
+
+
+
+
+
+
   const [cloudItems, setCloudItems] = useState<MetaEntry[]>([]);
   const [cloudThumbs, setCloudThumbs] = useState<Record<string, string>>({});
   const [endCursor, setEndCursor] = useState<string | null>(null);
@@ -81,15 +118,15 @@ export default function GalleryScreen() {
   const pendingCloudDeletesRef = React.useRef<Set<string>>(new Set());
   const [dialogState, setDialogState] = useState<MaterialDialogState>({ visible: false, title: '', message: undefined, tone: undefined, icon: undefined, actions: [] });
 
-  const darkPrimaryHex = '#6750A4';
-  const darkPrimaryContainerHex = '#6750A4';
-  const darkOnPrimaryHex = '#FFFFFF';
-  const darkOnPrimaryContainerHex = '#FFFFFF';
-
-  const primaryColor = useMemo(() => (theme.dark ? darkPrimaryHex : theme.colors.primary), [theme.dark, theme.colors.primary]);
-  const onPrimaryColor = useMemo(() => (theme.dark ? darkOnPrimaryHex : theme.colors.onPrimary), [theme.dark, theme.colors.onPrimary]);
-  const primaryContainerColor = useMemo(() => (theme.dark ? darkPrimaryContainerHex : theme.colors.primaryContainer), [theme.dark, theme.colors.primaryContainer]);
-  const onPrimaryContainerColor = useMemo(() => (theme.dark ? darkOnPrimaryContainerHex : theme.colors.onPrimaryContainer), [theme.dark, theme.colors.onPrimaryContainer]);
+  // Read the accent straight off the theme in both modes. immichTheme seeds
+  // light from #4150AF and dark from #ACCBFA, so the scheme already has the
+  // right colors. The fork base pinned these to MD3 baseline purple
+  // (#6750A4) whenever theme.dark was set, which discarded the Immich dark
+  // scheme and made every dark-mode accent stock Material purple.
+  const primaryColor = theme.colors.primary;
+  const onPrimaryColor = theme.colors.onPrimary;
+  const primaryContainerColor = theme.colors.primaryContainer;
+  const onPrimaryContainerColor = theme.colors.onPrimaryContainer;
 
   const cancelSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -259,21 +296,43 @@ export default function GalleryScreen() {
 
   const activeDialogPalette = dialogPalettes[dialogState.tone ?? 'primary'];
 
+  /**
+   * Wrap an async press handler so a rejection surfaces instead of vanishing.
+   *
+   * `onPress={async () => …}` discards the returned promise, so any throw
+   * becomes an unhandled rejection: no toast, no log, no state change — the
+   * control simply looks dead. That is exactly how the upload button appeared
+   * broken for three debugging rounds.
+   */
+  const safeAsync = useCallback(
+    (label: string, fn: () => Promise<unknown>) => () => {
+      fn().catch((error: any) => {
+        console.error(`[${label}] failed`, error);
+        showToast(`${label} failed: ${error?.message ?? 'unknown error'}`);
+      });
+    },
+    [],
+  );
+
   const handleDialogAction = useCallback(
     (action: MaterialDialogAction) => {
       if (action.dismiss !== false) {
         closeDialog();
       }
       if (action.onPress) {
+        // Failures must be visible. Logging alone means a failed delete looks
+        // exactly like a successful one — the dialog closes and nothing happens.
+        const report = (error: any) => {
+          console.error('Dialog action error', error);
+          showToast(`${action.label} failed: ${error?.message ?? 'unknown error'}`);
+        };
         try {
           const maybePromise = action.onPress();
           if (maybePromise && typeof (maybePromise as Promise<unknown>).catch === 'function') {
-            (maybePromise as Promise<unknown>).catch((error) => {
-              console.error('Dialog action error', error);
-            });
+            (maybePromise as Promise<unknown>).catch(report);
           }
         } catch (error) {
-          console.error('Dialog action error', error);
+          report(error);
         }
       }
     },
@@ -282,6 +341,12 @@ export default function GalleryScreen() {
 
   const refreshCloudItems = useCallback(async ({ force = false, showSpinner = true } = {}) => {
     if (reloadingCloudItemsRef.current) return;
+    // A forced refresh that finds nothing new still costs a full shard reload.
+    // The conditional ref check answers "did anything change?" for free (304),
+    // so skip the work when the branch hasn't moved.
+    if (force && cloudItems.length > 0 && !(await hasRemoteChanged())) {
+      return;
+    }
     if (!currentRepo) {
       setCloudItems([]);
       setCloudThumbs({});
@@ -361,7 +426,14 @@ export default function GalleryScreen() {
   }, [currentRepo]);
 
   const numColumns = 3;
-  const size = useMemo(() => Math.floor(Dimensions.get('window').width / numColumns) - SPACING * 2, []);
+  const { width: windowWidth } = useWindowDimensions();
+  // Each tile carries `margin: SPACING` on all four sides and the list itself
+  // has `padding: SPACING`. Both have to come out of the available width or the
+  // last column overflows and gets clipped at the screen edge.
+  const size = useMemo(() => {
+    const available = windowWidth - SPACING * 2;
+    return Math.floor(available / numColumns) - SPACING * 2;
+  }, [windowWidth, numColumns]);
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -482,7 +554,17 @@ export default function GalleryScreen() {
       }
     }
 
-    const selectionActive = currentSelectionInitialized || currentSelectedIds?.length > 0;
+    // iOS "limited" access: the user hand-picks which assets this app may
+    // see, and PhotoKit then exposes no album those assets dependably belong
+    // to. A previously saved album filter therefore matches nothing, and the
+    // early-bail just below emptied the grid even though photos *had* been
+    // granted — the user picks 2 photos and the app shows none. Album
+    // filtering is meaningless in this mode, so drop it and show everything
+    // we are permitted to see.
+    const limitedAccess =
+      Platform.OS === 'ios' && (permission as any)?.accessPrivileges === 'limited';
+    const selectionActive =
+      !limitedAccess && (currentSelectionInitialized || currentSelectedIds?.length > 0);
     const workingSelectedIds = selectionActive ? currentSelectedIds.filter((id) => albumMap.has(id)) : [];
 
     if (selectionActive && workingSelectedIds.length === 0) {
@@ -501,7 +583,7 @@ export default function GalleryScreen() {
     
     if (workingSelectedIds.length === 0) {
       const options: MediaLibrary.AssetsOptions = {
-        mediaType: ['photo'],
+        mediaType: ['photo', 'video'],
         first: 60,
         sortBy: [[MediaLibrary.SortBy.creationTime, false]],
         ...(reset ? {} : { after: endCursor ?? undefined }),
@@ -513,7 +595,7 @@ export default function GalleryScreen() {
       const album = albumMap.get(workingSelectedIds[0]);
       if (album) {
         const options: MediaLibrary.AssetsOptions = {
-          mediaType: ['photo'],
+          mediaType: ['photo', 'video'],
           first: 60,
           sortBy: [[MediaLibrary.SortBy.creationTime, false]],
           album,
@@ -541,7 +623,7 @@ export default function GalleryScreen() {
               continue;
             }
             const options: MediaLibrary.AssetsOptions = {
-              mediaType: ['photo'],
+              mediaType: ['photo', 'video'],
               first: 60,
               sortBy: [[MediaLibrary.SortBy.creationTime, false]],
               album,
@@ -572,6 +654,17 @@ export default function GalleryScreen() {
   const selectedAlbumIdsKey = React.useMemo(() => JSON.stringify([...selectedAlbumIds].sort()), [selectedAlbumIds]);
   const prevKeyRef = React.useRef<string>('');
   const hasLoadedRef = React.useRef(false);
+  /**
+   * One permission request per mount.
+   *
+   * This effect depends on `currentRepo` and `selectedAlbumIdsKey`, both of
+   * which change as the store hydrates from SecureStore at startup. It is
+   * async and had no re-entrancy guard, so while the first system dialog was
+   * still awaiting an answer the effect re-ran with `permission` still null
+   * and fired another request. Measured on a real S24 via
+   * GrantPermissionsViewModel: three dialogs on a first launch.
+   */
+  const permissionRequestedRef = React.useRef(false);
 
   useEffect(() => {
     if (gallerySource !== 'local') {
@@ -582,13 +675,28 @@ export default function GalleryScreen() {
     if (loadingRef.current) return;
     
     (async () => {
-      if (!permission) {
+      // `null` means the hook has not resolved yet — NOT that permission was
+      // denied. Prompting here asked for access on every launch and reload even
+      // when all three permissions already read granted=true, because
+      // `permission` starts null on every JS load. Wait for it to resolve; the
+      // effect re-runs when it does.
+      if (!permission) return;
+
+      if (!permission.granted && !permissionRequestedRef.current) {
+        permissionRequestedRef.current = true;
         await requestPermission();
         return;
       }
 
       let ensuredPermission = permission;
-      if (!ensuredPermission.granted || ensuredPermission.accessPrivileges !== 'all') {
+      // `accessPrivileges` is iOS-only — it distinguishes full access from
+      // "limited". On Android it is undefined, so `!== 'all'` was always true
+      // and this branch re-requested permission that had *just* been granted,
+      // producing a SECOND system prompt on first launch. Seen on a real S24:
+      // grant "Allow all", get asked again immediately.
+      const needsFullAccess =
+        Platform.OS === 'ios' && ensuredPermission.accessPrivileges !== 'all';
+      if (!ensuredPermission.granted || needsFullAccess) {
         ensuredPermission = await ensureMediaLibraryPermissions();
         if (!ensuredPermission.granted) {
           return;
@@ -682,7 +790,18 @@ export default function GalleryScreen() {
     const unsub = subscribeCompletion(async () => {
       const c = getLastCompletion();
       if (c && c.type === 'upload' && c.total > 0) {
-        setToastText('Synced');
+        // A sync that failed used to report "Synced" all the same.
+        const failed = c.failed ?? 0;
+        if (failed > 0) {
+          const reason = describeSyncError(getSyncStatus().lastError);
+          setToastText(
+            failed >= c.total
+              ? `Upload failed — ${reason}`
+              : `${c.total - failed} of ${c.total} uploaded — ${reason}`,
+          );
+        } else {
+          setToastText('Synced');
+        }
         setToastVisible(true);
         if (gallerySource === 'cloud') {
           await refreshCloudItems({ force: true, showSpinner: false });
@@ -765,6 +884,18 @@ export default function GalleryScreen() {
   }, [selectionMode, selectedIds, cancelSelection]);
 
   async function manualSync() {
+    try {
+      await manualSyncInner();
+    } catch (error: any) {
+      // Passing a bare async fn to onPress swallows throws as unhandled
+      // rejections: no toast, no cancelSelection, no log — the button just
+      // appears dead. Surface it instead.
+      console.error('[manualSync] failed', error?.message ?? error, error?.stack);
+      showToast(`Sync failed: ${error?.message ?? 'unknown error'}`);
+    }
+  }
+
+  async function manualSyncInner() {
     if (assets.length === 0) {
       if (loadingGrid) {
         showToast('Still loading photos. Please wait and try again.');
@@ -810,7 +941,7 @@ export default function GalleryScreen() {
     if (gallerySource === 'cloud') {
       const paths = Array.from(selectedIds);
       showDialog({
-        title: `Delete ${paths.length} photos from cloud?`,
+        title: `Delete ${paths.length} ${paths.length === 1 ? 'photo' : 'photos'} from cloud?`,
         message: 'This will remove them from your GitHub repo.',
         tone: 'error',
         icon: 'delete-alert',
@@ -950,14 +1081,21 @@ export default function GalleryScreen() {
     position: 'absolute' as const,
     left: 16,
     bottom: 16,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    alignItems: 'flex-start' as const,
     shadowColor: '#000',
     shadowOpacity: theme.dark ? 0.35 : 0.14,
     shadowOffset: { width: 0, height: 6 },
     shadowRadius: 10,
     elevation: 9,
   }), [theme.dark]);
+  const selectionCountChipStyle = useMemo(() => ({
+    alignSelf: 'flex-start' as const,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginBottom: 8,
+    backgroundColor: selectionAccentColor,
+  }), [selectionAccentColor]);
   const selectionPrimaryStyle = useMemo(() => ({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -1081,9 +1219,65 @@ export default function GalleryScreen() {
   }), [checkIconStyle, primaryColor]);
 
   // Memoized render functions
+  const favorites = useAppStore((st) => st.favorites);
+  const userAlbums = useAppStore((st) => st.userAlbums);
+  const addToAlbum = useAppStore((st) => st.addToAlbum);
+  const createAlbum = useAppStore((st) => st.createAlbum);
+  const [albumPicker, setAlbumPicker] = useState<{ visible: boolean; keys: string[] }>({ visible: false, keys: [] });
+  const [newAlbumName, setNewAlbumName] = useState('');
+  /** When set, the timeline shows only this album. */
+  const [albumFilter, setAlbumFilter] = useState<string | null>(null);
+
+  // The Albums tab navigates here with a filter; picking the same album twice
+  // should re-apply it, so this keys off the param rather than mount.
+  const routeAlbumFilter = route?.params?.albumFilter ?? null;
+  useEffect(() => {
+    if (routeAlbumFilter) setAlbumFilter(routeAlbumFilter);
+  }, [routeAlbumFilter]);
+  const toggleFavorite = useAppStore((st) => st.toggleFavorite);
+  const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
+  /** Stable key for favouriting, matching whichever source is active. */
+  const favKeyFor = useCallback(
+    (entry: any) => (entry?.id ? String(entry.id) : (entry?.repoPath ?? '')),
+    [],
+  );
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+
+  // Top-RIGHT, not top-left: the selection check also sits at (6,6), so a
+  // favourited photo in selection mode stacked the heart under the tick.
+  // Bottom-left is the video duration and bottom-right the uploaded cloud,
+  // which leaves this the one free corner.
+  const favoriteBadgeStyle = useMemo(
+    () => ({
+      position: 'absolute' as const,
+      right: 6,
+      top: 6,
+      borderRadius: 999,
+      padding: 3,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+    }),
+    [],
+  );
+
+  const videoBadgeStyle = useMemo(
+    () => ({
+      position: 'absolute' as const,
+      left: 6,
+      bottom: 6,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 10,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+    }),
+    [],
+  );
+
   const renderItem = useCallback(({ item }: { item: MediaLibrary.Asset }) => {
     const uploaded = isAssetUploadedAsset(item);
     const isSelected = selectedIds.has(item.id);
+    const isVideo = (item as any)?.mediaType === 'video';
 
     return (
       <TouchableOpacity
@@ -1109,15 +1303,33 @@ export default function GalleryScreen() {
               <MaterialCommunityIcons name="cloud-check" size={16} color="#fff" />
             </View>
           )}
+          {favoriteSet.has(String(item.id)) && (
+            <View style={favoriteBadgeStyle} pointerEvents="none">
+              <MaterialCommunityIcons name="heart" size={14} color="#EF5350" />
+            </View>
+          )}
+          {isVideo && (
+            // Without this a video is indistinguishable from a photo in the
+            // grid — you only find out after tapping.
+            <View style={videoBadgeStyle} pointerEvents="none">
+              <MaterialCommunityIcons name="play" size={12} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 11, marginLeft: 3 }}>
+                {formatDuration((item as any)?.duration)}
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
-  }, [itemContainerStyle, imageStyle, checkIconStyleWithColor, cloudIconStyle, selectedIds, handleItemPress, handleItemLongPress, indexVersion]);
+  }, [itemContainerStyle, imageStyle, checkIconStyleWithColor, cloudIconStyle, videoBadgeStyle, selectedIds, handleItemPress, handleItemLongPress, indexVersion, favoriteSet, favoriteBadgeStyle]);
 
   const renderCloudItem = useCallback(({ item }: { item: MetaEntry }) => {
     const thumbKey = item.fingerprint;
     const uri = cloudThumbs[thumbKey];
     const isFailed = failedThumbKeys.has(thumbKey);
+    // ~25-byte hash from the index, decoded locally. Lets the tile show a
+    // recognisable blur of the real photo before any image is fetched.
+    const placeholderUri = thumbHashDataUrl(item.thumbHash);
     const isSelected = selectedIds.has(item.repoPath);
 
     return (
@@ -1129,6 +1341,13 @@ export default function GalleryScreen() {
         style={cloudItemContainerStyle}
       >
         <View style={{ width: '100%', height: '100%', position: 'relative' }} pointerEvents="box-none">
+          {placeholderUri ? (
+            <Image
+              source={{ uri: placeholderUri }}
+              style={[imageStyle, { position: 'absolute', top: 0, left: 0 }]}
+              resizeMode="cover"
+            />
+          ) : null}
           {uri ? (
             <View style={{ width: '100%', height: '100%' }} pointerEvents="none">
             <Image
@@ -1150,7 +1369,7 @@ export default function GalleryScreen() {
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)' }} pointerEvents="none">
               <MaterialCommunityIcons name="image-off" size={size * 0.4} color="rgba(0,0,0,0.3)" />
             </View>
-          ) : (
+          ) : placeholderUri ? null : (
             <View pointerEvents="none" style={placeholderContainerStyle}>
               <Animated.View style={shimmerAnimatedStyle}>
                 <LinearGradient
@@ -1197,17 +1416,271 @@ export default function GalleryScreen() {
   }, [hasNext, loadPage, loadingGrid, gallerySource]);
   const emptyListMessage = useMemo(() => {
     if (gallerySource === 'local') {
+      // Under limited access no folder filter is applied, so naming one would
+      // send the user to Settings to fix something that is not the cause.
+      if (Platform.OS === 'ios' && (permission as any)?.accessPrivileges === 'limited') {
+        return 'No photos shared with GitGallery yet. Allow access to more in iOS Settings > Privacy > Photos.';
+      }
       return selectedAlbumIds.length > 0 ? 'No Photos in Selected Folder' : 'No Photos Found';
     }
     return 'No Cloud Photos Yet';
-  }, [gallerySource, selectedAlbumIds.length]);
+  }, [gallerySource, selectedAlbumIds.length, permission]);
 
   const listEmptyComponent = useMemo(() => (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       {loadingGrid ? null : <Text>{emptyListMessage}</Text>}
     </View>
   ), [loadingGrid, emptyListMessage]);
-  const contentContainerStyleMemo = useMemo(() => ({ padding: SPACING, flexGrow: 1 }), []);
+
+  // ── Asset viewer wiring ───────────────────────────────────────────────────
+  const closeViewer = useCallback(() => {
+    setSelected(null);
+    setSelectedCloudUri(null);
+    setSelectedCloudPath(null);
+  }, []);
+
+  const viewerSubtitle = useMemo(() => {
+    // Prefer the EXIF-derived capture date recorded at upload. MediaLibrary's
+    // creationTime is frequently just the file's mtime, which would caption a
+    // 2019 photo with today's date.
+    let ts: number | null = null;
+    if (selected) {
+      const entry = getMetaEntryFromCache(makeFingerprint(selected as any));
+      ts = entry?.createdAt ?? groupingTimestamp(selected as any);
+    } else if (selectedCloudPath) {
+      const entry = getMetaEntryFromCache(selectedCloudPath);
+      ts = entry?.createdAt ?? parseCanonicalPath(selectedCloudPath).captureDate?.getTime() ?? null;
+    }
+    if (!ts) return null;
+    const d = new Date(ts);
+    return `${formatDayLabel(d)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }, [selected, selectedCloudPath]);
+
+  const viewerActions = useMemo(() => {
+    const actions: ViewerAction[] = [];
+
+    const favTarget = selected ? String(selected.id) : selectedCloudPath ?? null;
+    if (favTarget) {
+      const isFav = favoriteSet.has(favTarget);
+      actions.push({
+        key: 'favorite',
+        icon: isFav ? 'heart' : 'heart-outline',
+        label: isFav ? 'Favourited' : 'Favourite',
+        onPress: () => toggleFavorite(favTarget),
+      });
+    }
+
+    if (favTarget) {
+      actions.push({
+        key: 'add-to-album',
+        icon: 'image-album',
+        label: 'Add to album',
+        // The viewer is a Modal and Paper's Portal renders behind it, so a
+        // dialog opened on top of the viewer is invisible. Close first.
+        onPress: () => {
+          closeViewer();
+          setAlbumPicker({ visible: true, keys: [favTarget] });
+        },
+      });
+    }
+
+    if (selected && gallerySource === 'local') {
+      actions.push({
+        key: 'delete-local',
+        icon: 'trash-can-outline',
+        label: 'Delete',
+        destructive: true,
+        onPress: () =>
+          showDialog({
+            title: 'Delete from device?',
+            message: 'This will remove the photo from your device.',
+            tone: 'error',
+            icon: 'trash-can-outline',
+            actions: [
+              { label: 'Cancel', tone: 'neutral' },
+              {
+                label: 'Delete',
+                tone: 'error',
+                variant: 'contained',
+                onPress: async () => {
+                  try {
+                    await MediaLibrary.deleteAssetsAsync([selected.id] as any);
+                  } catch {}
+                  closeViewer();
+                  setEndCursor(null);
+                  setAssets([]);
+                  await loadPage(true);
+                },
+              },
+            ],
+          }),
+      });
+    }
+
+    if (selected && isAssetUploadedAsset(selected)) {
+      actions.push({
+        key: 'delete-cloud',
+        icon: 'cloud-off-outline',
+        label: 'Remove from cloud',
+        destructive: true,
+        onPress: async () => {
+          const entry = await getRepoEntryForAsset(selected);
+          if (!entry) return;
+          showDialog({
+            title: 'Delete from cloud?',
+            message: 'This will remove the file from your repo.',
+            tone: 'error',
+            icon: 'cloud-off-outline',
+            actions: [
+              { label: 'Cancel', tone: 'neutral' },
+              {
+                label: 'Delete',
+                tone: 'error',
+                variant: 'contained',
+                onPress: async () => {
+                  await deleteRepoFile(entry.repoPath);
+                  removeCloudEntries([entry.repoPath]);
+                  closeViewer();
+                  await refreshCloudItems({ force: true, showSpinner: false });
+                },
+              },
+            ],
+          });
+        },
+      });
+    }
+
+    if (selectedCloudPath) {
+      actions.push({
+        key: 'download',
+        icon: 'download-outline',
+        label: 'Download',
+        onPress: async () => {
+          try {
+            await downloadRepoFiles([selectedCloudPath] as any);
+            showToast('Download completed');
+          } catch (error: any) {
+            showToast(`Download failed: ${error?.message ?? 'unknown error'}`);
+          }
+        },
+      });
+      actions.push({
+        key: 'delete-cloud-item',
+        icon: 'trash-can-outline',
+        label: 'Delete',
+        destructive: true,
+        onPress: () =>
+          showDialog({
+            title: 'Delete from cloud?',
+            message: 'This will remove the file from your repo.',
+            tone: 'error',
+            icon: 'cloud-off-outline',
+            actions: [
+              { label: 'Cancel', tone: 'neutral' },
+              {
+                label: 'Delete',
+                tone: 'error',
+                variant: 'contained',
+                onPress: async () => {
+                  await deleteRepoFile(selectedCloudPath);
+                  removeCloudEntries([selectedCloudPath]);
+                  closeViewer();
+                  await refreshCloudItems({ force: true, showSpinner: false });
+                },
+              },
+            ],
+          }),
+      });
+    }
+
+    return actions;
+  }, [selected, selectedCloudPath, gallerySource, closeViewer, loadPage, refreshCloudItems, favoriteSet, toggleFavorite]);
+
+  // The upload FAB, and in selection mode the delete FAB and the Select All
+  // bar, all float over the list on `position: absolute`. With only the
+  // uniform SPACING padding the bottom row sat underneath them: its selection
+  // tick was hidden and it could not be tapped at all, because the floating
+  // controls swallowed the touch. Reserve enough room to scroll it clear.
+  //   one FAB   : bottom 16 + 56 height          -> 72
+  //   selection : second FAB at bottom 86 + 56   -> 142, plus the count chip
+  const hasSelection = selectedIds.size > 0;
+  const contentContainerStyleMemo = useMemo(
+    () => ({ padding: SPACING, paddingBottom: SPACING + (hasSelection ? 168 : 88), flexGrow: 1 }),
+    [hasSelection],
+  );
+
+  // Immich groups the timeline by capture day, with a larger header at each
+  // month boundary. SectionList has no numColumns, so grouping.ts pre-chunks
+  // each day into rows and a row renders as one item.
+  const activeItems = gallerySource === 'cloud' ? (cloudItems as any[]) : (assets as any[]);
+  const timelineSections = useMemo(() => {
+    const source = activeItems ?? [];
+    let filtered = favoritesOnly ? source.filter((e: any) => favoriteSet.has(favKeyFor(e))) : source;
+    if (albumFilter) {
+      const members = new Set(userAlbums[albumFilter] ?? []);
+      filtered = filtered.filter((e: any) => members.has(favKeyFor(e)));
+    }
+    return buildTimelineSections(filtered, numColumns);
+  }, [activeItems, numColumns, favoritesOnly, favoriteSet, favKeyFor, albumFilter, userAlbums]);
+
+  /**
+   * Pages for the viewer, in the same order the grid shows them, so swiping
+   * follows the timeline rather than some unrelated ordering.
+   */
+  const viewerItems = useMemo(() => {
+    const flat = timelineSections.flatMap((section: any) => section.data.flat());
+    return flat.map((entry: any) => {
+      const ts = groupingTimestamp(entry);
+      const d = ts ? new Date(ts) : null;
+      return {
+        key: groupingKey(entry, entry?.uri ?? 'item'),
+        uri: gallerySource === 'cloud' ? cloudThumbs[entry.fingerprint] ?? '' : entry.uri,
+        isVideo: entry?.mediaType === 'video',
+        subtitle: d
+          ? `${formatDayLabel(d)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+          : null,
+      };
+    }).filter((p: any) => !!p.uri);
+  }, [timelineSections, gallerySource, cloudThumbs]);
+
+  const viewerIndex = useMemo(() => {
+    const target = selected ? groupingKey(selected as any, '') : selectedCloudPath ?? '';
+    const i = viewerItems.findIndex((p: any) => p.key === target);
+    return i >= 0 ? i : 0;
+  }, [viewerItems, selected, selectedCloudPath]);
+
+  const renderSectionHeader = useCallback(
+    ({ section }: any) => <TimelineSectionHeader date={section.date} startsMonth={section.startsMonth} />,
+    [],
+  );
+
+  const renderTimelineRow = useCallback(
+    ({ item: row, section }: any) => (
+      <View style={{ flexDirection: 'row' }}>
+        {row.map((entry: any, columnIndex: number) => {
+          const child =
+            gallerySource === 'cloud'
+              ? (renderCloudItem as any)({ item: entry, index: columnIndex, section })
+              : (renderItem as any)({ item: entry, index: columnIndex, section });
+          // Children of a .map() need a stable key. Without one, Fabric's
+          // reconciler mis-indexes the row and crashes mounting with
+          // "addViewAt: failed to insert view / IndexOutOfBoundsException".
+          const key = groupingKey(entry, `${section?.key}-${columnIndex}`);
+          return (
+            <React.Fragment key={key}>
+              {child}
+            </React.Fragment>
+          );
+        })}
+      </View>
+    ),
+    [gallerySource, renderCloudItem, renderItem],
+  );
+
+  const sectionKeyExtractor = useCallback(
+    (row: any[], index: number) => `${groupingKey(row?.[0], 'row')}-${index}`,
+    [],
+  );
   const getItemLayoutMemo = useCallback((data: any, index: number) => ({
     length: size + SPACING * 2,
     offset: (size + SPACING * 2) * Math.floor(index / numColumns),
@@ -1225,8 +1698,9 @@ export default function GalleryScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Source selector */}
-      <View style={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 4 }}>
+      {/* Source selector + favourites filter */}
+      <View style={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flex: 1 }}>
         <SegmentedButtons
           value={gallerySource}
           onValueChange={(v) => handleGallerySourceChange(v as 'local' | 'cloud')}
@@ -1235,6 +1709,19 @@ export default function GalleryScreen() {
             { value: 'cloud', label: 'Cloud' },
           ]}
         />
+        </View>
+        <TouchableOpacity
+          onPress={() => setFavoritesOnly((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={favoritesOnly ? 'Show all photos' : 'Show favourites only'}
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}
+        >
+          <MaterialCommunityIcons
+            name={favoritesOnly ? 'heart' : 'heart-outline'}
+            size={24}
+            color={favoritesOnly ? '#EF5350' : theme.colors.onSurfaceVariant}
+          />
+        </TouchableOpacity>
       </View>
       {showProgress ? (
         <View style={{ position: 'absolute', right: 96, bottom: 16, alignItems: 'flex-end', zIndex: 10 }}>
@@ -1249,24 +1736,32 @@ export default function GalleryScreen() {
           </View>
         </View>
       ) : null}
-      <FlatList
-        data={gallerySource === 'cloud' ? (cloudItems as any) : (assets as any)}
-        keyExtractor={keyExtractor}
-        numColumns={numColumns}
-        renderItem={gallerySource === 'cloud' ? (renderCloudItem as any) : (renderItem as any)}
+      <SectionList
+        // Without an explicit flex the list sizes to its content instead of
+        // becoming the scroller, which leaves RefreshControl with no drag to
+        // detect — pull-to-refresh silently never fires.
+        style={{ flex: 1 }}
+        sections={timelineSections as any}
+        keyExtractor={sectionKeyExtractor}
+        renderItem={renderTimelineRow}
+        renderSectionHeader={renderSectionHeader}
+        stickySectionHeadersEnabled
         extraData={flatListExtraData}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.3}
-        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        // VirtualizedList builds its own RefreshControl from these props.
+        // Passing a `refreshControl` element instead silently fails to fire on
+        // the new architecture (newArchEnabled: true) — the list scrolls and
+        // reaches offset 0, but the drag never reaches the control.
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={listEmptyComponent}
         contentContainerStyle={contentContainerStyleMemo}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
+        removeClippedSubviews={false}
+        maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
         windowSize={10}
-        initialNumToRender={15}
-        getItemLayout={getItemLayoutMemo}
+        initialNumToRender={8}
       />
       {loadingGrid ? (
         <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
@@ -1274,148 +1769,104 @@ export default function GalleryScreen() {
         </View>
       ) : null}
       {/* Image detail modal */}
-      <Modal visible={!!selected || !!selectedCloudUri} transparent animationType="fade" onRequestClose={() => { setSelected(null); setSelectedCloudUri(null); setSelectedCloudPath(null); }}>
-        <View pointerEvents="box-none" style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.96)' }}>
-            {/* Backdrop tap to close */}
-            <TouchableWithoutFeedback onPress={() => { setSelected(null); setSelectedCloudUri(null); setSelectedCloudPath(null); }}>
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-            </TouchableWithoutFeedback>
-            {/* Bottom-center close FAB */}
-            <FAB
-              icon="close"
-              style={{ position: 'absolute', alignSelf: 'center', bottom: 28, backgroundColor: primaryContainerColor }}
-              color={onPrimaryContainerColor}
-              onPress={() => { setSelected(null); setSelectedCloudUri(null); setSelectedCloudPath(null); }}
+      {albumFilter ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: 64,
+            left: 12,
+            right: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: theme.colors.primaryContainer,
+            zIndex: 20,
+          }}
+        >
+          <MaterialCommunityIcons name="image-album" size={16} color={theme.colors.onPrimaryContainer} />
+          <Text style={{ flex: 1, marginLeft: 8, color: theme.colors.onPrimaryContainer }} numberOfLines={1}>
+            {albumFilter}
+          </Text>
+          <TouchableOpacity onPress={() => setAlbumFilter(null)} accessibilityLabel="Clear album filter">
+            <MaterialCommunityIcons name="close" size={18} color={theme.colors.onPrimaryContainer} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <Portal>
+        <Dialog
+          visible={albumPicker.visible}
+          onDismiss={() => setAlbumPicker({ visible: false, keys: [] })}
+        >
+          <Dialog.Title>Add to album</Dialog.Title>
+          <Dialog.Content>
+            {Object.keys(userAlbums).length === 0 ? (
+              <Text style={{ marginBottom: 12 }}>No albums yet — name one below to create it.</Text>
+            ) : (
+              Object.keys(userAlbums)
+                .sort((a, b) => a.localeCompare(b))
+                .map((name) => (
+                  <Button
+                    key={name}
+                    mode="text"
+                    contentStyle={{ justifyContent: 'flex-start' }}
+                    onPress={() => {
+                      addToAlbum(name, albumPicker.keys);
+                      setAlbumPicker({ visible: false, keys: [] });
+                      showToast(`Added to "${name}"`);
+                    }}
+                  >
+                    {name}
+                  </Button>
+                ))
+            )}
+            <TextInput
+              mode="outlined"
+              label="New album"
+              value={newAlbumName}
+              onChangeText={setNewAlbumName}
+              style={{ marginTop: 8 }}
             />
-            {/* Center image */}
-            <View pointerEvents="auto" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
-            {selected ? (
-              <View style={{ width: '100%' }}>
-                <Image source={{ uri: selected.uri }} style={{ width: '100%', height: undefined, aspectRatio: 3/4, borderRadius: 12 }} resizeMode="contain" />
-                <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
-                  <Text style={{ color: '#fff', opacity: 0.7 }}>{isAssetUploadedAsset(selected) ? 'Synced' : 'Not synced'}</Text>
-                  <View style={{ flexDirection: 'row' }}>
-                    {gallerySource === 'local' ? (
-                      <Button
-                        mode="outlined"
-                        onPress={() => {
-                          showDialog({
-                            title: 'Delete from device?',
-                            message: 'This will remove the photo from your device.',
-                            tone: 'error',
-                            icon: 'trash-can-outline',
-                            actions: [
-                              { label: 'Cancel', tone: 'neutral' },
-                              {
-                                label: 'Delete',
-                                tone: 'error',
-                                variant: 'contained',
-                                onPress: async () => {
-                                  try {
-                                    await MediaLibrary.deleteAssetsAsync([selected.id] as any);
-                                  } catch {}
-                                  setSelected(null);
-                                  setSelectedCloudUri(null);
-                                  setSelectedCloudPath(null);
-                                  setEndCursor(null);
-                                  setAssets([]);
-                                  await loadPage(true);
-                                },
-                              },
-                            ],
-                          });
-                        }}
-                        style={{ marginRight: 8 }}
-                      >
-                        Delete local
-                      </Button>
-                    ) : null}
-                    {isAssetUploadedAsset(selected) ? (
-                      <Button
-                        mode="outlined"
-                        onPress={async () => {
-                          const entry = await getRepoEntryForAsset(selected);
-                          if (!entry) return;
-                          showDialog({
-                            title: 'Delete from cloud?',
-                            message: 'This will remove the file from your repo.',
-                            tone: 'error',
-                            icon: 'cloud-off-outline',
-                            actions: [
-                              { label: 'Cancel', tone: 'neutral' },
-                              {
-                                label: 'Delete',
-                                tone: 'error',
-                                variant: 'contained',
-                                onPress: async () => {
-                                  await deleteRepoFile(entry.repoPath);
-                                  removeCloudEntries([entry.repoPath]);
-                                  setSelected(null);
-                                  setSelectedCloudUri(null);
-                                  setSelectedCloudPath(null);
-                                  // Forcing reload with full meta to ensure deletion is reflected
-                                  await refreshCloudItems({ force: true, showSpinner: false });
-                                },
-                              },
-                            ],
-                          });
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    ) : null}
-                    
-                  </View>
-                </View>
-              </View>
-            ) : null}
-            {selectedCloudUri ? (
-              <View style={{ width: '100%' }}>
-                <Image
-                  source={{ uri: selectedCloudUri }}
-                  style={{ width: '100%', height: undefined, aspectRatio: 3/4, borderRadius: 12 }}
-                  resizeMode="contain"
-                  onError={() => {
-                    setSelectedCloudUri(null);
-                  }}
-                />
-                <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
-                  <Text style={{ color: '#fff', opacity: 0.7 }}>Cloud</Text>
-                  <View style={{ flexDirection: 'row' }}>
-                    {selectedCloudPath ? (
-                      <Button
-                        mode="outlined"
-                        onPress={async () => {
-                          await deleteRepoFile(selectedCloudPath!);
-                          removeCloudEntries([selectedCloudPath!]);
-                          // Forcing reload with full meta to ensure deletion is reflected
-                          await refreshCloudItems({ force: true, showSpinner: false });
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    ) : null}
-                    {selectedCloudPath ? (
-                      <Button
-                        mode="outlined"
-                        style={{ marginLeft: 8 }}
-                        onPress={async () => {
-                          await downloadRepoFiles([selectedCloudPath!]);
-                        }}
-                      >
-                        Download
-                      </Button>
-                    ) : null}
-                    
-                  </View>
-                </View>
-              </View>
-            ) : null}
-            </View>
-            {/* Bottom spacer */}
-            <View style={{ height: 24 }} />
-          </View>
-      </Modal>
+          </Dialog.Content>
+          <Dialog.Actions>
+            {[
+              <Button key="cancel" onPress={() => setAlbumPicker({ visible: false, keys: [] })}>
+                Cancel
+              </Button>,
+              <Button
+                key="create"
+                mode="contained"
+                disabled={!newAlbumName.trim()}
+                onPress={() => {
+                  const name = newAlbumName.trim();
+                  createAlbum(name);
+                  addToAlbum(name, albumPicker.keys);
+                  setNewAlbumName('');
+                  setAlbumPicker({ visible: false, keys: [] });
+                  showToast(`Added to "${name}"`);
+                }}
+              >
+                Create & add
+              </Button>,
+            ]}
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <AssetViewer
+        visible={!!selected || !!selectedCloudUri}
+        uri={selected ? selected.uri : selectedCloudUri}
+        width={selected?.width ?? null}
+        height={selected?.height ?? null}
+        items={viewerItems}
+        initialIndex={viewerIndex}
+        subtitle={viewerSubtitle}
+        isVideo={(selected as any)?.mediaType === 'video'}
+        actions={viewerActions}
+        onClose={closeViewer}
+      />
       {(() => {
         const baseFabStyle = { position: 'absolute' as const, right: 16, bottom: 16 };
 
@@ -1463,10 +1914,10 @@ export default function GalleryScreen() {
                 icon="download"
                 style={{ position: 'absolute', right: 16, bottom: 86, backgroundColor: primaryContainerColor }}
                 color={onPrimaryContainerColor}
-                onPress={async () => {
+                onPress={safeAsync('Download', async () => {
                   const paths = Array.from(selectedIds);
                   if (paths.length > 0) await downloadRepoFiles(paths as any);
-                }}
+                })}
               />
             </>
           );
@@ -1476,6 +1927,18 @@ export default function GalleryScreen() {
       })()}
       {selectedIds.size > 0 && !showProgress ? (
         <View style={selectionContainerStyle}>
+          {/*
+            Stacked above the buttons rather than beside them: the row already
+            sits opposite the FABs, and a count like "100 selected" would run
+            into them. Without this there was no way at all to tell how many
+            items were selected.
+          */}
+          <View style={selectionCountChipStyle}>
+            <Text variant="labelLarge" style={selectionPrimaryTextStyle}>
+              {selectedIds.size} selected
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={selectAll}
@@ -1502,6 +1965,7 @@ export default function GalleryScreen() {
           >
             <MaterialCommunityIcons name="close" size={20} color={selectionAccentContentColor} />
           </TouchableOpacity>
+          </View>
         </View>
       ) : null}
       <Portal>

@@ -1,16 +1,21 @@
 import { Buffer } from 'buffer';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useAppStore } from '@/store/appState';
 import type { SyncStatus, UploadIndex, UploadIndexEntry, MetaEntry, PreparedAsset, CompletionEvent } from './types';
 import { SimpleEmitter, EventEmitter } from './events';
 import * as localStore from '../localStore';
 import type { AssetRecord } from '../localStore';
-import { makeFingerprint, prepareAsset, temporaryDownloadPath, resolveBranch, sanitizeFilename } from './utils';
+import { makeFingerprint, prepareAsset, temporaryDownloadPath, resolveBranch, sanitizeFilename, chunk } from './utils';
+import { commitBatchWithRetry } from './gitPlumbing';
 import { JobQueue } from './jobQueue';
-import { getOctokit, getRepoInfo, fetchFileSha, putFile, deleteFile, downloadFile, resetBranchToEmptyCommit } from './githubClient';
-import { loadMetaIndex, upsertMetaEntry, getCachedMetaEntries, getMetaEntryFromCache, invalidateMetaCache, removeMetaEntries } from './metaIndex';
+import { getOctokit, getRepoInfo, fetchFileSha, putFile, deleteFile, downloadFile, resetBranchToEmptyCommit, getBranchHead } from './githubClient';
+import { previewPathFor, uploadTier2 } from './tiering';
+
+/** Files per batched commit. Keeps each request set modest and bounds retry cost. */
+const UPLOAD_BATCH_SIZE = 40;
+import { loadMetaIndex, upsertMetaEntry, upsertMetaEntries, getCachedMetaEntries, getMetaEntryFromCache, invalidateMetaCache, removeMetaEntries } from './metaIndex';
 import type { Octokit } from '@octokit/rest';
 import { ensureMediaLibraryPermissions } from '../mediaPermissions';
 import { ensureAndroidDownloadsDirectory } from './androidDownloads';
@@ -19,6 +24,85 @@ const uploadIndexEmitter = new SimpleEmitter();
 const syncStatusEmitter = new SimpleEmitter();
 const cacheInvalidatedEmitter = new SimpleEmitter();
 const completionEmitter = new EventEmitter<{ completion: CompletionEvent }>();
+
+/**
+ * Automatic retry after a transient failure.
+ *
+ * Measured on device: with the network off, an upload fails cleanly and
+ * nothing is lost — but when the network comes back, nothing resumes either.
+ * The user has to notice and re-select. Same story after the app is killed
+ * mid-upload. This closes that gap without adding a connectivity dependency:
+ * back off, and also try immediately when the app returns to the foreground,
+ * which is when a person has usually just fixed their connection.
+ *
+ * Deliberately narrow:
+ *  - only the assets that actually failed, never a broader re-sync, so a retry
+ *    can't upload things the user never selected;
+ *  - only transient-looking errors. Retrying a 401 or a permission failure
+ *    just burns requests and re-raises the same error.
+ */
+const RETRY_DELAYS_MS = [10_000, 30_000, 60_000, 120_000];
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryAttempt = 0;
+let retryAssets: MediaLibrary.Asset[] = [];
+
+function isRetryableError(message?: string | null): boolean {
+  const text = String(message ?? '');
+  if (!text) return false;
+  return /Network request failed|Unable to resolve host|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|getaddrinfo|socket|timed? ?out|\b(429|500|502|503|504)\b/i.test(text);
+}
+
+function cancelScheduledRetry(): void {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  retryAttempt = 0;
+  retryAssets = [];
+}
+
+async function runPendingRetry(): Promise<void> {
+  const assets = retryAssets;
+  if (assets.length === 0) return;
+  if (syncStatus.running) return;
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  console.log(`[sync] retrying ${assets.length} failed item(s) (attempt ${retryAttempt})`);
+  try {
+    await runSyncForAssets(assets);
+  } catch (error: any) {
+    console.warn('[sync] retry attempt failed', error?.message ?? error);
+  }
+}
+
+function scheduleRetry(assets: MediaLibrary.Asset[], lastError?: string | null): void {
+  if (assets.length === 0) return;
+  if (!isRetryableError(lastError)) {
+    cancelScheduledRetry();
+    return;
+  }
+  if (retryAttempt >= RETRY_DELAYS_MS.length) {
+    console.warn('[sync] giving up automatic retry; items stay pending for a manual upload');
+    retryAssets = [];
+    return;
+  }
+  retryAssets = assets;
+  const delay = RETRY_DELAYS_MS[retryAttempt];
+  retryAttempt += 1;
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void runPendingRetry();
+  }, delay);
+  console.log(`[sync] ${assets.length} item(s) failed transiently; retry in ${Math.round(delay / 1000)}s`);
+}
+
+// Coming back to the app is the usual moment a connection has just been fixed.
+AppState.addEventListener('change', (state) => {
+  if (state === 'active' && retryAssets.length > 0) void runPendingRetry();
+});
 
 const uploadIndexCache = new Map<string, UploadIndexEntry>();
 let syncStatus: SyncStatus = {
@@ -372,7 +456,16 @@ async function prepareAssetsForUpload(assets: MediaLibrary.Asset[], options?: Up
   return prepared;
 }
 
-async function uploadPreparedAsset(client: Octokit, repo: ReturnType<typeof getRepoInfo>, prepared: PreparedAsset): Promise<void> {
+async function uploadPreparedAsset(
+  client: Octokit,
+  repo: ReturnType<typeof getRepoInfo>,
+  prepared: PreparedAsset,
+  opts?: {
+    transferAlreadyDone?: boolean;
+    /** When given, the meta entry is appended here instead of written immediately. */
+    collectMeta?: MetaEntry[];
+  },
+): Promise<void> {
   const { fingerprint, repoPath, contentBase64, fileSize, creationTime, contentHash } = prepared;
   await localStore.saveAsset({
     fingerprint,
@@ -401,14 +494,50 @@ async function uploadPreparedAsset(client: Octokit, repo: ReturnType<typeof getR
     lastError: null,
       });
 
-  const sha = await fetchFileSha(repoPath, repo);
-  await putFile({
-    path: repoPath,
-    message: `Upload ${fingerprint}`,
-    contentBase64,
-    sha,
-    repo,
-  });
+  // Route by size. Tier 2 streams into a release asset and leaves a pointer
+  // stub at the same tree path, so everything downstream (timeline, albums,
+  // dedup, sync) keeps seeing one uniform library.
+  // For tier 2 the tree entry is the `.ptr` stub, not the original filename, so
+  // that is what the index must point at. Recording the original path instead
+  // makes every read start with a guaranteed 404 before falling back.
+  let indexedRepoPath = repoPath;
+  let tier2PreviewPath: string | null = null;
+
+  if (opts?.transferAlreadyDone) {
+    // Bytes already written by the batched commit; fall through to bookkeeping.
+  } else if (prepared.tier === 2) {
+    const tier2 = await uploadTier2({
+      repoPath,
+      localUri: prepared.localUri,
+      fileSize: fileSize ?? 0,
+      contentHash: contentHash ?? null,
+      captureDate: creationTime ? new Date(creationTime) : null,
+      contentType: (prepared.asset as any)?.mediaType === 'video' ? 'video/mp4' : undefined,
+      repo,
+    });
+    indexedRepoPath = tier2.stubPath;
+    tier2PreviewPath = tier2.previewPath;
+  } else {
+    if (!contentBase64) {
+      throw new Error(`Tier 1 asset ${fingerprint} has no content to upload.`);
+    }
+    const sha = await fetchFileSha(repoPath, repo);
+    await putFile({
+      path: repoPath,
+      message: `Upload ${fingerprint}`,
+      contentBase64,
+      sha,
+      repo,
+    });
+    if (prepared.previewBase64) {
+      await putFile({
+        path: previewPathFor(repoPath),
+        message: `Preview for ${fingerprint}`,
+        contentBase64: prepared.previewBase64,
+        repo,
+      });
+    }
+  }
 
   await localStore.markUploaded(fingerprint, repoPath, contentHash ?? null);
   updateIndexCacheForRecord({
@@ -425,19 +554,31 @@ async function uploadPreparedAsset(client: Octokit, repo: ReturnType<typeof getR
     lastError: null,
   });
 
+  // Compression writes a temp file; drop it once the bytes are safely uploaded.
+  if (prepared.compressedFrom && prepared.originalUri && prepared.localUri !== prepared.originalUri) {
+    await FileSystem.deleteAsync(prepared.localUri, { idempotent: true }).catch(() => {});
+  }
+
   await unblockAutoSyncFingerprint(fingerprint);
 
   const metaEntry: MetaEntry = {
     fingerprint,
-    repoPath,
+    repoPath: indexedRepoPath,
     createdAt: creationTime ?? null,
     fileSize: fileSize ?? null,
-    previewRepoPath: null,
+    previewRepoPath: tier2PreviewPath ?? (prepared.previewBase64 ? previewPathFor(repoPath) : null),
     contentHash: contentHash ?? null,
+    thumbHash: prepared.thumbHash ?? null,
     uploadedAt: Date.now(),
     assetId: prepared.asset.id,
   };
-  await upsertMetaEntry(client, repo, metaEntry);
+  if (opts?.collectMeta) {
+    // Deferred: the caller flushes the whole batch with upsertMetaEntries,
+    // turning 2 commits per photo into 2 commits per batch.
+    opts.collectMeta.push(metaEntry);
+  } else {
+    await upsertMetaEntry(client, repo, metaEntry);
+  }
 }
 
 async function processUploadBatch(assets: MediaLibrary.Asset[], options?: UploadBatchOptions): Promise<void> {
@@ -495,6 +636,53 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
   let processed = 0;
   let failed = 0;
   let cancelled = false;
+  /** Exactly the assets that failed, so a retry re-uploads these and nothing else. */
+  const failedAssets: MediaLibrary.Asset[] = [];
+
+  // ── Batch the tier-1 blobs into as few commits as possible ────────────────
+  //
+  // The per-file contents API costs a commit and ~2 requests each; measured on
+  // device, one photo produced three commits. Git plumbing turns N files into
+  // N+5 requests and a single commit.
+  //
+  // Tier-2 files are excluded: their bytes stream into release assets, and only
+  // a small pointer stub lands in the tree.
+  //
+  // If a batch fails for any reason we simply don't mark those items, and the
+  // loop below uploads them individually — slower, but still correct.
+  const batchedFingerprints = new Set<string>();
+  const pendingMetaEntries: MetaEntry[] = [];
+  const tier1Items = prepared.filter((item) => item.tier === 1 && !!item.contentBase64);
+
+  if (tier1Items.length > 1) {
+    for (const group of chunk(tier1Items, UPLOAD_BATCH_SIZE)) {
+      if (cancelToken.cancelled) break;
+      try {
+        const result = await commitBatchWithRetry({
+          // A tier-1 video needs its companion preview JPEG in the SAME commit,
+          // otherwise the grid has a video blob it cannot draw.
+          entries: group.flatMap((item) => {
+            const rows = [{ path: item.repoPath, contentBase64: item.contentBase64 as string }];
+            if (item.previewBase64) {
+              rows.push({ path: previewPathFor(item.repoPath), contentBase64: item.previewBase64 });
+            }
+            return rows;
+          }),
+          message: `Upload ${group.length} item${group.length === 1 ? '' : 's'}`,
+          repo,
+        });
+        if (result) {
+          console.log(
+            `[sync] batched ${result.filesWritten} files into 1 commit ` +
+            `(${result.requestsUsed} requests, ${result.commitSha.slice(0, 7)})`,
+          );
+          for (const item of group) batchedFingerprints.add(item.fingerprint);
+        }
+      } catch (error: any) {
+        console.warn('[sync] batch commit failed, falling back to per-file upload', error?.message ?? error);
+      }
+    }
+  }
 
   for (const item of prepared) {
     if (cancelToken.cancelled) {
@@ -503,7 +691,10 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     }
     processed += 1;
     try {
-      await uploadPreparedAsset(client, repo, item);
+      await uploadPreparedAsset(client, repo, item, {
+        transferAlreadyDone: batchedFingerprints.has(item.fingerprint),
+        collectMeta: pendingMetaEntries,
+      });
       if (deleteCandidates && item.asset?.id) {
         deleteCandidates.add(item.asset.id);
       }
@@ -514,6 +705,7 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
       });
     } catch (error: any) {
       failed += 1;
+      failedAssets.push(item.asset);
       setSyncStatus({
         lastError: error?.message ?? String(error),
         lastBatchUploaded: processed,
@@ -536,6 +728,15 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     }
   }
 
+  // Flush the whole batch's meta entries in one go.
+  if (pendingMetaEntries.length > 0) {
+    try {
+      await upsertMetaEntries(client, repo, pendingMetaEntries);
+    } catch (error: any) {
+      console.warn('[sync] bulk meta flush failed', error?.message ?? error);
+    }
+  }
+
   if (cancelToken.cancelled) {
     setSyncStatus({
       running: false,
@@ -547,6 +748,8 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     });
   } else {
     setSyncStatus({ running: false, lastBatchTotal: 0, lastBatchUploaded: 0, lastBatchType: null, pendingUploads: 0 });
+    if (failed > 0) scheduleRetry(failedAssets, syncStatus.lastError);
+    else cancelScheduledRetry();
     recordCompletion({ type: 'upload', total: prepared.length, failed, timestamp: Date.now() });
   }
 
@@ -566,7 +769,7 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
 async function collectAssetsFromSelectedAlbums(maxTotal?: number, options?: { includeUploaded?: boolean }): Promise<MediaLibrary.Asset[]> {
   const selected = useAppStore.getState().selectedAlbumIds;
   const selectionInitialized = useAppStore.getState().selectionInitialized ?? false;
-  const permission = await ensureMediaLibraryPermissions(false);
+  const permission = await ensureMediaLibraryPermissions();
   if (!permission.granted) {
     return [];
   }
@@ -737,6 +940,37 @@ export async function runSyncOnce(): Promise<void> {
   await queue.enqueue(() => processUploadBatch(assets, { allowBlocked: true, source: 'auto' }));
 }
 
+/**
+ * Has the remote library changed since we last looked?
+ *
+ * Uses a conditional request on the branch ref: an unchanged branch answers
+ * `304`, which GitHub does not bill against the rate limit. So a refresh that
+ * finds nothing new costs effectively zero, and we can skip the expensive
+ * shard reload entirely.
+ *
+ * Returns true when unsure — never skip work on the basis of a failed check.
+ */
+let lastKnownHead: string | null = null;
+
+export async function hasRemoteChanged(): Promise<boolean> {
+  try {
+    const { sha, fromCache } = await getBranchHead();
+    const changed = sha !== lastKnownHead;
+    lastKnownHead = sha;
+    if (__DEV__ && !changed) {
+      console.log(`[sync] remote unchanged (${fromCache ? '304, free' : '200'}) — skipping reload`);
+    }
+    return changed;
+  } catch {
+    return true;
+  }
+}
+
+/** Call after any local write so the next check re-reads. */
+export function invalidateRemoteHead(): void {
+  lastKnownHead = null;
+}
+
 export async function runSyncForAssets(assets: MediaLibrary.Asset[], options?: UploadBatchOptions): Promise<void> {
   if (!assets || assets.length === 0) {
     return;
@@ -876,7 +1110,7 @@ export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
       setSyncStatus({ lastError: 'Download directory permission not granted' });
     }
   } else {
-    const permission = await ensureMediaLibraryPermissions(true);
+    const permission = await ensureMediaLibraryPermissions();
     if (!permission.granted) {
       setSyncStatus({ lastError: 'Media library permission not granted' });
       return downloaded;

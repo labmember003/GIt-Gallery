@@ -4,6 +4,7 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { MetaEntry, RepoInfo } from './types';
 import { resolveBranch } from './utils';
 import { downloadFile } from './githubClient';
+import { fetchTier2ToFile, isStubPath, parseStub, stubPathFor } from './tiering';
 
 const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
 if (!baseDir) {
@@ -378,6 +379,49 @@ async function buildPreview(dir: string, entry: MetaEntry, repo: RepoInfo): Prom
   }
 }
 
+
+/**
+ * Resolve a tier-2 asset by reading its `.ptr` stub and pulling the bytes from
+ * the release asset it names.
+ *
+ * Returns null when there is no stub, so callers can treat "not tier 2" as a
+ * normal miss rather than an error.
+ */
+async function fetchTier2ViaStub(originalPath: string, repo: RepoInfo): Promise<Base64Result | null> {
+  const stubPath = isStubPath(originalPath) ? originalPath : stubPathFor(originalPath);
+  let stubRaw: { content: string } | null = null;
+  try {
+    stubRaw = (await downloadFile(stubPath, repo)) as any;
+  } catch {
+    return null;
+  }
+  if (!stubRaw?.content) return null;
+
+  const { Buffer } = require('buffer');
+  const pointer = parseStub(Buffer.from(stubRaw.content, 'base64').toString('utf8'));
+  if (!pointer) return null;
+
+  // Prefer the committed preview. Pulling the release asset to paint a grid
+  // thumbnail would mean a multi-tens-of-MB download per tile.
+  if (pointer.preview) {
+    try {
+      const preview = (await downloadFile(pointer.preview, repo)) as any;
+      if (preview?.content) {
+        return { content: preview.content, size: preview.size ?? 0, usedPath: pointer.preview };
+      }
+    } catch {
+      // Fall through to the full asset below.
+    }
+  }
+
+  const destUri = `${FileSystem.cacheDirectory}tier2-${pointer.assetId}`;
+  await fetchTier2ToFile(pointer, destUri, repo);
+  const content = await FileSystem.readAsStringAsync(destUri, { encoding: FileSystem.EncodingType.Base64 });
+  await FileSystem.deleteAsync(destUri, { idempotent: true }).catch(() => {});
+
+  return { content, size: pointer.size, usedPath: stubPath };
+}
+
 async function fetchBase64(primary: string[], repo: RepoInfo, fallback: string[]): Promise<Base64Result> {
   const paths: string[] = [];
   for (const p of primary) paths.push(p);
@@ -396,6 +440,18 @@ async function fetchBase64(primary: string[], repo: RepoInfo, fallback: string[]
       } catch (error) {
         errors.push(error);
       }
+    }
+
+    // Tier 2: the bytes are a release asset and the tree only holds a pointer,
+    // so fetching the original path 404s. Resolve through the stub instead.
+    //
+    // This is the read half of the tiering contract — without it, oversized
+    // files upload fine but can never be displayed.
+    try {
+      const viaStub = await fetchTier2ViaStub(candidate, repo);
+      if (viaStub) return viaStub;
+    } catch (error) {
+      errors.push(error);
     }
   }
   const message = errors.length > 0 ? String(errors[errors.length - 1]) : 'Unknown download failure';

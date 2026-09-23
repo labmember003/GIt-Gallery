@@ -1,22 +1,58 @@
 import { Platform } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 
-export async function ensureMediaLibraryPermissions(requireFullAccess = Platform.OS === 'ios'): Promise<MediaLibrary.PermissionResponse> {
-  const permissionOptions = requireFullAccess ? { accessPrivileges: 'all' as const } : undefined;
-  let current = await MediaLibrary.getPermissionsAsync(permissionOptions as any);
-  const needsRequest = !current.granted || (requireFullAccess && current.accessPrivileges !== 'all');
+/**
+ * Media types this app may ask for.
+ *
+ * Without narrowing, expo-media-library requests every type the manifest
+ * declares — on Android 13+ that means a photo gallery prompting for *music
+ * and audio*. Keep this in sync with the manifest's READ_MEDIA_* permissions.
+ */
+const GRANULAR_PERMISSIONS: MediaLibrary.GranularPermission[] = ['photo', 'video'];
 
-  if (needsRequest) {
-    current = await MediaLibrary.requestPermissionsAsync(permissionOptions as any);
-  }
-
-  if (requireFullAccess && current.granted && current.accessPrivileges !== 'all') {
-    try {
-      await (MediaLibrary as any).presentPermissionsPickerAsync?.();
-      current = await MediaLibrary.getPermissionsAsync(permissionOptions as any);
-    } catch (error) {
-      console.warn('Failed to present permissions picker for full photo access', error);
-    }
-  }
-  return current;
+/**
+ * NOTE ON THE API SHAPE — this has bitten us twice.
+ *
+ *   getPermissionsAsync(writeOnly?: boolean, granularPermissions?: GranularPermission[])
+ *   requestPermissionsAsync(writeOnly?: boolean, granularPermissions?: GranularPermission[])
+ *
+ * Both take POSITIONAL arguments. Passing an options object makes the first
+ * argument an object where a boolean is expected, and the native side fails
+ * with "Cannot convert '[object Object]' to a Kotlin type" — surfaced only as
+ * a rejected promise, so the calling button just appears dead.
+ *
+ * `usePermissions()` is the exception: it *does* take an options object.
+ *
+ * There is no `accessPrivileges` request option. It only exists on the
+ * *response*; full-access on iOS is obtained by inspecting the response and
+ * calling `presentPermissionsPickerAsync()`.
+ */
+export async function ensureMediaLibraryPermissions(): Promise<MediaLibrary.PermissionResponse> {
+  const current = await MediaLibrary.getPermissionsAsync(false, GRANULAR_PERMISSIONS);
+  if (current.granted) return current;
+  return MediaLibrary.requestPermissionsAsync(false, GRANULAR_PERMISSIONS);
 }
+
+/**
+ * Ask iOS to re-open the "which photos may this app see" picker.
+ *
+ * USER-INITIATED ONLY. This used to run automatically from
+ * `ensureMediaLibraryPermissions` whenever `accessPrivileges !== 'all'`,
+ * which made "Limit Access" unusable: every screen that checked permissions
+ * re-presented the picker, so the picker reappeared on each launch and the
+ * user could never actually reach the gallery. Limited access is a choice we
+ * honour — we show the assets we were given — not a state to nag out of.
+ */
+export async function presentFullAccessPicker(): Promise<MediaLibrary.PermissionResponse> {
+  try {
+    await MediaLibrary.presentPermissionsPickerAsync();
+  } catch (error) {
+    console.warn('Failed to present photo permissions picker', error);
+  }
+  return MediaLibrary.getPermissionsAsync(false, GRANULAR_PERMISSIONS);
+}
+
+/** Options for `MediaLibrary.usePermissions()` — this one *is* an options object. */
+export const mediaPermissionOptions = {
+  granularPermissions: GRANULAR_PERMISSIONS,
+};

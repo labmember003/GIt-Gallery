@@ -1,5 +1,11 @@
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
+import { buildPreviewBase64, tierForSize } from './tiering';
+import { buildCanonicalPath, identityHash } from './pathScheme';
+import { compressForUpload } from './compression';
+import { encodeThumbHash } from './thumbhash';
+import { useAppStore } from '@/store/appState';
+import { bytesFromBase64, extractExifDate, parseExifDateString } from './exifDate';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
 import type { PreparedAsset } from './types';
@@ -12,6 +18,54 @@ export function makeFingerprint(asset: MediaLibrary.Asset): string {
   const createdAt = asset.creationTime ?? asset.modificationTime ?? 0;
   const fileSize = (asset as any).fileSize ?? 0;
   return `${filename}|${createdAt}|${fileSize}`;
+}
+
+/** How much of the file to read when hunting for the EXIF header. */
+const EXIF_HEADER_BYTES = 64 * 1024;
+
+/**
+ * Best available capture time, in priority order.
+ *
+ * The file's own EXIF comes first because Android MediaStore's `datetaken` is
+ * unreliable — measured NULL for 3 of 6 test photos that all had valid EXIF,
+ * in which case expo falls back to DATE_ADDED (when the file arrived on the
+ * device, not when the photo was taken).
+ *
+ * Getting this wrong is not cosmetic: falling through to "now" buckets an
+ * entire backlog import under today and makes the timeline meaningless. That
+ * is why "now" is the last resort only.
+ *
+ * Only the first 64 KB is read, so this is cheap even for large video.
+ */
+export async function resolveCaptureDate(
+  asset: MediaLibrary.Asset,
+  info: MediaLibrary.AssetInfo | null,
+  localUri?: string | null,
+): Promise<Date> {
+  if (localUri) {
+    try {
+      const headerBase64 = await FileSystem.readAsStringAsync(localUri, {
+        encoding: FileSystem.EncodingType.Base64,
+        position: 0,
+        length: EXIF_HEADER_BYTES,
+      });
+      const fromFile = extractExifDate(bytesFromBase64(headerBase64));
+      if (fromFile) return fromFile;
+    } catch {
+      // Unreadable header is fine — fall through to the platform values.
+    }
+  }
+
+  const exif = (info as any)?.exif ?? null;
+  const fromPlatform =
+    parseExifDateString(exif?.DateTimeOriginal ?? null) ??
+    parseExifDateString(exif?.DateTimeDigitized ?? null) ??
+    parseExifDateString(exif?.DateTime ?? null);
+  if (fromPlatform) return fromPlatform;
+
+  const ts = asset.creationTime || asset.modificationTime || 0;
+  if (ts > 0) return new Date(ts);
+  return new Date();
 }
 
 export function normalizePath(path: string): string {
@@ -139,28 +193,93 @@ export async function prepareAsset(asset: MediaLibrary.Asset): Promise<PreparedA
     }
 
     const fingerprint = makeFingerprint(asset);
-    const folderName = await resolveFolderName(asset, info as any, localUri);
-    const repoPath = determineRepoPath(folderName, (info as any)?.filename ?? asset.filename ?? fingerprint, fingerprint);
+    const captureDate = await resolveCaptureDate(asset, info as any, localUri);
+    const identity = await identityHash(fingerprint);
 
-    const fileInfo = (await FileSystem.getInfoAsync(localUri)) as any;
-    const fileSize = typeof fileInfo?.size === 'number' ? fileInfo.size : (asset as any).fileSize ?? null;
 
-    const contentBase64 = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.Base64 });
-    const contentHash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      contentBase64,
-      { encoding: Crypto.CryptoEncoding.BASE64 }
-    );
+    // Compress BEFORE choosing a tier: a 30 MB photo that shrinks to 400 KB
+    // belongs in tier 1, not in a release asset. The capture date was already
+    // read from the ORIGINAL above, which matters because re-encoding strips
+    // EXIF — the date survives in the repo path regardless.
+    const preset = useAppStore.getState().compressionPreset;
+    const compressed = await compressForUpload({
+      localUri,
+      filename: (info as any)?.filename ?? asset.filename ?? null,
+      mediaType: (asset as any)?.mediaType ?? null,
+      width: (info as any)?.width ?? asset.width ?? null,
+      height: (info as any)?.height ?? asset.height ?? null,
+      preset,
+    });
+
+    const uploadUri = compressed.uri;
+    const fileSize = compressed.size || ((asset as any).fileSize ?? null);
+
+    // Built after compression so the recorded dimensions describe the file that
+    // is actually stored, not the pre-resize source. Aspect ratio is unchanged
+    // either way, but the path should not claim 4032x3024 for a 2048px file.
+    const repoPath = buildCanonicalPath({
+      captureDate,
+      width: compressed.width ?? (info as any)?.width ?? asset.width ?? null,
+      height: compressed.height ?? (info as any)?.height ?? asset.height ?? null,
+      filename: (info as any)?.filename ?? asset.filename ?? null,
+      // Compression re-encodes to JPEG, so a .heic or .png source is stored as
+      // JPEG bytes. Without this the blob is named .heic while containing JPEG
+      // — fine for in-app decoders that sniff content, wrong for anything that
+      // trusts the extension (GitHub's preview, a download, the photo library).
+      extension: compressed.outputExtension,
+      identity,
+    });
+
+    // Decide the tier from the bytes we will actually send. Reading a large
+    // video into a base64 string would OOM the app before we ever learn it
+    // belongs in tier 2.
+    const tier = tierForSize(fileSize);
+
+    let contentBase64: string | null = null;
+    let contentHash: string | null = null;
+
+    if (tier === 1) {
+      contentBase64 = await FileSystem.readAsStringAsync(uploadUri, { encoding: FileSystem.EncodingType.Base64 });
+      contentHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        contentBase64,
+        { encoding: Crypto.CryptoEncoding.BASE64 }
+      );
+    } else {
+      // Tier 2 streams from disk, so there is no in-memory buffer to hash.
+      // Identity comes from the stable fingerprint plus size instead; a real
+      // content hash would mean reading the whole file just to compute it.
+      contentHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        `${fingerprint}:${fileSize ?? 0}`
+      );
+    }
+
+    // Cheap (~7ms) and done once at upload; the payoff is an instantly-painted
+    // timeline for every future viewer of this library.
+    const isVideo = (asset as any)?.mediaType === 'video';
+    const thumbHash = await encodeThumbHash(uploadUri, isVideo);
+
+    // A tier-1 video is committed as the raw .mp4 blob, which the grid cannot
+    // decode as an image — every video showed a broken tile. Tier 2 already
+    // builds its own preview inside uploadTier2, so only tier 1 needs one here.
+    const previewBase64 =
+      isVideo && tier === 1 ? await buildPreviewBase64(uploadUri, true) : null;
 
     return {
       asset,
-      localUri,
+      previewBase64,
+      thumbHash,
+      localUri: uploadUri,
+      originalUri: localUri,
+      compressedFrom: compressed.isTemporary ? compressed.originalSize : null,
       repoPath,
       fingerprint,
-      creationTime: asset.creationTime ?? asset.modificationTime ?? null,
+      creationTime: captureDate.getTime(),
       fileSize,
       contentBase64,
       contentHash,
+      tier,
     };
   } catch (error) {
     console.warn('Failed to prepare asset for upload', error);

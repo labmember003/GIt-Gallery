@@ -1,8 +1,9 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from 'react-native-paper';
+import { ActivityIndicator, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomTabBar from '@/navigation/CustomTabBar';
 import WelcomeScreen from '@/screens/WelcomeScreen';
@@ -10,6 +11,7 @@ import SignInScreen from '@/screens/SignInScreen';
 import RepoSetupScreen from '@/screens/RepoSetupScreen';
 import GalleryScreen from '@/screens/GalleryScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
+import AlbumsScreen from '@/screens/AlbumsScreen';
 import { useAppStore } from '@/store/appState';
 
 type RootStackParamList = {
@@ -44,6 +46,17 @@ function MainTabs() {
           tabBarLabel: 'Gallery',
           title: 'GitGallery',
           headerTitle: 'GitGallery',
+        }}
+      />
+      <Tab.Screen
+        name="Albums"
+        component={AlbumsScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="image-album" size={22} color={color} />
+          ),
+          tabBarLabel: 'Albums',
+          title: 'Albums',
         }}
       />
       <Tab.Screen
@@ -88,11 +101,26 @@ function OnboardingStack() {
   );
 }
 
+/** Shown while persisted auth is read back, so onboarding never flashes. */
+function SplashScreen() {
+  const theme = useTheme();
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface }}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+    </View>
+  );
+}
+
 export default function AppNavigator() {
+  const hydrated = useAppStore((s) => s.hydrated);
   const hasAuth = useAppStore((s) => !!s.authToken);
   const hasRepo = useAppStore((s) => !!s.currentRepo);
 
   const isReady = hasAuth && hasRepo;
+
+  // Rendering before hydration would show onboarding to a signed-in user for a
+  // frame or two, then swap — a visible flash on every cold start.
+  if (!hydrated) return <SplashScreen />;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

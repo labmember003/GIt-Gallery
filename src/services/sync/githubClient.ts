@@ -3,6 +3,7 @@ import { Buffer } from 'buffer';
 import { useAppStore } from '@/store/appState';
 import { RepoInfo } from './types';
 import { resolveBranch } from './utils';
+import { clearEtagCache, clearInFlight, coalesce, conditionalRequest } from './requestCache';
 
 let cachedClient: { token: string | null; client: Octokit | null } = {
   token: null,
@@ -29,15 +30,37 @@ export function getOctokit(): Octokit {
   if (cachedClient.client && cachedClient.token === token) {
     return cachedClient.client;
   }
-  const client = new Octokit({ auth: token });
+  const client = new Octokit({
+    auth: token,
+    /**
+     * Octokit logs every non-2xx as console.error. A large share of ours are
+     * *expected* 404s — "does this file exist yet?" probes before a create —
+     * which in dev pop LogBox over the app and, worse, bury genuine failures
+     * in noise. Downgrade those to debug and let everything else through.
+     */
+    log: {
+      debug: () => {},
+      info: () => {},
+      warn: (message: string) => {
+        if (/ - 404 /.test(message)) return;
+        console.warn(message);
+      },
+      error: (message: string) => {
+        if (/ - 404 /.test(message)) return;
+        console.error(message);
+      },
+    },
+  });
   cachedClient = { token, client };
   return client;
 }
 
 export async function fetchFileSha(path: string, repo?: RepoInfo): Promise<string | undefined> {
-  const octokit = getOctokit();
   const repoInfo = repo ?? getRepoInfo();
   const branch = resolveBranch(repoInfo.branch);
+  // Coalesced: concurrent callers asking for the same path share one request.
+  return coalesce(`sha:${repoInfo.owner}/${repoInfo.name}@${branch}:${path}`, async () => {
+  const octokit = getOctokit();
   try {
     const response = await octokit.repos.getContent({
       owner: repoInfo.owner,
@@ -53,6 +76,7 @@ export async function fetchFileSha(path: string, repo?: RepoInfo): Promise<strin
     }
     throw error;
   }
+  });
 }
 
 export async function putFile(params: {
@@ -133,9 +157,12 @@ export async function resetBranchToEmptyCommit(message = 'Reset repository'): Pr
 }
 
 export async function downloadFile(path: string, repo?: RepoInfo): Promise<{ content: string; encoding: 'base64'; size: number } | null> {
-  const octokit = getOctokit();
   const repoInfo = repo ?? getRepoInfo();
   const branch = resolveBranch(repoInfo.branch);
+  // Coalesced: the grid frequently asks for the same blob from several tiles
+  // in the same frame.
+  return coalesce(`get:${repoInfo.owner}/${repoInfo.name}@${branch}:${path}`, async () => {
+  const octokit = getOctokit();
   try {
     const response = await octokit.repos.getContent({
       owner: repoInfo.owner,
@@ -172,8 +199,38 @@ export async function downloadFile(path: string, repo?: RepoInfo): Promise<{ con
     if (error?.status === 404) return null;
     throw error;
   }
+  });
+}
+
+/**
+ * Current branch head SHA using a conditional request.
+ *
+ * An unchanged branch returns 304, which GitHub does not bill against the
+ * rate limit — so background change-detection is effectively free.
+ */
+export async function getBranchHead(repo?: RepoInfo): Promise<{ sha: string; fromCache: boolean }> {
+  const repoInfo = repo ?? getRepoInfo();
+  const branch = resolveBranch(repoInfo.branch);
+  const key = `ref:${repoInfo.owner}/${repoInfo.name}@${branch}`;
+
+  const result = await conditionalRequest<string>(key, async (etag) => {
+    const octokit = getOctokit();
+    const res = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+      owner: repoInfo.owner,
+      repo: repoInfo.name,
+      ref: `heads/${branch}`,
+      headers: etag ? { 'if-none-match': etag } : {},
+    });
+    return { value: (res.data as any).object.sha as string, etag: res.headers?.etag ?? null };
+  });
+
+  return { sha: result.value, fromCache: result.fromCache };
 }
 
 export function invalidateClient(): void {
   cachedClient = { token: null, client: null };
+  // A different token means a different identity; cached etags and in-flight
+  // requests from the previous session must not leak across it.
+  clearInFlight();
+  clearEtagCache();
 }

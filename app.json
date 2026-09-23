@@ -17,8 +17,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to sync photos to GitHub.",
-        "NSPhotoLibraryAddUsageDescription": "This app needs access to save photos to your library."
-      }
+        "NSPhotoLibraryAddUsageDescription": "This app needs access to save photos to your library.",
+        "PHPhotoLibraryPreventAutomaticLimitedAccessAlert": true
+      },
+      "bundleIdentifier": "com.gitgallery.app"
     },
     "android": {
       "package": "com.gitgallery.app",
@@ -29,7 +31,13 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
       ]
     },
     "web": {
@@ -39,10 +47,14 @@
       [
         "expo-media-library",
         {
-          "granularPermissions": ["photo"],
+          "granularPermissions": [
+            "photo",
+            "video"
+          ],
           "isAccessMediaLocationEnabled": false
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "eas": {
