@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, Platform } from 'react-native';
 import { Button, List, Switch, Divider, ActivityIndicator, Checkbox, RadioButton, Portal, Dialog, Text, useTheme } from 'react-native-paper';
 import { useAppStore } from '@/store/appState';
+import { previewSquash, squashHistory, type SquashPreview } from '@/services/sync/squash';
+import { getRepoSizeStatus, type RepoSizeStatus } from '@/services/sync/repoSize';
+import { COMPRESSION_PRESETS, type CompressionPreset } from '@/services/sync/compression';
 import * as MediaLibrary from 'expo-media-library';
 import * as SecureStore from 'expo-secure-store';
 import { resetRepoAndCaches } from '@/services/sync/index';
-import { ensureMediaLibraryPermissions } from '@/services/mediaPermissions';
+import { ensureMediaLibraryPermissions, mediaPermissionOptions, presentFullAccessPicker } from '@/services/mediaPermissions';
 import { getPersistedAndroidDownloadsDirectory, chooseAndroidDownloadsDirectory, clearAndroidDownloadsDirectory, describeAndroidDownloadsDirectory } from '@/services/sync/androidDownloads';
 
 const sortIds = (ids: string[]) => [...ids].sort();
@@ -31,6 +34,13 @@ const isLikelyInternalId = (value: string | null | undefined, albumId: string) =
 
 const deriveNameFromUri = (uri: string | undefined | null) => {
   if (!uri) return null;
+  // Android only. There, an album's own title is often a bare id, so the
+  // containing folder ("Camera", "Screenshots") is the better name. iOS has
+  // no such problem — PHAssetCollection.localizedTitle is already the real
+  // name — and its paths actively mislead: the uri is `ph://<uuid>/L0/001`
+  // and the on-disk path is a DCIM bucket, so every album would come out
+  // named "L0" or "100APPLE".
+  if (Platform.OS !== 'android') return null;
   try {
     const decoded = decodeURI(uri.replace(/^file:\/\//, ''));
     if (decoded.startsWith('content://')) return null;
@@ -106,10 +116,15 @@ export default function SettingsScreen({ navigation }: any) {
   const albumRefreshToken = useAppStore((s) => s.albumRefreshToken);
   const themeMode = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
+  const compressionPreset = useAppStore((s) => s.compressionPreset);
+  const setCompressionPreset = useAppStore((s) => s.setCompressionPreset);
   const setGallerySource = useAppStore((s) => s.setGallerySource);
   const savedSelectionCacheRef = React.useRef<string[] | null>(null);
 
-  const [permission, requestPermission] = MediaLibrary.usePermissions();
+  const [permission, requestPermission, refreshPermission] = MediaLibrary.usePermissions(mediaPermissionOptions as any);
+  /** iOS "limited": the user picked individual assets, so albums carry no meaning here. */
+  const limitedPhotoAccess =
+    Platform.OS === 'ios' && (permission as any)?.accessPrivileges === 'limited';
   const requestPermissionRef = React.useRef(requestPermission);
   useEffect(() => {
     requestPermissionRef.current = requestPermission;
@@ -117,15 +132,23 @@ export default function SettingsScreen({ navigation }: any) {
   const [albums, setAlbums] = useState<MediaLibrary.Album[]>([]);
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [squashing, setSquashing] = useState(false);
+  const [repoSize, setRepoSize] = useState<RepoSizeStatus | null>(null);
+  const [squashDialog, setSquashDialog] = useState<{
+    visible: boolean;
+    preview: SquashPreview | null;
+    result: string | null;
+    error: string | null;
+  }>({ visible: false, preview: null, result: null, error: null });
   const [downloadDirectoryUri, setDownloadDirectoryUri] = useState<string | null>(null);
   const hasAutoSelectedRef = React.useRef(false);
   const [resetDialogVisible, setResetDialogVisible] = useState(false);
   const [resetDialogStage, setResetDialogStage] = useState<'warning' | 'confirm'>('warning');
   const paperTheme = useTheme();
-  const darkPrimaryContainerHex = '#6750A4';
-  const darkOnPrimaryContainerHex = '#FFFFFF';
-  const primaryContainerColor = paperTheme.dark ? darkPrimaryContainerHex : paperTheme.colors.primaryContainer;
-  const onPrimaryContainerColor = paperTheme.dark ? darkOnPrimaryContainerHex : paperTheme.colors.onPrimaryContainer;
+  // See GalleryScreen: the fork base overrode these with MD3 baseline purple
+  // in dark mode, throwing away the Immich dark scheme.
+  const primaryContainerColor = paperTheme.colors.primaryContainer;
+  const onPrimaryContainerColor = paperTheme.colors.onPrimaryContainer;
 
   function changeRepo() {
     const parent = navigation.getParent?.();
@@ -137,6 +160,57 @@ export default function SettingsScreen({ navigation }: any) {
     setAuthToken(null);
     setCurrentRepo(null);
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+  }
+
+  /**
+   * Squash is a force-push, so it is always previewed first: the user sees the
+   * real commit and file counts and confirms against those numbers rather than
+   * a generic warning.
+   */
+  // Repo size is the ceiling users actually hit: at ~400 KB/photo, GitHub's
+  // 1 GB guidance arrives around 2,600 photos. Surfacing it early beats
+  // discovering it from a Support email.
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentRepo) return;
+    getRepoSizeStatus()
+      .then((status) => {
+        if (!cancelled) setRepoSize(status);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [currentRepo]);
+
+  async function openSquashDialog() {
+    if (squashing) return;
+    setSquashDialog({ visible: true, preview: null, result: null, error: null });
+    try {
+      const preview = await previewSquash();
+      setSquashDialog({ visible: true, preview, result: null, error: null });
+    } catch (error: any) {
+      setSquashDialog({ visible: true, preview: null, result: null, error: error?.message ?? 'Could not read history' });
+    }
+  }
+
+  async function runSquash() {
+    setSquashing(true);
+    try {
+      const result = await squashHistory();
+      setSquashDialog({
+        visible: true,
+        preview: null,
+        result: `History compacted: ${result.before.commitCount} commits to ${result.after.commitCount}. ` +
+                `All ${result.after.fileCount} files verified unchanged.`,
+        error: null,
+      });
+    } catch (error: any) {
+      // Guards throw rather than force-push; surface exactly why.
+      setSquashDialog({ visible: true, preview: null, result: null, error: error?.message ?? 'Squash failed' });
+    } finally {
+      setSquashing(false);
+    }
   }
 
   function confirmAndResetAll() {
@@ -214,7 +288,11 @@ export default function SettingsScreen({ navigation }: any) {
 
       if (useAppStore.getState().autoDeleteAfterSync) {
         try {
-          await MediaLibrary.requestPermissionsAsync();
+          // POSITIONAL args — see the note in services/mediaPermissions. This
+          // passed an options object into `writeOnly`, so the native side rejected
+          // with "Cannot convert '[object Object]'". The try/catch swallowed it,
+          // so auto-delete silently never obtained the write permission it needs.
+          await MediaLibrary.requestPermissionsAsync(true, ['photo', 'video']);
         } catch {}
       }
 
@@ -502,12 +580,77 @@ export default function SettingsScreen({ navigation }: any) {
         />
         <Divider />
         <List.Item
+          title="Storage used"
+          description={repoSize ? repoSize.message : 'Checking…'}
+          descriptionNumberOfLines={4}
+          left={(props) => (
+            <List.Icon
+              {...props}
+              icon={repoSize?.level === 'over' ? 'alert-circle' : repoSize?.level === 'approaching' ? 'alert' : 'database-outline'}
+              color={
+                repoSize?.level === 'over'
+                  ? paperTheme.colors.error
+                  : repoSize?.level === 'approaching'
+                    ? '#B26A00'
+                    : undefined
+              }
+            />
+          )}
+        />
+        <Divider />
+        <List.Item
+          title="Compact history"
+          description="Collapse repo history into a single commit. Files are never touched."
+          descriptionNumberOfLines={3}
+          onPress={openSquashDialog}
+          right={() => (
+            <Button mode="text" loading={squashing} disabled={squashing} onPress={openSquashDialog}>
+              Compact
+            </Button>
+          )}
+          left={(props) => <List.Icon {...props} icon="archive-arrow-down-outline" />}
+        />
+        <Divider />
+        <List.Item
           title="Reset all (dangerous)"
           description="Force wipe repo content and history; clear local caches"
           onPress={confirmAndResetAll}
           right={() => <Button mode="text" loading={resetting} disabled={resetting} onPress={confirmAndResetAll}>Reset</Button>}
           left={(props) => <List.Icon {...props} icon="alert" />}
         />
+      </List.Section>
+
+      <List.Section>
+        <List.Subheader>Upload quality</List.Subheader>
+        <RadioButton.Group
+          onValueChange={(v) => setCompressionPreset(v as CompressionPreset)}
+          value={compressionPreset}
+        >
+          {(Object.keys(COMPRESSION_PRESETS) as CompressionPreset[]).map((key) => (
+            <List.Item
+              key={key}
+              title={COMPRESSION_PRESETS[key].label}
+              description={COMPRESSION_PRESETS[key].description}
+              descriptionNumberOfLines={3}
+              onPress={() => setCompressionPreset(key)}
+              right={() => <RadioButton value={key} />}
+              left={(props) => (
+                <List.Icon
+                  {...props}
+                  icon={
+                    key === 'original'
+                      ? 'image-outline'
+                      : key === 'high'
+                        ? 'image-size-select-actual'
+                        : key === 'balanced'
+                          ? 'image-size-select-large'
+                          : 'image-size-select-small'
+                  }
+                />
+              )}
+            />
+          ))}
+        </RadioButton.Group>
       </List.Section>
 
       <List.Section>
@@ -536,6 +679,34 @@ export default function SettingsScreen({ navigation }: any) {
 
       
 
+      {/*
+        Only reachable on iOS in "limited" mode. We set
+        PHPhotoLibraryPreventAutomaticLimitedAccessAlert so the system stops
+        re-prompting on every launch, which means the app now owns the only
+        route back to the picker — without this row the selection would be
+        unchangeable from inside the app.
+      */}
+      {limitedPhotoAccess ? (
+        <List.Section>
+          <List.Subheader>Photo access</List.Subheader>
+          <List.Item
+            title="Shared photos"
+            description="GitGallery can only see the photos you picked. Tap to change which ones."
+            left={(props) => <List.Icon {...props} icon="image-lock" />}
+            onPress={async () => {
+              await presentFullAccessPicker();
+              // The picker returns before the user finishes choosing, so read
+              // the permission back through the hook to re-render this row.
+              await refreshPermission?.();
+              useAppStore.getState().bumpAlbumRefreshToken();
+            }}
+          />
+        </List.Section>
+      ) : null}
+
+      {/* Hidden under limited access: no album filter is applied in that mode,
+          so the section would render as a header with nothing beneath it. */}
+      {limitedPhotoAccess ? null : (
       <List.Section>
         <List.Subheader>Albums to show & sync</List.Subheader>
         {loading ? (
@@ -556,12 +727,80 @@ export default function SettingsScreen({ navigation }: any) {
           ))
         )}
       </List.Section>
+      )}
 
       <List.Section>
         <List.Subheader>Account</List.Subheader>
         <List.Item title="Logout" onPress={logout} left={(props) => <List.Icon {...props} icon="logout" />} />
       </List.Section>
       </ScrollView>
+      <Portal>
+        <Dialog
+          visible={squashDialog.visible}
+          onDismiss={() => !squashing && setSquashDialog({ visible: false, preview: null, result: null, error: null })}
+        >
+          <Dialog.Icon icon={squashDialog.error ? 'alert-circle-outline' : 'archive-arrow-down-outline'} />
+          <Dialog.Title style={{ textAlign: 'center' }}>
+            {squashDialog.result ? 'History compacted' : squashDialog.error ? 'Cannot compact' : 'Compact history?'}
+          </Dialog.Title>
+          <Dialog.Content>
+            {squashDialog.error ? (
+              <Text>{squashDialog.error}</Text>
+            ) : squashDialog.result ? (
+              <Text>{squashDialog.result}</Text>
+            ) : squashDialog.preview?.alreadyCompact ? (
+              <Text>
+                History is already a single commit — there is nothing to compact.
+              </Text>
+            ) : squashDialog.preview ? (
+              <>
+                <Text style={{ marginBottom: 12 }}>
+                  {squashDialog.preview.commitCount === 1
+                    ? '1 commit will be replaced by a single commit.'
+                    : `${squashDialog.preview.commitCount} commits will be replaced by a single commit.`}
+                </Text>
+                <Text style={{ marginBottom: 12 }}>
+                  All {squashDialog.preview.fileCount} files stay exactly as they are — the existing tree is reused, so
+                  nothing is re-uploaded and no photo can be lost. Only past versions become unrecoverable.
+                </Text>
+                <Text style={{ opacity: 0.7 }}>This rewrites history and cannot be undone.</Text>
+              </>
+            ) : (
+              <ActivityIndicator />
+            )}
+          </Dialog.Content>
+          <Dialog.Actions>
+            {squashDialog.result || squashDialog.error || squashDialog.preview?.alreadyCompact
+              ? [
+                  <Button
+                    key="close"
+                    onPress={() => setSquashDialog({ visible: false, preview: null, result: null, error: null })}
+                  >
+                    Close
+                  </Button>,
+                ]
+              : [
+                  <Button
+                    key="cancel"
+                    disabled={squashing}
+                    onPress={() => setSquashDialog({ visible: false, preview: null, result: null, error: null })}
+                  >
+                    Cancel
+                  </Button>,
+                  <Button
+                    key="compact"
+                    mode="contained"
+                    loading={squashing}
+                    disabled={squashing || !squashDialog.preview}
+                    onPress={runSquash}
+                  >
+                    Compact
+                  </Button>,
+                ]}
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
       <Portal>
         <Dialog
           visible={resetDialogVisible}

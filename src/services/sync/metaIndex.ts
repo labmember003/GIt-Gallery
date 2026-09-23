@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import { coalesce } from './requestCache';
 import type { Octokit } from '@octokit/rest';
 import type { RepoInfo, MetaEntry } from './types';
 import { resolveBranch } from './utils';
@@ -317,29 +318,82 @@ async function fetchManifest(octokit: Octokit, repo: RepoInfo): Promise<{ manife
 	return { manifest, sha: data.sha ?? null };
 }
 
+/** A conditional write lost the race: someone else wrote the file first. */
+function isShaConflict(error: any): boolean {
+	const status = error?.status ?? error?.response?.status;
+	if (status === 409 || status === 422) return true;
+	return /does not match|but expected/i.test(String(error?.message ?? ''));
+}
+
+const MANIFEST_WRITE_ATTEMPTS = 4;
+
+/**
+ * Write the manifest, surviving a concurrent writer.
+ *
+ * The manifest is written with an If-Match style `sha`. Anything else that
+ * touched it since we read it — a second device on the same repo, or two
+ * overlapping syncs — makes that sha stale and GitHub answers 409. Observed
+ * on device: six photos committed their blobs fine, then the whole meta flush
+ * was dropped with `manifest.json does not match 60a9eb03…`, leaving the index
+ * behind the tree.
+ *
+ * A conflict is not a failure here, because the manifest is a per-bucket map:
+ * re-read it, re-apply only the buckets THIS write touched, and try again.
+ * Blindly replaying our whole copy would clobber buckets another writer added.
+ * `manifest` is updated in place so the caller's cached state stays true.
+ */
 async function writeManifest(
 	octokit: Octokit,
 	repo: RepoInfo,
 	manifest: MetaManifest,
 	sha?: string | null,
 	message = 'Update GitGallery meta manifest',
+	touchedBuckets?: string[],
 ): Promise<string | null> {
 	const branch = resolveBranch(repo.branch);
-	const payload: MetaManifest = {
-		version: MANIFEST_VERSION,
-		updatedAt: manifest.updatedAt,
-		shards: manifest.shards,
-	};
-	const response = await octokit.repos.createOrUpdateFileContents({
-		owner: repo.owner,
-		repo: repo.name,
-		branch,
-		path: META_MANIFEST_PATH,
-		content: encode(payload),
-		message,
-		sha: sha ?? undefined,
-	});
-	return response.data.content?.sha ?? null;
+	let currentSha = sha;
+
+	for (let attempt = 1; attempt <= MANIFEST_WRITE_ATTEMPTS; attempt += 1) {
+		const payload: MetaManifest = {
+			version: MANIFEST_VERSION,
+			updatedAt: manifest.updatedAt,
+			shards: manifest.shards,
+		};
+		try {
+			const response = await octokit.repos.createOrUpdateFileContents({
+				owner: repo.owner,
+				repo: repo.name,
+				branch,
+				path: META_MANIFEST_PATH,
+				content: encode(payload),
+				message,
+				sha: currentSha ?? undefined,
+			});
+			return response.data.content?.sha ?? null;
+		} catch (error: any) {
+			if (!isShaConflict(error) || attempt === MANIFEST_WRITE_ATTEMPTS) throw error;
+
+			const fresh = await fetchManifest(octokit, repo);
+			const mergedShards: MetaManifest['shards'] = { ...fresh.manifest.shards };
+			if (touchedBuckets && touchedBuckets.length > 0) {
+				for (const bucket of touchedBuckets) {
+					// Absent locally means this write removed it.
+					if (manifest.shards[bucket]) mergedShards[bucket] = manifest.shards[bucket];
+					else delete mergedShards[bucket];
+				}
+			} else {
+				Object.assign(mergedShards, manifest.shards);
+			}
+			manifest.shards = mergedShards;
+			manifest.updatedAt = Date.now();
+			currentSha = fresh.sha ?? null;
+			console.warn(
+				`[meta] manifest write conflicted (attempt ${attempt}/${MANIFEST_WRITE_ATTEMPTS}); merged and retrying`,
+			);
+			await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+		}
+	}
+	return null;
 }
 
 async function fetchShardDocument(
@@ -511,7 +565,20 @@ async function buildManifestFromExistingShards(
 	return { manifest, shards };
 }
 
+/**
+ * Coalesced wrapper.
+ *
+ * The `if (cache) return cache` guard below only helps *after* a load has
+ * finished. Two callers entering concurrently both pass it and both fetch the
+ * manifest — observed on device as identical GETs 26 ms apart, followed by a
+ * `PUT … 409` when both then wrote.
+ */
 async function ensureBaseState(octokit: Octokit, repo: RepoInfo): Promise<Cache> {
+	if (cache) return cache;
+	return coalesce(`meta:base:${repo.owner}/${repo.name}`, () => ensureBaseStateUncoalesced(octokit, repo));
+}
+
+async function ensureBaseStateUncoalesced(octokit: Octokit, repo: RepoInfo): Promise<Cache> {
 	if (cache) return cache;
 
 	metaByFingerprint.clear();
@@ -566,7 +633,15 @@ async function ensureBaseState(octokit: Octokit, repo: RepoInfo): Promise<Cache>
 	return cache;
 }
 
+/** Coalesced: several assets in one batch routinely share a day bucket. */
 async function ensureShardLoaded(octokit: Octokit, repo: RepoInfo, bucket: string): Promise<ShardCacheEntry> {
+	return coalesce(
+		`meta:shard:${repo.owner}/${repo.name}:${sanitizeBucket(bucket)}`,
+		() => ensureShardLoadedUncoalesced(octokit, repo, bucket),
+	);
+}
+
+async function ensureShardLoadedUncoalesced(octokit: Octokit, repo: RepoInfo, bucket: string): Promise<ShardCacheEntry> {
 	const state = await ensureBaseState(octokit, repo);
 	const key = sanitizeBucket(bucket);
 	let shard = state.shards.get(key);
@@ -685,6 +760,7 @@ export async function removeMetaEntries(octokit: Octokit, repo: RepoInfo, finger
 	}
 
 	let manifestDirty = false;
+	const touchedBuckets = new Set<string>();
 
 	for (const [bucket, list] of grouped.entries()) {
 		const shard = await ensureShardLoaded(octokit, repo, bucket);
@@ -708,19 +784,74 @@ export async function removeMetaEntries(octokit: Octokit, repo: RepoInfo, finger
 			state.shards.delete(bucket);
 			evictBucketEntries(bucket);
 			markManifestEntry(state, bucket, null);
+			touchedBuckets.add(bucket);
 			manifestDirty = true;
 		} else {
 			await persistShard(octokit, repo, shard, `Update meta shard ${bucket}`);
 			ingestShardDocument(shard.doc);
 			markManifestEntry(state, bucket, shard);
+			touchedBuckets.add(bucket);
 			manifestDirty = true;
 		}
 	}
 
 	if (manifestDirty) {
 		state.manifest.updatedAt = Date.now();
-		state.manifestSha = await writeManifest(octokit, repo, state.manifest, state.manifestSha, 'Update GitGallery meta manifest');
+		state.manifestSha = await writeManifest(
+			octokit,
+			repo,
+			state.manifest,
+			state.manifestSha,
+			'Update GitGallery meta manifest',
+			Array.from(touchedBuckets),
+		);
 	}
+}
+
+/**
+ * Bulk variant of {@link upsertMetaEntry}.
+ *
+ * The single-entry version persists its shard *and* rewrites the manifest on
+ * every call — two commits per photo. Uploading six photos produced twelve meta
+ * commits even though the images themselves were batched into one.
+ *
+ * This applies every entry in memory first, then writes each touched shard
+ * once and the manifest once. Six photos in the same day bucket go from twelve
+ * commits to two.
+ */
+export async function upsertMetaEntries(octokit: Octokit, repo: RepoInfo, entries: MetaEntry[]): Promise<void> {
+	if (entries.length === 0) return;
+	const state = await ensureBaseState(octokit, repo);
+	const touched = new Map<string, ShardCacheEntry>();
+
+	for (const entry of entries) {
+		const bucket = resolveBucket(entry);
+		const shard = await ensureShardLoaded(octokit, repo, bucket);
+		if (!shard.doc) {
+			shard.doc = makeEmptyShard(bucket);
+		}
+		shard.doc.entries[entry.fingerprint] = { ...entry, updatedAt: Date.now() };
+		shard.doc.generatedAt = Date.now();
+		shard.count = Object.keys(shard.doc.entries).length;
+		shard.updatedAt = shard.doc.generatedAt;
+		touched.set(bucket, shard);
+	}
+
+	for (const [bucket, shard] of touched.entries()) {
+		await persistShard(octokit, repo, shard, `Update meta shard ${bucket} (${entries.length} entries)`);
+		if (shard.doc) ingestShardDocument(shard.doc);
+		markManifestEntry(state, bucket, shard);
+	}
+
+	state.manifest.updatedAt = Date.now();
+	state.manifestSha = await writeManifest(
+		octokit,
+		repo,
+		state.manifest,
+		state.manifestSha,
+		'Update GitGallery meta manifest',
+		Array.from(touched.keys()),
+	);
 }
 
 export async function upsertMetaEntry(octokit: Octokit, repo: RepoInfo, entry: MetaEntry): Promise<void> {
@@ -743,6 +874,13 @@ export async function upsertMetaEntry(octokit: Octokit, repo: RepoInfo, entry: M
 	ingestShardDocument(shard.doc);
 	markManifestEntry(state, bucket, shard);
 	state.manifest.updatedAt = Date.now();
-	state.manifestSha = await writeManifest(octokit, repo, state.manifest, state.manifestSha, 'Update GitGallery meta manifest');
+	state.manifestSha = await writeManifest(
+		octokit,
+		repo,
+		state.manifest,
+		state.manifestSha,
+		'Update GitGallery meta manifest',
+		[bucket],
+	);
 }
 
