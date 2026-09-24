@@ -1,130 +1,119 @@
-<p align="center">
-	<img src="assets/GitGallery.jpg" alt="GitGallery preview" width="640" />
-</p>
-
-<p align="center">
-	<a href="https://github.com/Sumit189/GitGalleryApp/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/Sumit189/GitGalleryApp?color=2ea44f&label=release&sort=semver" /></a>
-	<a href="https://github.com/Sumit189/GitGalleryApp/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Sumit189/GitGalleryApp?style=social" /></a>
-	<img alt="Expo + React Native" src="https://img.shields.io/badge/Expo%20%2B%20React%20Native-16191A?logo=expo&logoColor=00D8FF&labelColor=16191A" />
-	<img alt="License" src="https://img.shields.io/badge/License-MIT%20%28at%20launch%29-0b7285" />
-</p>
-
 # GitGallery
 
-GitGallery is a privacy-first photo vault that stores your memories securely in your own GitHub repository.
-No third-party servers, no data mining, no ads. Just you, your device, and GitHub.
+A photo/video gallery app that stores your library in **your own private GitHub repo**, with an **Immich-quality UI**.
 
-Your photos are version-controlled, encrypted, and fully owned by you. Whether you're backing up personal photos or building a digital journal, GitGallery keeps your data safe and accessible.
+No server. No Docker. No monthly bill.
 
-Built with Expo and React Native, the app currently targets Android with a cross-platform foundation ready for future iOS and web releases.
+> **Status: v1 complete.** Android + iOS, tested on emulator/simulator and on real hardware
+> (iPhone 13, Galaxy S24 Ultra, ~15,000-asset library). GitHub sign-in works end to end.
 
-Core principles: Ownership, Transparency, and Privacy by Design.
+---
 
-## Behind the Build
-[F*** DB: How I built a photo gallery using GitHub as storage](https://medium.com/@sumit-paul/f-k-db-how-i-built-a-photo-gallery-using-github-as-storage-baa8bef275f8)
+## The idea in one paragraph
 
-## Downloads
+Immich is a brilliant self-hosted photo app, but it needs a server (Postgres + Redis + S3 + an ML service). GitGalleryApp is a tiny Expo app that commits photos straight into a private GitHub repo — no server at all — but its UI is plain. This project takes **GitGalleryApp's architecture** and gives it **Immich's interface**, plus the storage optimizations needed to make GitHub behave like a real photo backend.
 
-You can get GitGallery in two ways:
+---
 
-**Option 1: Build it yourself** - Follow the [Building a Release](#building-a-release) instructions below to create your own APK. This is free but requires some setup.
+## Start here
 
-**Option 2: Get it from Play Store** - Skip the hassle and support the project by purchasing it at a minimal price from Google Play.
+| Doc | What's in it |
+|---|---|
+| **[docs/PROJECT-DOC.md](docs/PROJECT-DOC.md)** | What we're building and why. Architecture, hard constraints, feature scope, decisions log. |
+| **[docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md)** | How and in what order. 6 phases, with risks and a definition of done. |
+| **[docs/BIG-BRAIN-IDEAS.md](docs/BIG-BRAIN-IDEAS.md)** | ⚡ Architecture exploits that beat most of the constraints below. **Read before starting Phase 1** — two of them reshape the plan. |
+| **[docs/CHAT-LOG.md](docs/CHAT-LOG.md)** | The full conversation this came from, start to finish. |
+| **[docs/REGRESSION-2026-09-19.md](docs/REGRESSION-2026-09-19.md)** | Android regression pass — results, regressions caught, known gaps. |
+| **[docs/REGRESSION-2026-09-20-ios.md](docs/REGRESSION-2026-09-20-ios.md)** | iOS regression pass — the 16 bugs found on device and how each was fixed. |
 
-<p align="center">
-	<a href="https://play.google.com/store/apps/details?id=com.gitgallery.app">
-		<img
-			alt="Get it on Google Play"
-			src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
-			height="60"
-		/>
-	</a>
-</p>
-<p align="center"><em>Your Play Store purchase keeps the project sustainable and funds ongoing development.</em></p>
+---
 
-## Why GitGallery?
-- Own your storage: photos live in your private GitHub repo instead of someone else’s cloud.
-- Familiar tooling: Git history, pull requests, and Actions can automate your media backups.
-- Thoughtful UX: modern UI with dark/light themes, album filters, and clear sync states.
-- Offline friendly: a local queue and SQLite cache keep track of work even when the network drops.
+## Reference code
 
-## Features at a Glance
-- GitHub Device Flow sign-in - no personal access tokens to copy/paste.
-- Guided repo setup that can create a fresh private repository for you.
-- Local ↔ cloud gallery views so you can browse device photos or the repo-backed library.
-- Selective album syncing with optional auto-delete after successful uploads.
-- Job queue with resumable uploads, retry handling, and conflict detection (requires app to be open).
-- Repo maintenance actions, including an optional clean‑slate reset that rewrites history (explicit opt‑in with double confirmation; use with caution).
+Two repos are read alongside this one. **Neither is committed here** — `reference/` is gitignored.
+Recreate them locally if you want them:
 
-## Getting Started
+| Repo | Size | Role | Get it |
+|---|---|---|---|
+| GitGalleryApp | 2.9 MB | **The fork base.** Expo + RN + Octokit, ~6,250 LOC. | `git fetch upstream` |
+| immich | 162 MB | **UI reference only.** The Flutter timeline & theme. | `git clone --depth 1 https://github.com/immich-app/immich reference/immich` |
 
-### Requirements
-- Node.js 18 or newer and npm 9+.
-- Expo CLI (`npm install -g expo-cli`) if you prefer the classic developer menu.
-- A GitHub account capable of creating private repositories.
+> ⚠️ **GitGalleryApp has no LICENSE file** — default copyright applies. Fine for private use;
+> resolve before publishing. Immich is AGPL-3.0 (strong copyleft — learn from it, don't paste
+> from it), which is why its tree is never vendored into this repo.
 
-### Local Setup
-1. Clone the repo and install dependencies:
-	```sh
-	git clone https://github.com/Sumit189/GitGallery.git
-	cd GitGallery
-	npm install
-	```
-2. Create a GitHub OAuth app (Device Flow enabled) and note the Client ID. Scope should allow repo access.
-3. Provide the Client ID to the app at runtime using the Expo public env var:
-	- Easiest (one-off):
-		```sh
-		EXPO_PUBLIC_GITHUB_CLIENT_ID=<your_client_id> npx expo start
-		```
-	- Or set it in `eas.json` under the build profile you use (see below) so local runs via EAS CLI inherit it.
-4. Ensure your `app.json` contains your EAS project ID at `expo.extra.eas.projectId`. You can find this in the EAS Dashboard or after running `eas project:init`.
-5. Start the project with `npx expo start`, then launch on Android or the web preview.
-6. On first launch, sign in with GitHub, pick (or create) a private repo, and choose which albums should auto-sync.
+---
 
-### Building a Release
-- Make sure `EXPO_PUBLIC_GITHUB_CLIENT_ID` is set in `eas.json` for the profile you will use (e.g., `production`). Example:
-	```json
-	{
-	  "build": {
-	    "production": {
-	      "env": {
-	        "EXPO_PUBLIC_GITHUB_CLIENT_ID": "<your_client_id>"
-	      }
-	    }
-	  }
-	}
-	```
-- Ensure `app.json` includes your EAS project ID at `expo.extra.eas.projectId`.
-- Run a build:
-	```sh
-	eas build --platform android --profile production
-	```
-- Artifacts will be available in the EAS dashboard once the build completes.
+## How storage works
 
-## How Sync Works
-- **On-device index**: a lightweight SQLite store remembers every asset fingerprint, upload status, and last-known SHA.
-- **Job queue**: uploads, deletions, and downloads run through a serialized queue so the UI stays responsive.
-- **GitHub bridge**: Octokit handles file pushes, branch resets, and content downloads against your chosen repo.
-- **Metadata mirror**: a meta index inside the repo lets the app fetch cloud thumbnails quickly without downloading originals.
-- **Recovery tools**: auto-sync blocklists, repo resets, and cache clears help recover from API hiccups without nuking the app.
+Files are **tiered by size**, and the git tree stays the single source of truth for both tiers:
 
-## Roadmap & Ideas
-- Background sync triggers (App Clips / Headless JS) once platforms allow it.
-- End-to-end encryption for assets before they leave the device.
-- Video support and higher throughput batching for large libraries.
-- Share-sheet shortcut to push a single freshly-snapped photo to GitHub.
+```
+library/2026/09/17/143022_4032x3024_a1b2c3.jpg       ← tier 1: the photo itself, in git
+library/2026/09/17/150811_3840x2160_62s_d4e5f6.mp4.ptr ← tier 2: 200-byte pointer in git
+                                                        └→ 500 MB video in release "media-2026"
+```
 
-Suggestions live in the issue tracker-feel free to propose others.
+Tier 1 (photos, ~95% of files) lives in git, so it keeps the sorted tree, free dedup, zero-cost albums and Merkle sync. Tier 2 (video, RAW — anything over the threshold) goes to **release assets**, which allow **2 GiB per file** and don't touch git history. The `.ptr` stub keeps the folder, date and dimensions in the tree, so one API call still returns the whole library correctly ordered — and nothing above the fetcher knows tiers exist.
 
-## Contributing
-- Check open issues or start a discussion before tackling big changes.
-- Keep pull requests focused; it makes review easier for everyone.
-- Use `npx expo start` for local testing and verify both local and cloud gallery modes before submitting.
-- If you touch sync logic, include notes on failure scenarios you exercised.
+*(Same pattern Git LFS uses: pointer in the tree, bytes elsewhere.)*
 
-## Community & Support
-- File bugs and feature requests via GitHub Issues.
-- If you ship something cool (actions workflows, automations, etc.), link it in a discussion so others can learn from it.
+---
 
-## License
-Released under the MIT License.
+## The core challenge
+
+GitHub is not a database. It cannot answer *"give me photos 500–550, sorted by date."* Everything in this project follows from working around that:
+
+| Constraint | Our answer |
+|---|---|
+| No query engine | Path encodes capture date, dimensions & content hash → one `git/trees?recursive=1` call returns a pre-sorted, pre-laid-out library |
+| 5,000 API req/hour | Batch commits via git plumbing + **304 conditional requests are free** |
+| 100 MB file cap | **Release assets allow 2 GiB** and don't touch git history |
+| History keeps every binary forever | Largely moot if blobs live outside git; rolling compaction otherwise |
+| Repo size ceiling | Index-only repo stays tiny; shard by year beyond that |
+| No ML / vector search | **Not dead** — move the ML on-device (Phase 6 stretch) |
+
+See **[BIG-BRAIN-IDEAS.md](docs/BIG-BRAIN-IDEAS.md)** for how each of these is actually beaten.
+
+---
+
+## Platforms
+
+Android and iOS, both shipped and both tested on real hardware. Web & desktop out of scope.
+
+---
+
+## Running it
+
+```bash
+cd app
+npm install
+npx expo run:android     # or: npx expo run:ios
+```
+
+iOS needs CocoaPods (`cd ios && pod install`) and a signing team in Xcode for a physical device.
+
+Sign-in is GitHub **Device Flow** — the app shows a code, you approve it at
+`github.com/login/device`. That needs an OAuth App client ID in `app/.env`:
+
+```
+EXPO_PUBLIC_GITHUB_CLIENT_ID=Ov23li...      # OAuth App, "Device Flow" enabled
+EXPO_PUBLIC_GITHUB_TEST_REPO=you/some-repo  # dev only
+EXPO_PUBLIC_GITHUB_TOKEN=github_pat_...     # dev only — skips the sign-in screen
+```
+
+`.env` is gitignored. The two dev keys are a convenience for local builds; the token fallback is
+guarded by `if (!token)`, so a real signed-in session always wins.
+
+> ⚠️ Sign-in currently requests the `repo` scope, which is **read/write to every repository you
+> own** — GitHub OAuth Apps have no narrower option. Scoping it to one repo means switching to a
+> GitHub App with per-repository installation. Revoke any time at
+> `github.com/settings/applications`.
+
+---
+
+## What's not done
+
+- **Select All** only covers the page of the timeline that has loaded, not the whole library.
+- **Scope narrowing** — see the warning above.
+- On-device ML search / face grouping — deliberately deferred (Phase 6 stretch).

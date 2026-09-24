@@ -1,6 +1,14 @@
-node_modules/
-build-*
+# macOS / editors
 .DS_Store
-.env
-.expo/
+.idea/
 .vscode/
+
+# Local reference checkouts — deliberately NOT committed.
+#   reference/immich/        162 MB, AGPL-3.0, third party. It is a *visual*
+#                            reference only; vendoring it would pull an AGPL
+#                            tree into this repo for no benefit.
+#                            Recreate: git clone --depth 1 https://github.com/immich-app/immich
+#   reference/GitGalleryApp/ the fork base — already reachable as the `upstream`
+#                            remote, so committing a copy duplicates it.
+#                            Recreate: git fetch upstream
+reference/
