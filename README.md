@@ -93,6 +93,26 @@ npx expo run:android     # or: npx expo run:ios
 
 iOS needs CocoaPods (`cd ios && pod install`) and a signing team in Xcode for a physical device.
 
+Android needs `android/local.properties` pointing at your SDK — it is gitignored, and `gradlew`
+fails with *SDK location not found* without it:
+
+```bash
+echo "sdk.dir=$HOME/Library/Android/sdk" > app/android/local.properties
+```
+
+**Release APK:**
+
+```bash
+cd app/android && ./gradlew assembleRelease
+# -> app/build/outputs/apk/release/app-release.apk
+```
+
+> ⚠️ Two things about that APK. It is signed with the **debug keystore** (`signingConfig
+> signingConfigs.debug`, the Expo template default) — fine for sideloading, not for distribution.
+> And `EXPO_PUBLIC_*` values are **inlined into the JS bundle at build time**, so remove
+> `EXPO_PUBLIC_GITHUB_TOKEN` from `.env` before building or your PAT ships inside the APK.
+> `__DEV__` gates the code path, not the string literal.
+
 Sign-in is GitHub **Device Flow** — the app shows a code, you approve it at
 `github.com/login/device`. That needs an OAuth App client ID in `app/.env`:
 

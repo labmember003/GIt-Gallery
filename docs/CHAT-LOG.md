@@ -1372,6 +1372,124 @@ naming the `repo` scope breadth, Select All's page-only reach, and the deferred 
 
 ---
 
+## Turn — first release APK, installed on the S24 Ultra (2026-09-24)
+
+**User:** build a release apk put it and install it in connected s24 ultra, remove any old instaleed app
+
+### The thing worth catching: `EXPO_PUBLIC_*` is inlined at build time
+
+`.env` holds a real fine-grained PAT. Expo's babel plugin replaces `process.env.EXPO_PUBLIC_X`
+with a **string literal** during bundling, so a naive `assembleRelease` would have written that
+PAT into an installable, shareable 103 MB artifact. `getDevToken()` is guarded by
+`if (!__DEV__) return null`, but that only kills the *code path* — whether the literal itself
+survives depends on dead-code elimination, and minify is off in this config. Not a bet worth taking.
+
+So the build parks the two dev-only keys first, with a `trap` guaranteeing restore even on failure:
+
+```
+EXPO_PUBLIC_GITHUB_TOKEN      → parked   (real credential)
+EXPO_PUBLIC_GITHUB_TEST_REPO  → parked   (dev convenience)
+EXPO_PUBLIC_GITHUB_CLIENT_ID  → kept     (public by design; Device Flow needs it)
+```
+
+Metro's transform cache was cleared too, so a token inlined into an earlier dev bundle could not
+survive into the release one.
+
+**Verified on the built APK, not assumed:**
+
+| Check | Result |
+|---|---|
+| Live PAT byte-for-byte in `index.android.bundle` | **absent** |
+| `gitgallery-test` repo name | absent |
+| OAuth client ID | present (1 occurrence) — sign-in would break without it |
+| `android:debuggable` | absent |
+| Installed package flags | `DEBUGGABLE` gone (the old build had it) |
+
+One scare: a token-shaped regex matched `…sleigh` + `u_acquireLock` colliding in Octokit's string
+table. Extracting the actual match rather than trusting the count settled it.
+
+**Proof the parking worked, from the device itself:** the release build opens on **Welcome**.
+Every dev build until now skipped straight into the gallery because the PAT short-circuited
+sign-in. Tapping Get Started reaches *Sign in with GitHub → Continue with GitHub*. Stopped there —
+going further starts a real OAuth grant.
+
+### Two build gotchas a fresh clone will also hit
+
+1. **`android/local.properties` is gitignored and was missing**, so `./gradlew assembleRelease`
+   failed with *SDK location not found*. Previous builds only worked because `expo run:android`
+   sets `ANDROID_HOME` itself. Now written locally, and the build script exports `ANDROID_HOME`.
+2. **Release is signed with the debug keystore** — `signingConfig signingConfigs.debug`, the Expo
+   template default. Fine for sideloading, not for distribution: `CN=Android Debug`. A real
+   keystore is a deliberate step, not a tweak, so it was left alone.
+
+**Result:** old debuggable build uninstalled (data wiped), `app-release.apk` (103 MB, unminified,
+all ABIs) installed and launched clean — no fatals. A copy sits at
+`/sdcard/Download/GitGallery-1.0.0-release.apk` on the phone.
+
+---
+
+## Turn — release artifacts for GitHub Releases (2026-09-25)
+
+**User:** can you like upload release apk and ipa file in github release of this github repo
+
+Both binaries built and verified; the upload itself is blocked on a credential.
+
+### The auth trap, again
+
+`gh` on this machine is authenticated as **`Avishisht-Gupta`** — the *work* account — through a
+`GITHUB_TOKEN` environment variable carrying `admin:enterprise`, `admin:org`, `delete_repo` and
+more. Exactly the same shape of mistake as the SSH host alias. Checked rather than assumed:
+
+```
+gh api repos/labmember003/GIt-Gallery --jq '{permissions}'
+  → {"admin":false,"maintain":false,"pull":true,"push":false,"triage":false}
+```
+
+`push:false`, so it *cannot* create the release even if used. A fine-grained PAT scoped to
+`GIt-Gallery` with Contents: Read and write is the way in. Also noted: the repo is **public**, so
+release assets are world-downloadable — the user confirmed that is intended.
+
+### Version drift, inherited from the fork
+
+| Source | Was | Now |
+|---|---|---|
+| `app.json` `expo.version` | 1.1.0 | **1.0.0** |
+| `ios/GitGallery/Info.plist` | 1.1.0 | **1.0.0** |
+| `android/app/build.gradle` `versionName` | 1.0.0 | 1.0.0 (unchanged) |
+
+Both values came straight from the upstream GitGalleryApp baseline (`git show cc9a4ba`), so the
+two platforms had *always* disagreed — iOS reads `app.json`, Android reads a hardcoded gradle
+string. Shipping an APK and an IPA that report different versions in the same release is a defect,
+so iOS was aligned **down** to 1.0.0: this is GitGallery's first release, the docs call it v1, and
+it keeps the APK already installed on the S24 accurate. Only the IPA needed rebuilding.
+
+### The IPA can only be unsigned
+
+The GitGallery provisioning profile decides this:
+
+```
+team=Avishisht Gupta (2PP8TN6GPJ)   expires 2026-09-29   → 7-day validity = FREE Apple ID
+```
+
+A free account gets development profiles only — no ad-hoc, no App Store. A dev-signed IPA would
+expire in four days and install solely on the one registered iPhone, which is useless as a release
+asset. So the archive is built with `CODE_SIGNING_ALLOWED=NO` and packaged by hand into
+`Payload/GitGallery.app`, the pattern open-source iOS projects ship: recipients re-sign with their
+own Apple ID via Sideloadly or AltStore. A genuinely installable build needs the paid programme.
+
+### Artifacts
+
+| File | Size | Notes |
+|---|---|---|
+| `GitGallery-1.0.0-release.apk` | 103.2 MB | `com.gitgallery.app` v1.0.0, **not** debuggable, debug-keystore signed → Play Protect will warn |
+| `GitGallery-1.0.0-unsigned.ipa` | 11.2 MB | arm64, min iOS 15.1, `main.jsbundle` 3.9 MB, unsigned |
+
+The iOS bundle got the same `.env`-parking treatment and the same scan as the APK — live PAT
+absent from both, client ID present in both (sign-in breaks without it), `gitgallery-test` absent.
+`.env` restored intact each time by a `trap`.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
