@@ -9,6 +9,80 @@ No server. No Docker. No monthly bill.
 
 ---
 
+## Screenshots
+
+Captured directly from the Android emulator and iOS simulator with a curated demo library.
+
+### Android
+
+<table>
+  <tr>
+    <th>Light gallery</th>
+    <th>Dark gallery</th>
+    <th>Albums</th>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/01-gallery-light.png" alt="Android light gallery with coastal photos, favourites, and video thumbnails" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/13-gallery-dark.png" alt="Android gallery in dark mode" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/18-mountain-album-dark.png" alt="Android mountain album with alpine lakes, forests, and snowy peaks" width="240" /></td>
+  </tr>
+</table>
+
+<details>
+<summary>More Android screenshots: photo viewer, travel timeline, and video playback</summary>
+
+<table>
+  <tr>
+    <th>Photo viewer</th>
+    <th>Travel timeline</th>
+    <th>Video playback</th>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/03-riviera-viewer.png" alt="Android full-screen Riviera photo viewer" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/21-travel-timeline-dark.png" alt="Android timeline with mountain and Japan travel photos grouped by date" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/08-ocean-video-player.png" alt="Android video player showing ocean footage" width="240" /></td>
+  </tr>
+</table>
+
+</details>
+
+### iOS
+
+<table>
+  <tr>
+    <th>Light gallery</th>
+    <th>Dark gallery</th>
+    <th>Albums</th>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/01-gallery-light.png" alt="iOS light gallery with coastal photos, favourites, and video thumbnails" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/13-gallery-dark.png" alt="iOS gallery in dark mode" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/18-mountain-album-dark.png" alt="iOS mountain album with alpine lakes, forests, and snowy peaks" width="240" /></td>
+  </tr>
+</table>
+
+<details>
+<summary>More iOS screenshots: photo viewer, travel timeline, and video playback</summary>
+
+<table>
+  <tr>
+    <th>Photo viewer</th>
+    <th>Travel timeline</th>
+    <th>Video playback</th>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/03-riviera-viewer.png" alt="iOS full-screen Riviera photo viewer" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/21-travel-timeline-dark.png" alt="iOS timeline with mountain and Japan travel photos grouped by date" width="240" /></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/08-ocean-video-player.png" alt="iOS video player showing ocean footage" width="240" /></td>
+  </tr>
+</table>
+
+</details>
+
+[Browse all 44 screenshots](screenshots/README.md), including favourites, selection, settings, and onboarding.
+
+---
+
 ## The idea in one paragraph
 
 Immich is a brilliant self-hosted photo app, but it needs a server (Postgres + Redis + S3 + an ML service). GitGalleryApp is a tiny Expo app that commits photos straight into a private GitHub repo — no server at all — but its UI is plain. This project takes **GitGalleryApp's architecture** and gives it **Immich's interface**, plus the storage optimizations needed to make GitHub behave like a real photo backend.
