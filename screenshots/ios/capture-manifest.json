@@ -1,0 +1,169 @@
+{
+  "device": "iPhone 16 iOS simulator",
+  "runtime": "iOS 26.4",
+  "deviceUDID": "DDFD69F7-0C0B-4240-B7B5-B20AB89FB905",
+  "capture": "xcrun simctl io screenshot",
+  "screenshots": [
+    {
+      "filename": "01-gallery-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2791688,
+      "sha256": "c0b09619ef1d39dc2e2d18f448d3ad28de5c69814c3bda8d7f24be7c27a22e9e"
+    },
+    {
+      "filename": "02-cloud-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2666644,
+      "sha256": "96c3e892809bba52b6d0b805e64cc0b478698adc93ed70e25aebc13bee68c53a"
+    },
+    {
+      "filename": "03-riviera-viewer.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 3844140,
+      "sha256": "abc168f73730cee891f61da8e01fc75d51d00c8ff62ac737595b1376cf17056f"
+    },
+    {
+      "filename": "04-favourites-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2582413,
+      "sha256": "c8f9e611c4f9a21aaf499858245d2590e9ddbb709a06278b62c45e15eac70a04"
+    },
+    {
+      "filename": "05-albums-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 230492,
+      "sha256": "c0b6ab421f35296de85e4919b1d18a23bade67e7f95095ca7d9b9c217f1eb2d5"
+    },
+    {
+      "filename": "06-mountain-album-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2552949,
+      "sha256": "85e065c18dd333bb93f523e28fc29ec344f7adf12d26bb937ff807832bdc4aec"
+    },
+    {
+      "filename": "07-alpine-viewer.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 3304897,
+      "sha256": "2890d85710ca813df1043b87272898c2ad13c695aba6f30f8fd38d7ebe1ef081"
+    },
+    {
+      "filename": "08-ocean-video-player.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2909113,
+      "sha256": "ebfb3f6b6db088137dd02103d89e55349739c19c6ddaaed94b1e8b10342ed8f9"
+    },
+    {
+      "filename": "09-multi-select-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2601420,
+      "sha256": "3104cff367c7f870c32b34aad3fb0d915ded05d7e9dfe496e6f4beec2300b1fb"
+    },
+    {
+      "filename": "10-settings-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 279952,
+      "sha256": "9ea68c0eb4a33c1249c4c86419908f43d6a5c0afecb5702f348df3a69be6740c"
+    },
+    {
+      "filename": "11-upload-quality-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 229889,
+      "sha256": "329510e497dc496384ebaa0023a35ac9465f421517fd6fc74867f72e51cfa847"
+    },
+    {
+      "filename": "12-upload-quality-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 230690,
+      "sha256": "21af323e3a53a3d76072c1949447ddedd75ed97153596b66063e6b94e7fad3ac"
+    },
+    {
+      "filename": "13-gallery-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2787819,
+      "sha256": "7c3928a49a750b724f448f44db9d4e963a174cbe83f2529fc2673321901d950c"
+    },
+    {
+      "filename": "14-cloud-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2665424,
+      "sha256": "e1004bd0129fc4f12e5a8495bf04cd1178e4a34282b7ba199bfa897fdba1312c"
+    },
+    {
+      "filename": "15-favourites-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2567879,
+      "sha256": "4f0ccc2da881b226698bda31a14d74790de5c5c261d99efd45810a5c143e922d"
+    },
+    {
+      "filename": "16-multi-select-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2594684,
+      "sha256": "7e32502d79b065ea522c27f37082fd90be151f753ce23e3cb24bb66c6b996bfb"
+    },
+    {
+      "filename": "17-albums-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 199539,
+      "sha256": "2a00b82f2c6d735b9a3f3d4bd1ada99b8496bbfb834ed6df7006767131a331a6"
+    },
+    {
+      "filename": "18-mountain-album-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2528524,
+      "sha256": "2dabdad94cf51d54bcfb7f1a8f955dbbefeed8497a7831a631a8fc0d1938d7ba"
+    },
+    {
+      "filename": "19-add-to-album-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 503657,
+      "sha256": "b2890a3e5af4cb539907a63045f2639221e04a5d2f95f1d9d7ffa40823ddf4e7"
+    },
+    {
+      "filename": "20-city-viewer.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 1562658,
+      "sha256": "48ccc078ee7a320dce32acc442aa1e82dc15f2f6b2718ab463fd82150912fa64"
+    },
+    {
+      "filename": "21-travel-timeline-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 3211125,
+      "sha256": "72e2279497bf46618699b0a1cdb2d05061696dc50da9bab7b827baeef7e9194e"
+    },
+    {
+      "filename": "22-welcome-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 252154,
+      "sha256": "31d89f2851be0c9256f87f70522d14c63b153208f37409720f78acd8f787b161"
+    },
+    {
+      "filename": "23-sign-in-light.png",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 240671,
+      "sha256": "0629166afa3c6a4b5c783bb55872ccadea550ed59daa631897cc21b030eb94cc"
+    }
+  ]
+}
