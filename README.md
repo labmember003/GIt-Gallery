@@ -11,75 +11,79 @@ No server. No Docker. No monthly bill.
 
 ## Screenshots
 
-Captured directly from the Android emulator and iOS simulator with a curated demo library.
+Android and iOS with a curated demo library. Click any screenshot to open the full-resolution image.
 
 ### Android
 
 <table>
   <tr>
-    <th>Light gallery</th>
-    <th>Dark gallery</th>
-    <th>Albums</th>
-  </tr>
-  <tr>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/01-gallery-light.png" alt="Android light gallery with coastal photos, favourites, and video thumbnails" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/13-gallery-dark.png" alt="Android gallery in dark mode" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/18-mountain-album-dark.png" alt="Android mountain album with alpine lakes, forests, and snowy peaks" width="240" /></td>
-  </tr>
-</table>
-
-<details>
-<summary>More Android screenshots: photo viewer, travel timeline, and video playback</summary>
-
-<table>
-  <tr>
-    <th>Photo viewer</th>
+    <th>Gallery — light</th>
+    <th>Gallery — dark</th>
     <th>Travel timeline</th>
-    <th>Video playback</th>
   </tr>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/03-riviera-viewer.png" alt="Android full-screen Riviera photo viewer" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/21-travel-timeline-dark.png" alt="Android timeline with mountain and Japan travel photos grouped by date" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/08-ocean-video-player.png" alt="Android video player showing ocean footage" width="240" /></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/01-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/01-gallery-light.webp" alt="Android — Gallery — light" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/13-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/13-gallery-dark.webp" alt="Android — Gallery — dark" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/21-travel-timeline-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/21-travel-timeline-dark.webp" alt="Android — Travel timeline" width="240" /></a></td>
+  </tr>
+  <tr>
+    <th>Mountain album — dark</th>
+    <th>Favourites — dark</th>
+    <th>Multi-selection — dark</th>
+  </tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/18-mountain-album-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/18-mountain-album-dark.webp" alt="Android — Mountain album — dark" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/15-favourites-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/15-favourites-dark.webp" alt="Android — Favourites — dark" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/16-multi-select-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/16-multi-select-dark.webp" alt="Android — Multi-selection — dark" width="240" /></a></td>
+  </tr>
+  <tr>
+    <th>Riviera photo viewer</th>
+    <th>Video playback</th>
+    <th>Upload quality — light</th>
+  </tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/03-riviera-viewer.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/03-riviera-viewer.webp" alt="Android — Riviera photo viewer" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/08-ocean-video-player.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/08-ocean-video-player.webp" alt="Android — Video playback" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/11-upload-quality-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/11-upload-quality-light.webp" alt="Android — Upload quality — light" width="240" /></a></td>
   </tr>
 </table>
-
-</details>
 
 ### iOS
 
 <table>
   <tr>
-    <th>Light gallery</th>
-    <th>Dark gallery</th>
-    <th>Albums</th>
-  </tr>
-  <tr>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/01-gallery-light.png" alt="iOS light gallery with coastal photos, favourites, and video thumbnails" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/13-gallery-dark.png" alt="iOS gallery in dark mode" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/18-mountain-album-dark.png" alt="iOS mountain album with alpine lakes, forests, and snowy peaks" width="240" /></td>
-  </tr>
-</table>
-
-<details>
-<summary>More iOS screenshots: photo viewer, travel timeline, and video playback</summary>
-
-<table>
-  <tr>
-    <th>Photo viewer</th>
+    <th>Gallery — light</th>
+    <th>Gallery — dark</th>
     <th>Travel timeline</th>
-    <th>Video playback</th>
   </tr>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/03-riviera-viewer.png" alt="iOS full-screen Riviera photo viewer" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/21-travel-timeline-dark.png" alt="iOS timeline with mountain and Japan travel photos grouped by date" width="240" /></td>
-    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/08-ocean-video-player.png" alt="iOS video player showing ocean footage" width="240" /></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/01-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/01-gallery-light.webp" alt="iOS — Gallery — light" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/13-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/13-gallery-dark.webp" alt="iOS — Gallery — dark" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/21-travel-timeline-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/21-travel-timeline-dark.webp" alt="iOS — Travel timeline" width="240" /></a></td>
+  </tr>
+  <tr>
+    <th>Mountain album — dark</th>
+    <th>Favourites — dark</th>
+    <th>Multi-selection — dark</th>
+  </tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/18-mountain-album-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/18-mountain-album-dark.webp" alt="iOS — Mountain album — dark" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/15-favourites-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/15-favourites-dark.webp" alt="iOS — Favourites — dark" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/16-multi-select-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/16-multi-select-dark.webp" alt="iOS — Multi-selection — dark" width="240" /></a></td>
+  </tr>
+  <tr>
+    <th>Riviera photo viewer</th>
+    <th>Video playback</th>
+    <th>Upload quality — light</th>
+  </tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/03-riviera-viewer.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/03-riviera-viewer.webp" alt="iOS — Riviera photo viewer" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/08-ocean-video-player.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/08-ocean-video-player.webp" alt="iOS — Video playback" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/11-upload-quality-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/11-upload-quality-light.webp" alt="iOS — Upload quality — light" width="240" /></a></td>
   </tr>
 </table>
 
-</details>
-
-[Browse all 44 screenshots](screenshots/README.md), including favourites, selection, settings, and onboarding.
+[Browse all 44 screenshots](screenshots/README.md), including cloud views, more albums, settings, and iOS onboarding.
 
 ---
 

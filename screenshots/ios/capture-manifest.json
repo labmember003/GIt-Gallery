@@ -5,165 +5,657 @@
   "capture": "xcrun simctl io screenshot",
   "screenshots": [
     {
-      "filename": "01-gallery-light.png",
+      "filename": "01-gallery-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2791688,
-      "sha256": "c0b09619ef1d39dc2e2d18f448d3ad28de5c69814c3bda8d7f24be7c27a22e9e"
+      "bytes": 371142,
+      "sha256": "c6af26ad61ae6568bbfe61b03f51ff4be30343bd24a987e913d257d15d729eb9",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "01-gallery-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2791688,
+        "sha256": "c0b09619ef1d39dc2e2d18f448d3ad28de5c69814c3bda8d7f24be7c27a22e9e"
+      },
+      "preview": {
+        "filename": "../previews/ios/01-gallery-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 92500,
+        "sha256": "1882361c87d9cde449a8c2456fd232b3375a52837de7702f4b9ff8dfa38898ba",
+        "quality": 86
+      }
     },
     {
-      "filename": "02-cloud-light.png",
+      "filename": "02-cloud-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2666644,
-      "sha256": "96c3e892809bba52b6d0b805e64cc0b478698adc93ed70e25aebc13bee68c53a"
+      "bytes": 363278,
+      "sha256": "b641d2d475c77acf481a43115da23d44a38895ff1daac8fd363e13fab362bc31",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "02-cloud-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2666644,
+        "sha256": "96c3e892809bba52b6d0b805e64cc0b478698adc93ed70e25aebc13bee68c53a"
+      },
+      "preview": {
+        "filename": "../previews/ios/02-cloud-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 89414,
+        "sha256": "bb23bfb79e5fccee121dbdf40328692a03f3e61e6217921d73af70c301e22335",
+        "quality": 86
+      }
     },
     {
-      "filename": "03-riviera-viewer.png",
+      "filename": "03-riviera-viewer.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 3844140,
-      "sha256": "abc168f73730cee891f61da8e01fc75d51d00c8ff62ac737595b1376cf17056f"
+      "bytes": 451096,
+      "sha256": "a76643912af7a6738405a7ea2495acfb0ab07b90cdd453ae8ecd3e404165daf3",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "03-riviera-viewer.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 3844140,
+        "sha256": "abc168f73730cee891f61da8e01fc75d51d00c8ff62ac737595b1376cf17056f"
+      },
+      "preview": {
+        "filename": "../previews/ios/03-riviera-viewer.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 134432,
+        "sha256": "1b361beb9c156bca88781c5dc1c697e761907f1f06900e1de535d59f6a1f5122",
+        "quality": 86
+      }
     },
     {
-      "filename": "04-favourites-light.png",
+      "filename": "04-favourites-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2582413,
-      "sha256": "c8f9e611c4f9a21aaf499858245d2590e9ddbb709a06278b62c45e15eac70a04"
+      "bytes": 341422,
+      "sha256": "058bfc3524589e8f8aa0c7f1076bbbff324bfe87a50522ba4f9dec8fce9cafcc",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "04-favourites-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2582413,
+        "sha256": "c8f9e611c4f9a21aaf499858245d2590e9ddbb709a06278b62c45e15eac70a04"
+      },
+      "preview": {
+        "filename": "../previews/ios/04-favourites-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 89374,
+        "sha256": "9dfccfb5e6795f944365ef7c4fcbfd9ab0940662305baec186d3c799cfe67770",
+        "quality": 86
+      }
     },
     {
-      "filename": "05-albums-light.png",
+      "filename": "05-albums-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 230492,
-      "sha256": "c0b6ab421f35296de85e4919b1d18a23bade67e7f95095ca7d9b9c217f1eb2d5"
+      "bytes": 54064,
+      "sha256": "136997cab8640a9266d4d09de6f2493919281cffff2242f38dede2fcedf3c64d",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "05-albums-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 230492,
+        "sha256": "c0b6ab421f35296de85e4919b1d18a23bade67e7f95095ca7d9b9c217f1eb2d5"
+      },
+      "preview": {
+        "filename": "../previews/ios/05-albums-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 24530,
+        "sha256": "540fb056cafa86fbc645360ee43419b665706141e931e909c54002ef3db9e52d",
+        "quality": 86
+      }
     },
     {
-      "filename": "06-mountain-album-light.png",
+      "filename": "06-mountain-album-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2552949,
-      "sha256": "85e065c18dd333bb93f523e28fc29ec344f7adf12d26bb937ff807832bdc4aec"
+      "bytes": 353582,
+      "sha256": "f0b0ce8d9bcc08662906e405b527dffd30bb8aea4f802ec7ac6ec44e1780d035",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "06-mountain-album-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2552949,
+        "sha256": "85e065c18dd333bb93f523e28fc29ec344f7adf12d26bb937ff807832bdc4aec"
+      },
+      "preview": {
+        "filename": "../previews/ios/06-mountain-album-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 89566,
+        "sha256": "98c20e54130346c6ea943411d98ca2945d328a4607214752d9e9905573598ff8",
+        "quality": 86
+      }
     },
     {
-      "filename": "07-alpine-viewer.png",
+      "filename": "07-alpine-viewer.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 3304897,
-      "sha256": "2890d85710ca813df1043b87272898c2ad13c695aba6f30f8fd38d7ebe1ef081"
+      "bytes": 534706,
+      "sha256": "222a313429db75daa3f8803598490392c11e1369af32e2e4c2f2caefa37989a0",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "07-alpine-viewer.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 3304897,
+        "sha256": "2890d85710ca813df1043b87272898c2ad13c695aba6f30f8fd38d7ebe1ef081"
+      },
+      "preview": {
+        "filename": "../previews/ios/07-alpine-viewer.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 116318,
+        "sha256": "82262186d47338e6e49221169257841488cd65c5cd863d78f0b03c113e9070d6",
+        "quality": 86
+      }
     },
     {
-      "filename": "08-ocean-video-player.png",
+      "filename": "08-ocean-video-player.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2909113,
-      "sha256": "ebfb3f6b6db088137dd02103d89e55349739c19c6ddaaed94b1e8b10342ed8f9"
+      "bytes": 197588,
+      "sha256": "61f5744f1532affc300a85b6e533475f4141e3e4e2ed7bbde73e8483915e7b5d",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "08-ocean-video-player.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2909113,
+        "sha256": "ebfb3f6b6db088137dd02103d89e55349739c19c6ddaaed94b1e8b10342ed8f9"
+      },
+      "preview": {
+        "filename": "../previews/ios/08-ocean-video-player.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 66960,
+        "sha256": "f42cb56492103acf2eeeacb8bde34216e3161f8582e8309cb32fe540f02e3842",
+        "quality": 86
+      }
     },
     {
-      "filename": "09-multi-select-light.png",
+      "filename": "09-multi-select-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2601420,
-      "sha256": "3104cff367c7f870c32b34aad3fb0d915ded05d7e9dfe496e6f4beec2300b1fb"
+      "bytes": 352084,
+      "sha256": "8bdcc018580bf51d0d27e8f129f64964590d4a119e30767d45e5e865c28344e3",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "09-multi-select-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2601420,
+        "sha256": "3104cff367c7f870c32b34aad3fb0d915ded05d7e9dfe496e6f4beec2300b1fb"
+      },
+      "preview": {
+        "filename": "../previews/ios/09-multi-select-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 91574,
+        "sha256": "b43501985ea11ca702c4179abbfb8094dcff07c27a69486a56567d38e41b031c",
+        "quality": 86
+      }
     },
     {
-      "filename": "10-settings-light.png",
+      "filename": "10-settings-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 279952,
-      "sha256": "9ea68c0eb4a33c1249c4c86419908f43d6a5c0afecb5702f348df3a69be6740c"
+      "bytes": 61652,
+      "sha256": "f61c1ce9b55a89b03da5e23d2eac6af8a9a372c472eecfc2ff787c7e350007bf",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "10-settings-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 279952,
+        "sha256": "9ea68c0eb4a33c1249c4c86419908f43d6a5c0afecb5702f348df3a69be6740c"
+      },
+      "preview": {
+        "filename": "../previews/ios/10-settings-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 42910,
+        "sha256": "807d7cb5c47c292f1aeb47596dcf67b33bc617b80567f9cf282623a1cbe68dfd",
+        "quality": 86
+      }
     },
     {
-      "filename": "11-upload-quality-light.png",
+      "filename": "11-upload-quality-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 229889,
-      "sha256": "329510e497dc496384ebaa0023a35ac9465f421517fd6fc74867f72e51cfa847"
+      "bytes": 46714,
+      "sha256": "2cacf56251e1a0bc39144155e68e0edca5ab69dc6246d84f3063b9349b84d795",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "11-upload-quality-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 229889,
+        "sha256": "329510e497dc496384ebaa0023a35ac9465f421517fd6fc74867f72e51cfa847"
+      },
+      "preview": {
+        "filename": "../previews/ios/11-upload-quality-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 33212,
+        "sha256": "46da02c8122ad7bd4dd5afc861ac2efa290a0c6f56b26360ec9203e53798f3a4",
+        "quality": 86
+      }
     },
     {
-      "filename": "12-upload-quality-dark.png",
+      "filename": "12-upload-quality-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 230690,
-      "sha256": "21af323e3a53a3d76072c1949447ddedd75ed97153596b66063e6b94e7fad3ac"
+      "bytes": 46144,
+      "sha256": "c3a86b1f31e471f1815dcde606e35477f60fe1e80ba46329a055d7df78e86ab1",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "12-upload-quality-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 230690,
+        "sha256": "21af323e3a53a3d76072c1949447ddedd75ed97153596b66063e6b94e7fad3ac"
+      },
+      "preview": {
+        "filename": "../previews/ios/12-upload-quality-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 32496,
+        "sha256": "0ad46be906467363a24cec8c4f71460c808d753f22e5e0b0285b11e2c1373312",
+        "quality": 86
+      }
     },
     {
-      "filename": "13-gallery-dark.png",
+      "filename": "13-gallery-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2787819,
-      "sha256": "7c3928a49a750b724f448f44db9d4e963a174cbe83f2529fc2673321901d950c"
+      "bytes": 370168,
+      "sha256": "be0c05437928b604326bc89dd4565ffb85d5cb981d412bccd49260758ffda946",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "13-gallery-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2787819,
+        "sha256": "7c3928a49a750b724f448f44db9d4e963a174cbe83f2529fc2673321901d950c"
+      },
+      "preview": {
+        "filename": "../previews/ios/13-gallery-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 92510,
+        "sha256": "f3ecd58aeb77828b9253b0e72dff2808dada8f7bb50b1bfcf08db2c83855ef46",
+        "quality": 86
+      }
     },
     {
-      "filename": "14-cloud-dark.png",
+      "filename": "14-cloud-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2665424,
-      "sha256": "e1004bd0129fc4f12e5a8495bf04cd1178e4a34282b7ba199bfa897fdba1312c"
+      "bytes": 361946,
+      "sha256": "50197292d7cd60bb21c8284411b81d73582dfd18e6958e7151bfda2343677970",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "14-cloud-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2665424,
+        "sha256": "e1004bd0129fc4f12e5a8495bf04cd1178e4a34282b7ba199bfa897fdba1312c"
+      },
+      "preview": {
+        "filename": "../previews/ios/14-cloud-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 88476,
+        "sha256": "25d8416399390606d0534e3f1b6891ba714a85fa80ecd4ca018ec33a02cd18d2",
+        "quality": 86
+      }
     },
     {
-      "filename": "15-favourites-dark.png",
+      "filename": "15-favourites-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2567879,
-      "sha256": "4f0ccc2da881b226698bda31a14d74790de5c5c261d99efd45810a5c143e922d"
+      "bytes": 345960,
+      "sha256": "1c1e8cae1bc84d1e311b3195d673eae898e36e8784fc3b2764715aaf3b16e0c5",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "15-favourites-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2567879,
+        "sha256": "4f0ccc2da881b226698bda31a14d74790de5c5c261d99efd45810a5c143e922d"
+      },
+      "preview": {
+        "filename": "../previews/ios/15-favourites-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 88924,
+        "sha256": "0d259aca284ce794df644ff5b34c7cd1ce7c9f06112dfb5944f9c4a0b0eba5d8",
+        "quality": 86
+      }
     },
     {
-      "filename": "16-multi-select-dark.png",
+      "filename": "16-multi-select-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2594684,
-      "sha256": "7e32502d79b065ea522c27f37082fd90be151f753ce23e3cb24bb66c6b996bfb"
+      "bytes": 350630,
+      "sha256": "98a82db55e088dd64424eb513ca13cf31150fdd0883f4ccd11a9e841ee94fc30",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "16-multi-select-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2594684,
+        "sha256": "7e32502d79b065ea522c27f37082fd90be151f753ce23e3cb24bb66c6b996bfb"
+      },
+      "preview": {
+        "filename": "../previews/ios/16-multi-select-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 91232,
+        "sha256": "acba6a110d6cb092c592ccdd438fc035ee3230c12401f230e5b72b93dcbab37d",
+        "quality": 86
+      }
     },
     {
-      "filename": "17-albums-dark.png",
+      "filename": "17-albums-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 199539,
-      "sha256": "2a00b82f2c6d735b9a3f3d4bd1ada99b8496bbfb834ed6df7006767131a331a6"
+      "bytes": 36482,
+      "sha256": "bc0f074004b2c0eb94c15087abea15d6a98c0ad25c6820c7e491344f1fd959a5",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "17-albums-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 199539,
+        "sha256": "2a00b82f2c6d735b9a3f3d4bd1ada99b8496bbfb834ed6df7006767131a331a6"
+      },
+      "preview": {
+        "filename": "../previews/ios/17-albums-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 23638,
+        "sha256": "5bce15e420ccef28989dcf0b3c0eaf310d452317fce6b3cde6642fbe9b52041d",
+        "quality": 86
+      }
     },
     {
-      "filename": "18-mountain-album-dark.png",
+      "filename": "18-mountain-album-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 2528524,
-      "sha256": "2dabdad94cf51d54bcfb7f1a8f955dbbefeed8497a7831a631a8fc0d1938d7ba"
+      "bytes": 351884,
+      "sha256": "7ebf2352bdb519d6339a23357d64c70725ff40d18d194f4298005eb3eae65a55",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "18-mountain-album-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 2528524,
+        "sha256": "2dabdad94cf51d54bcfb7f1a8f955dbbefeed8497a7831a631a8fc0d1938d7ba"
+      },
+      "preview": {
+        "filename": "../previews/ios/18-mountain-album-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 88256,
+        "sha256": "2d294fe5abb0b668c6531bd7b2b33b490a17879c3bdfa54fc01dccdde37bdc6c",
+        "quality": 86
+      }
     },
     {
-      "filename": "19-add-to-album-dark.png",
+      "filename": "19-add-to-album-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 503657,
-      "sha256": "b2890a3e5af4cb539907a63045f2639221e04a5d2f95f1d9d7ffa40823ddf4e7"
+      "bytes": 89284,
+      "sha256": "11571f6321ea6beb4922eca7ddb0232b07978729673991188d99ddaf9856807f",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "19-add-to-album-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 503657,
+        "sha256": "b2890a3e5af4cb539907a63045f2639221e04a5d2f95f1d9d7ffa40823ddf4e7"
+      },
+      "preview": {
+        "filename": "../previews/ios/19-add-to-album-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 29816,
+        "sha256": "4ca092c521dc5db7f5de20052310dd5f1c5f8c11a043491c7daba5edb4d46da9",
+        "quality": 86
+      }
     },
     {
-      "filename": "20-city-viewer.png",
+      "filename": "20-city-viewer.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 1562658,
-      "sha256": "48ccc078ee7a320dce32acc442aa1e82dc15f2f6b2718ab463fd82150912fa64"
+      "bytes": 222460,
+      "sha256": "40dda2d29810bcfa185b3141aed9cb7c6db7ee71159d7916cf31c2300e569450",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "20-city-viewer.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 1562658,
+        "sha256": "48ccc078ee7a320dce32acc442aa1e82dc15f2f6b2718ab463fd82150912fa64"
+      },
+      "preview": {
+        "filename": "../previews/ios/20-city-viewer.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 62866,
+        "sha256": "077246e94b771553f1726b972293f7da77237fff97d639206815f37422597f4a",
+        "quality": 86
+      }
     },
     {
-      "filename": "21-travel-timeline-dark.png",
+      "filename": "21-travel-timeline-dark.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 3211125,
-      "sha256": "72e2279497bf46618699b0a1cdb2d05061696dc50da9bab7b827baeef7e9194e"
+      "bytes": 445080,
+      "sha256": "067f06b03ea90c25d1e28a8b89af061595937a617d5bf56a2d945943ab0b7fb6",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "21-travel-timeline-dark.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 3211125,
+        "sha256": "72e2279497bf46618699b0a1cdb2d05061696dc50da9bab7b827baeef7e9194e"
+      },
+      "preview": {
+        "filename": "../previews/ios/21-travel-timeline-dark.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 111658,
+        "sha256": "41d6b706783a5cb8c2c1866fe25b75def73fe90011b7db6d691762810aa5e23f",
+        "quality": 86
+      }
     },
     {
-      "filename": "22-welcome-light.png",
+      "filename": "22-welcome-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 252154,
-      "sha256": "31d89f2851be0c9256f87f70522d14c63b153208f37409720f78acd8f787b161"
+      "bytes": 39490,
+      "sha256": "52d47f18ffba5ab501ca25ba59f1108d67a9eb67d47263f764ce7e1ff272cd26",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "22-welcome-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 252154,
+        "sha256": "31d89f2851be0c9256f87f70522d14c63b153208f37409720f78acd8f787b161"
+      },
+      "preview": {
+        "filename": "../previews/ios/22-welcome-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 16288,
+        "sha256": "10a6ad87186e0ff5c41be9097fbe01f76102e05f958c9dc9e6863dd89bdb3fd8",
+        "quality": 86
+      }
     },
     {
-      "filename": "23-sign-in-light.png",
+      "filename": "23-sign-in-light.webp",
       "width": 1179,
       "height": 2556,
-      "bytes": 240671,
-      "sha256": "0629166afa3c6a4b5c783bb55872ccadea550ed59daa631897cc21b030eb94cc"
+      "bytes": 41808,
+      "sha256": "cbc53251d70e5e49de3417d1805b35ebb6b1f659e58e61f9f04acc823eb09cdc",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "23-sign-in-light.png",
+        "width": 1179,
+        "height": 2556,
+        "bytes": 240671,
+        "sha256": "0629166afa3c6a4b5c783bb55872ccadea550ed59daa631897cc21b030eb94cc"
+      },
+      "preview": {
+        "filename": "../previews/ios/23-sign-in-light.webp",
+        "width": 600,
+        "height": 1301,
+        "bytes": 16286,
+        "sha256": "65d8173906d244e0cb856d1bcd8044e3d55d560b3edcca72c85ecd66b846262f",
+        "quality": 86
+      }
     }
-  ]
+  ],
+  "storage": "Full-resolution WebP images with separate 600px-wide README previews; original PNG capture metadata is retained per image."
 }

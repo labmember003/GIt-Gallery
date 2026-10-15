@@ -3,151 +3,599 @@
   "capture": "adb shell screencap -p",
   "screenshots": [
     {
-      "filename": "01-gallery-light.png",
+      "filename": "01-gallery-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3411176,
-      "sha256": "08a719c636f455542f1ee6f6cd90a9c7b6dd992af79d0da60edc56dcdb5bc784"
+      "bytes": 434496,
+      "sha256": "db62e2aa1ba24c4196f0888c7ba07625fbd85ce6f201f89df9310a7d7339c2f4",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "01-gallery-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3411176,
+        "sha256": "08a719c636f455542f1ee6f6cd90a9c7b6dd992af79d0da60edc56dcdb5bc784"
+      },
+      "preview": {
+        "filename": "../previews/android/01-gallery-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 90700,
+        "sha256": "c1ec9459bd7504e06309876830045501370d1409515d17a239c8893647655195",
+        "quality": 86
+      }
     },
     {
-      "filename": "02-cloud-light.png",
+      "filename": "02-cloud-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3396467,
-      "sha256": "852412b6dbec4e39c862a89116fbe6d8498a41793cfac5a035a2be77bb9dead7"
+      "bytes": 431922,
+      "sha256": "3ca8334d565ab4e5418def3cf1a0170061f8c7fdd3a047d6d6f507bff63851ca",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "02-cloud-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3396467,
+        "sha256": "852412b6dbec4e39c862a89116fbe6d8498a41793cfac5a035a2be77bb9dead7"
+      },
+      "preview": {
+        "filename": "../previews/android/02-cloud-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 87724,
+        "sha256": "fa2d0be2a7b67c76f2ae575ecc9dc4c9b35bfbffafabbd447136a11fa40d1904",
+        "quality": 86
+      }
     },
     {
-      "filename": "03-riviera-viewer.png",
+      "filename": "03-riviera-viewer.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 4724855,
-      "sha256": "fc33ca90365755d0caec5b862e81412ea548b7d22986172722af5d39b0eac1a0"
+      "bytes": 591750,
+      "sha256": "58ce47895a53be2db1686b9a4ac9d7fded53af3922db649d0569205ef2e2bb66",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "03-riviera-viewer.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 4724855,
+        "sha256": "fc33ca90365755d0caec5b862e81412ea548b7d22986172722af5d39b0eac1a0"
+      },
+      "preview": {
+        "filename": "../previews/android/03-riviera-viewer.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 134580,
+        "sha256": "9d2f87aebf788b05c5472546cb7e6ffd54d97fd7bb54fbdbb40188f719f3178b",
+        "quality": 86
+      }
     },
     {
-      "filename": "04-favourites-light.png",
+      "filename": "04-favourites-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3243950,
-      "sha256": "7f47ec592a49fbeb6fb0d0e14e90b132c418365aca8de6fc1b46f67cf5c8fd5d"
+      "bytes": 429388,
+      "sha256": "ffc3828f4e2e69c6574597cebd6d543bbd01c84b2b568f4d5c0c4b4ad6432be9",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "04-favourites-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3243950,
+        "sha256": "7f47ec592a49fbeb6fb0d0e14e90b132c418365aca8de6fc1b46f67cf5c8fd5d"
+      },
+      "preview": {
+        "filename": "../previews/android/04-favourites-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 92458,
+        "sha256": "77983d0711dc54cc62aad2795a1b367a032806efbafa0a365e63b170233cbe1e",
+        "quality": 86
+      }
     },
     {
-      "filename": "05-albums-light.png",
+      "filename": "05-albums-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 170368,
-      "sha256": "6d5f316018c750aea996f8ec8d3131ab8654c7037390d6f2a96e225a7bc1485f"
+      "bytes": 40448,
+      "sha256": "cf2f8a8ed8c3e940712e87f9f61ccc2df53c25b5acae2b201e3a073d2f5153f5",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "05-albums-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 170368,
+        "sha256": "6d5f316018c750aea996f8ec8d3131ab8654c7037390d6f2a96e225a7bc1485f"
+      },
+      "preview": {
+        "filename": "../previews/android/05-albums-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 22222,
+        "sha256": "7e9eb2374dd7c00015d3347e6f29d9108c64d4008108941daf3a2b4b528c7134",
+        "quality": 86
+      }
     },
     {
-      "filename": "06-mountain-album-light.png",
+      "filename": "06-mountain-album-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3210709,
-      "sha256": "c3a60b66a45085b891ff62b4b2237c81dc2f8de7ede852b6cc89a0497c2ff7d2"
+      "bytes": 435692,
+      "sha256": "c8ebb27a43c13b8666e5254d1c898e648dee9ca43b5754d4d5a73fa2067d639e",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "06-mountain-album-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3210709,
+        "sha256": "c3a60b66a45085b891ff62b4b2237c81dc2f8de7ede852b6cc89a0497c2ff7d2"
+      },
+      "preview": {
+        "filename": "../previews/android/06-mountain-album-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 85060,
+        "sha256": "14f57597380b6f384cc1fc5d144ef49000c5eefd522f4922f544d73080d31f7b",
+        "quality": 86
+      }
     },
     {
-      "filename": "07-alpine-viewer.png",
+      "filename": "07-alpine-viewer.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 4960719,
-      "sha256": "f6c35b050cc4ccd2ec221c60a5a127ce1987e44be82ce2b6004b2d82ce2f99d4"
+      "bytes": 823452,
+      "sha256": "5cc288bb463aa643aff1f31e96ae4920e98753a4d2893946cbf2bbddf4a7bdb2",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "07-alpine-viewer.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 4960719,
+        "sha256": "f6c35b050cc4ccd2ec221c60a5a127ce1987e44be82ce2b6004b2d82ce2f99d4"
+      },
+      "preview": {
+        "filename": "../previews/android/07-alpine-viewer.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 121334,
+        "sha256": "2530db4075f0e0e8c8f8078d0474f50cf865c1dfa872455131633e6495007d01",
+        "quality": 86
+      }
     },
     {
-      "filename": "08-ocean-video-player.png",
+      "filename": "08-ocean-video-player.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 2150591,
-      "sha256": "aceafd74d15d3b4a09a361df3ae04b2339b4f45abc0e59e9cb19cac8d10d256e"
+      "bytes": 132864,
+      "sha256": "de926f458734450c65462b3b64c5c98bbe5031ad4ec0b2c1da882bd1f0788d80",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "08-ocean-video-player.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 2150591,
+        "sha256": "aceafd74d15d3b4a09a361df3ae04b2339b4f45abc0e59e9cb19cac8d10d256e"
+      },
+      "preview": {
+        "filename": "../previews/android/08-ocean-video-player.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 34928,
+        "sha256": "b91509106c54d06783526d02dd0745d6a6189ac47ee73da74046eb8d0a656363",
+        "quality": 86
+      }
     },
     {
-      "filename": "09-multi-select-light.png",
+      "filename": "09-multi-select-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3195840,
-      "sha256": "eb6e6b4090a1427e01d688fbe41b4c511c38b45f5144c1e196c1c12e7a04cc1d"
+      "bytes": 421246,
+      "sha256": "f9824978ac9e7a5d0f262bfe8bfb1e4c9b937e532c7c823ff6950caca3d89081",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "09-multi-select-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3195840,
+        "sha256": "eb6e6b4090a1427e01d688fbe41b4c511c38b45f5144c1e196c1c12e7a04cc1d"
+      },
+      "preview": {
+        "filename": "../previews/android/09-multi-select-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 90424,
+        "sha256": "d136c22ebead7842999b48c74168ef5c06101ff83418457826c4fd30c3d7c4bf",
+        "quality": 86
+      }
     },
     {
-      "filename": "10-settings-light.png",
+      "filename": "10-settings-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 302386,
-      "sha256": "bab5ee1d8a7cbb20077c54f8209e3174f8b0dfa4470a09ca94d2d62fbcc261a6"
+      "bytes": 93358,
+      "sha256": "c1f18227a5cd75748d6b527a441c42a0a2b2fba386927427cf7021856a803f1a",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "10-settings-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 302386,
+        "sha256": "bab5ee1d8a7cbb20077c54f8209e3174f8b0dfa4470a09ca94d2d62fbcc261a6"
+      },
+      "preview": {
+        "filename": "../previews/android/10-settings-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 42610,
+        "sha256": "b15ca79477a07d9d2d82a77d3b7c1deb863ca4d1799cc0e920afb8fa387a86d6",
+        "quality": 86
+      }
     },
     {
-      "filename": "11-upload-quality-light.png",
+      "filename": "11-upload-quality-light.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 236471,
-      "sha256": "d5bb7b07ab410b03d3799da6e7cb89fda0b468f39679f9dfc4c908b364d60e1d"
+      "bytes": 66640,
+      "sha256": "880cde56d9a216e3dd5b41804b2cc1f55492e1172be88c9bb236854dd82a6628",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "11-upload-quality-light.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 236471,
+        "sha256": "d5bb7b07ab410b03d3799da6e7cb89fda0b468f39679f9dfc4c908b364d60e1d"
+      },
+      "preview": {
+        "filename": "../previews/android/11-upload-quality-light.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 32738,
+        "sha256": "3a42609990ff98400824325dfa51baf6506bec753e70a675fbda1949111a736d",
+        "quality": 86
+      }
     },
     {
-      "filename": "12-upload-quality-dark.png",
+      "filename": "12-upload-quality-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 237706,
-      "sha256": "4e830bbcf78eb8fe8147bc8ba1babb4fc4ffb62341815e32019e86314aaa447d"
+      "bytes": 66260,
+      "sha256": "98654ab408e82b696d288768104732265db231172953f0734e72dc992dafb68b",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "12-upload-quality-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 237706,
+        "sha256": "4e830bbcf78eb8fe8147bc8ba1babb4fc4ffb62341815e32019e86314aaa447d"
+      },
+      "preview": {
+        "filename": "../previews/android/12-upload-quality-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 32788,
+        "sha256": "982f37341cbea404af96ac3c5812f3f19f4c6de916c2edc28e6c7766c8bf3721",
+        "quality": 86
+      }
     },
     {
-      "filename": "13-gallery-dark.png",
+      "filename": "13-gallery-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3414128,
-      "sha256": "a38328290d17db9761d0fc3c18d0fca03df59db96e9fc85f237a57776f3d919a"
+      "bytes": 436410,
+      "sha256": "1c598e5ad2d321f43889f2aaaf80e8f383aa816c0cf0a120d27d6e5e8ad011a7",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "13-gallery-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3414128,
+        "sha256": "a38328290d17db9761d0fc3c18d0fca03df59db96e9fc85f237a57776f3d919a"
+      },
+      "preview": {
+        "filename": "../previews/android/13-gallery-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 93206,
+        "sha256": "5ee662087742aff916d52778fac2681f1142b04936e8a5397a5a997f658c1660",
+        "quality": 86
+      }
     },
     {
-      "filename": "14-cloud-dark.png",
+      "filename": "14-cloud-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3397332,
-      "sha256": "4277fb610f048eda5e83a30ba7eb189efaadfe2d84f1e0a8bf8895f2c393ae72"
+      "bytes": 432244,
+      "sha256": "1553950bd5638c039c9498ba4f10074c72fc5b196fdbbb2c04823523c0da776a",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "14-cloud-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3397332,
+        "sha256": "4277fb610f048eda5e83a30ba7eb189efaadfe2d84f1e0a8bf8895f2c393ae72"
+      },
+      "preview": {
+        "filename": "../previews/android/14-cloud-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 87398,
+        "sha256": "908d3ec07f38cce12ddf883819ce0d59b55d33bfa638dcea187ac5d70e6491c1",
+        "quality": 86
+      }
     },
     {
-      "filename": "15-favourites-dark.png",
+      "filename": "15-favourites-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3241627,
-      "sha256": "3f2bcf1e32bb2c2c03d45f31512d69f0b919ce7662b36450e6f0c51da67826d4"
+      "bytes": 430110,
+      "sha256": "15eb395d30c2ba94aa375b25ee5c1ede74e9f8e5fc48c370d10cc6a32e89ef5b",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "15-favourites-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3241627,
+        "sha256": "3f2bcf1e32bb2c2c03d45f31512d69f0b919ce7662b36450e6f0c51da67826d4"
+      },
+      "preview": {
+        "filename": "../previews/android/15-favourites-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 92424,
+        "sha256": "18df631fcb266c59ee65670f40cda9e9495852f4c87950b5621d9a3090351b85",
+        "quality": 86
+      }
     },
     {
-      "filename": "16-multi-select-dark.png",
+      "filename": "16-multi-select-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3196240,
-      "sha256": "f7bc180efbe9018fb1a8ad150a78d4996cb5c141d932b7f205a2140ec018c898"
+      "bytes": 422688,
+      "sha256": "75c77356d17aaa04aae0dbca64ec33f9c3759cc03d4ea6712b34a1e9a5d93d23",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "16-multi-select-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3196240,
+        "sha256": "f7bc180efbe9018fb1a8ad150a78d4996cb5c141d932b7f205a2140ec018c898"
+      },
+      "preview": {
+        "filename": "../previews/android/16-multi-select-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 94016,
+        "sha256": "ab98806cc093dbcbd3043fefb3fde0bacb10bdf6b468b84446e742b5cf1635ad",
+        "quality": 86
+      }
     },
     {
-      "filename": "17-albums-dark.png",
+      "filename": "17-albums-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 167155,
-      "sha256": "d6f01b4c9bc31e4def626d38afd9713ff8ce981e9563ba4d41b8f1985f00761e"
+      "bytes": 36874,
+      "sha256": "295de137bb5abead2666ac955803db0d2aa5e52416af080b6eaf434baeae7232",
+      "compression": {
+        "format": "WebP",
+        "lossless": true
+      },
+      "originalCapture": {
+        "filename": "17-albums-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 167155,
+        "sha256": "d6f01b4c9bc31e4def626d38afd9713ff8ce981e9563ba4d41b8f1985f00761e"
+      },
+      "preview": {
+        "filename": "../previews/android/17-albums-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 21982,
+        "sha256": "c576a5bef5ef669171c356d394a0fa56d4bfc2d7bb00f6db17172681e3fc1564",
+        "quality": 86
+      }
     },
     {
-      "filename": "18-mountain-album-dark.png",
+      "filename": "18-mountain-album-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 3187737,
-      "sha256": "55e731fad0e73acc0aa61c51a1e81ed6de25fda1bbac5253e344d7d9a9a8445a"
+      "bytes": 437148,
+      "sha256": "aa64494c173290e3fc6e650be8f6fcfa43015f63835439c44426fad2458873ef",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "18-mountain-album-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 3187737,
+        "sha256": "55e731fad0e73acc0aa61c51a1e81ed6de25fda1bbac5253e344d7d9a9a8445a"
+      },
+      "preview": {
+        "filename": "../previews/android/18-mountain-album-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 86148,
+        "sha256": "e8c32541fb382896426189cb82cb34e935be95c941122ee2676cd56005910179",
+        "quality": 86
+      }
     },
     {
-      "filename": "19-add-to-album-dark.png",
+      "filename": "19-add-to-album-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 577259,
-      "sha256": "b702d3a12de321bf4dc0c3ed313f3474215c3b7cc7ca13aa1d63e6c6c4eae150"
+      "bytes": 110294,
+      "sha256": "3e852bf880817c39d6c2e7e8756d4f539146982c604682cf72c3741bf07789c5",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "19-add-to-album-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 577259,
+        "sha256": "b702d3a12de321bf4dc0c3ed313f3474215c3b7cc7ca13aa1d63e6c6c4eae150"
+      },
+      "preview": {
+        "filename": "../previews/android/19-add-to-album-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 29548,
+        "sha256": "db871430a11ad6ad3138ea376c59164178c9f944b1237e2508a74e37499a8968",
+        "quality": 86
+      }
     },
     {
-      "filename": "20-city-viewer.png",
+      "filename": "20-city-viewer.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 2093916,
-      "sha256": "7c52a02b2ac33c444046edb5834a19811982281b074f6e909cf29b19057fc2b6"
+      "bytes": 304052,
+      "sha256": "e3578559d5472ec90846ea0d13b0e836471b1123ddfd34288a0863ed60093cc3",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "20-city-viewer.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 2093916,
+        "sha256": "7c52a02b2ac33c444046edb5834a19811982281b074f6e909cf29b19057fc2b6"
+      },
+      "preview": {
+        "filename": "../previews/android/20-city-viewer.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 63050,
+        "sha256": "68ac223f4ea8c24cfd1db4b8310969e64ec3e6225721d1e98b014eee825cc038",
+        "quality": 86
+      }
     },
     {
-      "filename": "21-travel-timeline-dark.png",
+      "filename": "21-travel-timeline-dark.webp",
       "width": 1440,
       "height": 3120,
-      "bytes": 4154467,
-      "sha256": "a3d480c187a3bab1179da0212abfa4cbcb06e7a202a04eaf9e00d4856029cd9a"
+      "bytes": 563560,
+      "sha256": "d7d9efbda88c10e84bbbbab7819cb3ebe8408f2f46727a20a9a606368a37f77f",
+      "compression": {
+        "format": "WebP",
+        "lossless": false,
+        "quality": 90,
+        "method": 6,
+        "sharpYuv": true
+      },
+      "originalCapture": {
+        "filename": "21-travel-timeline-dark.png",
+        "width": 1440,
+        "height": 3120,
+        "bytes": 4154467,
+        "sha256": "a3d480c187a3bab1179da0212abfa4cbcb06e7a202a04eaf9e00d4856029cd9a"
+      },
+      "preview": {
+        "filename": "../previews/android/21-travel-timeline-dark.webp",
+        "width": 600,
+        "height": 1300,
+        "bytes": 111754,
+        "sha256": "5069b1ec376030566baf1c4fff9a8a7b69cb71a32f5de4fd1e521169cee44719",
+        "quality": 86
+      }
     }
-  ]
+  ],
+  "storage": "Full-resolution WebP images with separate 600px-wide README previews; original PNG capture metadata is retained per image."
 }
