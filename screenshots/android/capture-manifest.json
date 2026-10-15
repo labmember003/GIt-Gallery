@@ -1,0 +1,153 @@
+{
+  "device": "Pixel 6 Pro Android emulator",
+  "capture": "adb shell screencap -p",
+  "screenshots": [
+    {
+      "filename": "01-gallery-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3411176,
+      "sha256": "08a719c636f455542f1ee6f6cd90a9c7b6dd992af79d0da60edc56dcdb5bc784"
+    },
+    {
+      "filename": "02-cloud-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3396467,
+      "sha256": "852412b6dbec4e39c862a89116fbe6d8498a41793cfac5a035a2be77bb9dead7"
+    },
+    {
+      "filename": "03-riviera-viewer.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 4724855,
+      "sha256": "fc33ca90365755d0caec5b862e81412ea548b7d22986172722af5d39b0eac1a0"
+    },
+    {
+      "filename": "04-favourites-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3243950,
+      "sha256": "7f47ec592a49fbeb6fb0d0e14e90b132c418365aca8de6fc1b46f67cf5c8fd5d"
+    },
+    {
+      "filename": "05-albums-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 170368,
+      "sha256": "6d5f316018c750aea996f8ec8d3131ab8654c7037390d6f2a96e225a7bc1485f"
+    },
+    {
+      "filename": "06-mountain-album-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3210709,
+      "sha256": "c3a60b66a45085b891ff62b4b2237c81dc2f8de7ede852b6cc89a0497c2ff7d2"
+    },
+    {
+      "filename": "07-alpine-viewer.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 4960719,
+      "sha256": "f6c35b050cc4ccd2ec221c60a5a127ce1987e44be82ce2b6004b2d82ce2f99d4"
+    },
+    {
+      "filename": "08-ocean-video-player.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 2150591,
+      "sha256": "aceafd74d15d3b4a09a361df3ae04b2339b4f45abc0e59e9cb19cac8d10d256e"
+    },
+    {
+      "filename": "09-multi-select-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3195840,
+      "sha256": "eb6e6b4090a1427e01d688fbe41b4c511c38b45f5144c1e196c1c12e7a04cc1d"
+    },
+    {
+      "filename": "10-settings-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 302386,
+      "sha256": "bab5ee1d8a7cbb20077c54f8209e3174f8b0dfa4470a09ca94d2d62fbcc261a6"
+    },
+    {
+      "filename": "11-upload-quality-light.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 236471,
+      "sha256": "d5bb7b07ab410b03d3799da6e7cb89fda0b468f39679f9dfc4c908b364d60e1d"
+    },
+    {
+      "filename": "12-upload-quality-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 237706,
+      "sha256": "4e830bbcf78eb8fe8147bc8ba1babb4fc4ffb62341815e32019e86314aaa447d"
+    },
+    {
+      "filename": "13-gallery-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3414128,
+      "sha256": "a38328290d17db9761d0fc3c18d0fca03df59db96e9fc85f237a57776f3d919a"
+    },
+    {
+      "filename": "14-cloud-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3397332,
+      "sha256": "4277fb610f048eda5e83a30ba7eb189efaadfe2d84f1e0a8bf8895f2c393ae72"
+    },
+    {
+      "filename": "15-favourites-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3241627,
+      "sha256": "3f2bcf1e32bb2c2c03d45f31512d69f0b919ce7662b36450e6f0c51da67826d4"
+    },
+    {
+      "filename": "16-multi-select-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3196240,
+      "sha256": "f7bc180efbe9018fb1a8ad150a78d4996cb5c141d932b7f205a2140ec018c898"
+    },
+    {
+      "filename": "17-albums-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 167155,
+      "sha256": "d6f01b4c9bc31e4def626d38afd9713ff8ce981e9563ba4d41b8f1985f00761e"
+    },
+    {
+      "filename": "18-mountain-album-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 3187737,
+      "sha256": "55e731fad0e73acc0aa61c51a1e81ed6de25fda1bbac5253e344d7d9a9a8445a"
+    },
+    {
+      "filename": "19-add-to-album-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 577259,
+      "sha256": "b702d3a12de321bf4dc0c3ed313f3474215c3b7cc7ca13aa1d63e6c6c4eae150"
+    },
+    {
+      "filename": "20-city-viewer.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 2093916,
+      "sha256": "7c52a02b2ac33c444046edb5834a19811982281b074f6e909cf29b19057fc2b6"
+    },
+    {
+      "filename": "21-travel-timeline-dark.png",
+      "width": 1440,
+      "height": 3120,
+      "bytes": 4154467,
+      "sha256": "a3d480c187a3bab1179da0212abfa4cbcb06e7a202a04eaf9e00d4856029cd9a"
+    }
+  ]
+}
