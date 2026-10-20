@@ -9,7 +9,7 @@ const app = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const mode = process.argv[2] ?? 'dev';
 if (!['dev', 'build', 'preview'].includes(mode)) throw new Error('Use dev, build, or preview.');
 const env = { ...process.env, EXPO_NO_DOTENV: '1', BROWSER: 'none' };
-for (const key of ['EXPO_PUBLIC_GITHUB_TOKEN', 'EXPO_PUBLIC_GITHUB_TEST_REPO', 'GITHUB_CLIENT_SECRET']) delete env[key];
+for (const key of ['EXPO_PUBLIC_GITHUB_TOKEN', 'EXPO_PUBLIC_GITHUB_TEST_REPO', 'GITHUB_CLIENT_SECRET', 'UPSTASH_REDIS_REST_TOKEN', 'KV_REST_API_TOKEN']) delete env[key];
 let child;
 let server;
 if (mode === 'build') {

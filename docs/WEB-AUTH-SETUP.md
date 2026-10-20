@@ -2,6 +2,16 @@
 
 The website guides each visitor through signing in to **their own GitHub account**, approving GitGallery and choosing their photo repository. Users do not create developer credentials or personal tokens.
 
+The shared website is live at **[gitgallery-umber.vercel.app](https://gitgallery-umber.vercel.app)**. GitHub code issuance, pending approval and cancellation were verified on the deployed site; completing sign-in requires the visitor to approve access on GitHub.
+
+## Why web uses a server while mobile connects directly
+
+The native Android/iOS clients call GitHub's Device Flow endpoints directly and keep the resulting user token in Expo SecureStore. Native networking is not subject to browser CORS restrictions. Device Flow does not require an app client secret; a native app is not a safe place to hide a shared secret either.
+
+The web version uses a Node server for those authorization requests and stores GitHub tokens in its server sessions. The browser receives an HttpOnly session cookie instead of the GitHub token. This reduces exposure of the token to page JavaScript and lets the server fetch private media without browser redirect/CORS problems. React itself does not require a backend; this is the architecture chosen for the current GitHub sign-in and private-gallery experience.
+
+✅ [React Native networking](https://reactnative.dev/docs/network) explains the native CORS difference. [Browser CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) requires the remote endpoint to allow cross-origin response access. A live check on 2026-10-20 used the configured client ID and a website Origin header: GitHub's device-code endpoint and an invalid-device-code token request both returned HTTP 200 without `Access-Control-Allow-Origin`. No user authorization was completed and no response credentials were displayed. This is distinct from the [GitHub REST API](https://docs.github.com/en/rest/using-the-rest-api/using-cors-and-jsonp-to-make-cross-origin-requests), which does support CORS; public web gallery requests already use it directly. [HttpOnly cookies](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies) prevent JavaScript from reading the session cookie, but do not by themselves eliminate every web security risk.
+
 ## What a visitor does
 
 1. Click **Continue with GitHub**.
@@ -56,6 +66,8 @@ For redirect sign-in, obtain the client secret for the same registration, store 
 ✅ [GitHub's web authorization flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#web-application-flow) requires a client secret. This requirement applies to redirect sign-in; it does not block approval-code sign-in.
 
 ## Hosting and optional advanced access
+
+The selected deployment is one Vercel project for the frontend and Node API, with Upstash Redis for sessions, pending approvals and rate counters. Vercel requires the shared store; it does not fall back to process memory. Configure hosted settings in the project's environment dashboard. Deployed functions ignore the local `.env.web` file. Follow [WEB-DEPLOYMENT.md](WEB-DEPLOYMENT.md) for the free-plan setup and live status.
 
 Run the Node website behind HTTPS, set `WEB_ORIGIN` to its public origin, and set `HOST=0.0.0.0` if the host needs it. Preserve the configured Host header through the reverse proxy. Production startup validates the credentials required for the selected method. Static hosting of `dist-web` alone does not provide authentication.
 

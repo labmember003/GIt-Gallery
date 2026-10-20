@@ -2,6 +2,8 @@
 
 A photo/video gallery app that stores your library in **your own private GitHub repo**, with an **Immich-quality UI**.
 
+**[Open GitGallery Web](https://gitgallery-umber.vercel.app)** · [Try the demo](https://gitgallery-umber.vercel.app/?demo=1)
+
 Your media lives in GitHub. Android and iOS connect directly; the web app uses a small Node server for secure sign-in.
 
 > **Status: v1 complete.** Android + iOS, tested on emulator/simulator and on real hardware
@@ -202,7 +204,7 @@ npm run preview:web     # http://127.0.0.1:8082
 
 **Website operator setup, once for all users:** set the existing registration’s client ID in `app/.env.web` and enable Device Flow on GitHub. Visitors click **Continue with GitHub**, follow the on-screen copy-code/approval steps, and return to choose their library. No client secret is needed for this flow. A configured client secret enables optional direct browser redirects. [Plain-language setup guide](docs/WEB-AUTH-SETUP.md). Run `npm run check:web` from `app/` to check configuration without exposing secrets. Token login is an optional advanced feature, disabled by default.
 
-The web scripts exclude native development credentials and `.env` from website builds. The Node server is required for sign-in; publishing `dist-web` alone is insufficient. [Web setup, deployment, and limitations](docs/WEB-PLAN.md).
+The web scripts exclude native development credentials and `.env` from website builds. The Node backend is required for sign-in; publishing `dist-web` alone is insufficient. Frontend and API are configured for one Vercel project, with shared Redis sessions. [Vercel deployment guide](docs/WEB-DEPLOYMENT.md) · [Web setup and limitations](docs/WEB-PLAN.md).
 
 **Android / iOS:**
 
