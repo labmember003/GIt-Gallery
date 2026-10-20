@@ -1,0 +1,13 @@
+.env*
+**/.env*
+android/
+ios/
+node_modules/
+dist-web/
+test-results/
+playwright-report/
+web-tests/
+server/*.test.mjs
+src/**/__tests__/
+.expo/
+*.log

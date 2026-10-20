@@ -8,3 +8,6 @@ build-*
 dist-web/
 playwright-report/
 test-results/
+.vercel/
+.vercel
+.env*

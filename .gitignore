@@ -12,3 +12,4 @@
 #                            remote, so committing a copy duplicates it.
 #                            Recreate: git fetch upstream
 reference/
+.vercel/

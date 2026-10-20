@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createServer } from 'node:http';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createAuthHandler } from './auth.mjs';
+import { createMemorySessionStore, createRedisSessionStore, StoreUnavailable } from './session-store.mjs';
+import { createVercelHandler } from './vercel.mjs';
 
 const TOKEN = 'test_token_for_fixture_only_1234567890';
 const SECRET = 'fixture_client_secret_only';
 const SHA = 'a'.repeat(40);
 const DEVICE = { device_code: 'server_only_device_code_fixture', user_code: 'ABCD-EFGH', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 };
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...headers } });
-async function setup(t, overrides = {}) {
+async function setup(t, overrides = {}, options = {}) {
   let time = Date.now();
   const config = { origin: '', clientId: 'test-client-id', clientSecret: SECRET, allowTokenSignIn: true };
   const requests = [];
@@ -24,8 +26,12 @@ async function setup(t, overrides = {}) {
     if (url.endsWith(`/git/blobs/${SHA}`)) return new Response('image bytes', { headers: { 'content-type': 'image/webp' } });
     return json({}, 404);
   };
-  const handler = createAuthHandler(config, { fetcher, now: () => time });
-  const server = createServer(async (req, res) => { if (!await handler(req, res)) res.writeHead(404).end(); });
+  const redis = process.env.GITGALLERY_TEST_REDIS_URL && process.env.GITGALLERY_TEST_REDIS_TOKEN;
+  const store = options.store ?? (redis ? createRedisSessionStore({ origin: `https://fixture-${randomUUID()}.example`,
+    redisUrl: process.env.GITGALLERY_TEST_REDIS_URL, redisToken: process.env.GITGALLERY_TEST_REDIS_TOKEN }, { now: () => time }) : createMemorySessionStore({ now: () => time }));
+  const makeHandler = () => (options.freshInstance ? createVercelHandler : createAuthHandler)(config, { fetcher, now: () => time, store });
+  const handler = makeHandler();
+  const server = createServer(async (req, res) => { if (!await (options.freshInstance ? makeHandler() : handler)(req, res) && !res.writableEnded) res.writeHead(404).end(); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   config.origin = `http://127.0.0.1:${server.address().port}`;
   t.after(() => { server.closeAllConnections(); server.close(); });
@@ -285,4 +291,73 @@ test('sign-in cannot finish after the originating session has logged out', async
   await app.call('/api/auth/logout', {}); release();
   assert.match((await callback).headers.get('location'), /auth_error=/);
   assert.equal((await app.session()).user, null);
+});
+
+test('fresh Vercel handlers share sign-in, repository selection, sessions and logout', async t => {
+  const app = await setup(t, {}, { freshInstance: true });
+  await app.login();
+  await app.call('/api/repository', { repository: 'tester/photos' });
+  const authenticated = app.getCookie();
+  assert.equal((await app.session()).selectedRepo.name, 'photos');
+  assert.equal((await app.session()).user.login, 'tester');
+  const media = await app.call(`/api/github/repos/tester/photos/git/blobs/${SHA}`, undefined, { Accept: 'application/vnd.github.raw+json' });
+  assert.equal(await media.text(), 'image bytes');
+  await app.call('/api/auth/logout', {});
+  assert.equal((await app.call('/api/repositories', undefined, { Cookie: authenticated })).status, 401);
+});
+
+test('device cancellation on another Vercel instance wins over an in-flight approval', async t => {
+  let release; let entered;
+  const waiting = new Promise(resolve => { entered = resolve; });
+  const app = await setup(t, {
+    'https://github.com/login/device/code': () => json(DEVICE),
+    'https://github.com/login/oauth/access_token': () => { entered(); return new Promise(resolve => { release = () => resolve(json({ access_token: TOKEN })); }); },
+  }, { freshInstance: true });
+  app.config.clientSecret = ''; await app.session();
+  const { attemptId } = await (await app.call('/api/auth/start', {})).json();
+  app.advance(5000);
+  const poll = app.call('/api/auth/device/poll', { attemptId });
+  await waiting;
+  assert.equal((await (await app.call('/api/auth/device/poll', { attemptId })).json()).status, 'pending');
+  assert.equal((await app.call('/api/auth/device/cancel', { attemptId })).status, 200);
+  release();
+  assert.equal((await poll).status, 409);
+  assert.equal((await app.session()).user, null);
+  assert.equal(app.requests.filter(item => item.url.endsWith('/access_token')).length, 1);
+});
+
+test('redirect state is single-use and rate limits are shared across fresh Vercel handlers', async t => {
+  const app = await setup(t, {}, { freshInstance: true });
+  await app.session();
+  const target = new URL((await (await app.call('/api/auth/start', {})).json()).url);
+  assert.equal((await app.call(`/api/auth/callback?code=test&state=${target.searchParams.get('state')}`)).status, 303);
+  assert.equal((await app.session()).user.login, 'tester');
+  assert.match((await app.call(`/api/auth/callback?code=test&state=${target.searchParams.get('state')}`)).headers.get('location'), /auth_error=/);
+  for (let i = 0; i < 19; i++) assert.equal((await app.call('/api/auth/start', {})).status, 200);
+  assert.equal((await app.call('/api/auth/start', {})).status, 429);
+});
+
+test('a shared-store outage returns a safe retryable error without creating a session', async t => {
+  const store = { async rotate() { throw new StoreUnavailable(); } };
+  const app = await setup(t, {}, { store, freshInstance: true });
+  const response = await app.call('/api/session');
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get('set-cookie'), null);
+  assert.match((await response.json()).error, /temporarily unavailable/);
+});
+
+test('Vercel API handler streams private media larger than buffered function responses', async t => {
+  const chunk = new Uint8Array(1024 * 1024).fill(42);
+  const app = await setup(t, {
+    [`https://api.github.com/repos/tester/photos/git/blobs/${SHA}`]: () => new Response(new ReadableStream({
+      start(controller) { for (let i = 0; i < 6; i++) controller.enqueue(chunk); controller.close(); },
+    }), { headers: { 'content-type': 'video/mp4' } }),
+  }, { freshInstance: true });
+  await app.login(); await app.call('/api/repository', { repository: 'tester/photos' });
+  const response = await app.call(`/api/github/repos/tester/photos/git/blobs/${SHA}`, undefined, { Accept: 'application/vnd.github.raw+json' });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  let bytes = 0;
+  for await (const part of response.body) bytes += part.byteLength;
+  assert.equal(bytes, 6 * 1024 * 1024);
 });

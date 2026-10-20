@@ -2,6 +2,7 @@ import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { signInMethod } from './config.mjs';
+import { createSessionStore, SessionConflict, StoreUnavailable } from './session-store.mjs';
 
 const SESSION_AGE = 8 * 60 * 60 * 1000;
 const COOKIE = 'gg_session';
@@ -36,40 +37,40 @@ function userInfo(user) {
 }
 
 /** Same-origin session gateway. No token or client secret is returned to the browser. */
-export function createAuthHandler(config, { fetcher = (...args) => fetch(...args), now = Date.now } = {}) {
-  const sessions = new Map();
-  const attempts = new Map();
+export function createAuthHandler(config, { fetcher = (...args) => fetch(...args), now = Date.now, store } = {}) {
+  const sessions = store ?? createSessionStore(config, { now });
   const secure = () => new URL(config.origin).protocol === 'https:';
   function cookie(response, id, age) {
     response.setHeader('Set-Cookie', `${COOKIE}=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(age / 1000)}${secure() ? '; Secure' : ''}`);
   }
-  function find(request) {
+  async function find(request) {
     const id = request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
-    const session = id && sessions.get(id);
-    if (session && session.expires > now()) return session;
-    if (id) sessions.delete(id);
-    return null;
+    return typeof id === 'string' && /^[A-Za-z0-9_-]{43}$/.test(id) ? sessions.get(id) : null;
   }
-  function create(response, previous, values = {}) {
-    if (previous) sessions.delete(previous.id);
-    for (const [id, value] of sessions) if (value.expires <= now()) sessions.delete(id);
-    if (sessions.size >= 2000) throw new HttpError(503, 'The server is busy. Please try again later.');
+  async function save(session) {
+    const expected = session.version;
+    session.version++;
+    if (!await sessions.save(session, expected)) { session.version = expected; throw new SessionConflict(); }
+  }
+  async function active(session) {
+    const current = await sessions.get(session.id);
+    if (!current || current.version !== session.version) throw new SessionConflict();
+  }
+  async function create(response, previous, values = {}) {
     const age = values.user ? Math.min(SESSION_AGE, values.tokenAge ?? SESSION_AGE) : 30 * 60 * 1000;
-    const session = { id: random(), csrf: random(), expires: now() + age, ...values };
-    sessions.set(session.id, session); cookie(response, session.id, age); return session;
+    const session = { id: random(), version: 0, csrf: random(), expires: now() + age, ...values };
+    if (!await sessions.rotate(previous, session)) throw new SessionConflict();
+    cookie(response, session.id, age); return session;
   }
   function visible(session) {
     return { user: session.user ?? null, csrf: session.csrf, selectedRepo: session.repo ?? null,
       expiresAt: session.expires, oauthAvailable: !!signInMethod(config), signInMethod: signInMethod(config),
       tokenSignInAvailable: config.allowTokenSignIn === true };
   }
-  function limit(request) {
-    // Ignore forwarded headers; this bound protects the local server and shared deployments.
-    const key = request.socket.remoteAddress ?? 'unknown';
-    for (const [id, value] of attempts) if (value.until < now()) attempts.delete(id);
-    const item = attempts.get(key) ?? { count: 0, until: now() + 60_000 };
-    if (++item.count > 20) throw new HttpError(429, 'Too many sign-in attempts. Wait a minute and try again.');
-    attempts.set(key, item);
+  async function limit(request) {
+    // Vercel overwrites this header. Other hosts must not trust client-supplied forwarded headers.
+    const ip = config.vercel ? request.headers['x-vercel-forwarded-for'] : request.socket?.remoteAddress;
+    if (await sessions.increment(`sign-in:${ip ?? 'unknown'}`, 60_000) > 20) throw new HttpError(429, 'Too many sign-in attempts. Wait a minute and try again.');
   }
   async function github(path, token, accept = 'application/vnd.github+json', signal) {
     const response = await fetcher(`https://api.github.com${path}`, { method: 'GET', redirect: 'manual',
@@ -104,28 +105,30 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
   return async function handle(request, response) {
     const url = new URL(request.url, config.origin);
     if (!url.pathname.startsWith('/api/')) return false;
-    let session = find(request);
+    let session;
     try {
       if (request.headers.host !== new URL(config.origin).host) throw new HttpError(403, 'Open the configured website address.');
       if (request.headers['sec-fetch-site'] === 'cross-site' && url.pathname !== '/api/auth/callback') throw new HttpError(403, 'Cross-site requests are not allowed.');
       if (!['GET', 'POST'].includes(request.method)) throw new HttpError(405, 'Method not allowed.');
+      session = await find(request);
       if (request.method === 'POST') {
         if (request.headers.origin !== config.origin || !session || !equal(request.headers['x-gitgallery-csrf'], session.csrf)) throw new HttpError(403, 'Your session changed. Reload the page and try again.');
       }
       if (url.pathname === '/api/session' && request.method === 'GET') {
-        session ??= create(response);
+        session ??= await create(response);
         json(response, 200, visible(session)); return true;
       }
       if (url.pathname === '/api/auth/start' && request.method === 'POST') {
-        limit(request);
+        await limit(request);
         const method = signInMethod(config);
         if (!method) throw new HttpError(503, 'This website has not connected to GitHub yet. Open the setup instructions on the sign-in page, or contact the person who shared this website.');
         if (method === 'device') {
           if (session.pending?.kind === 'device' && session.pending.expires > now()) {
             json(response, 200, deviceDetails(session.pending)); return true;
           }
-          if (session.startingDevice) throw new HttpError(409, 'Sign-in is already starting. Please wait a moment.');
-          session.startingDevice = true;
+          if (session.startingUntil > now()) throw new HttpError(409, 'Sign-in is already starting. Please wait a moment.');
+          session.startingUntil = now() + 35_000;
+          await save(session);
           try {
             const upstream = await oauthRequest('device/code', { client_id: config.clientId, scope: 'repo' });
             const data = await upstream.json();
@@ -138,15 +141,21 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
               || (data.interval !== undefined && (!Number.isFinite(data.interval) || data.interval < 1 || data.interval > 900))) {
               throw new HttpError(502, 'GitHub returned an invalid sign-in code. Please try again.');
             }
-            if (find(request) !== session) throw new HttpError(409, 'Your session changed. Please start sign-in again.');
             const interval = Math.ceil(data.interval ?? 5) * 1000;
             session.pending = { kind: 'device', id: random(), deviceCode: data.device_code, userCode: data.user_code,
-              expires: now() + Math.min(data.expires_in, 900) * 1000, interval, nextPollAt: now() + interval, polling: false };
+              expires: now() + Math.min(data.expires_in, 900) * 1000, interval, nextPollAt: now() + interval, pollingUntil: 0 };
+            delete session.startingUntil;
+            await save(session);
             json(response, 200, deviceDetails(session.pending)); return true;
-          } finally { session.startingDevice = false; }
+          } catch (error) {
+            delete session.startingUntil;
+            await save(session).catch(conflict => { if (!(conflict instanceof SessionConflict)) throw conflict; });
+            throw error;
+          }
         }
         const state = random(); const verifier = random();
         session.pending = { kind: 'redirect', state, verifier, expires: now() + 10 * 60 * 1000 };
+        await save(session);
         const target = new URL('https://github.com/login/oauth/authorize');
         target.search = new URLSearchParams({ client_id: config.clientId, redirect_uri: `${config.origin}/api/auth/callback`,
           scope: 'repo', state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString();
@@ -154,48 +163,51 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
       }
       if (url.pathname === '/api/auth/device/cancel' && request.method === 'POST') {
         const data = await body(request);
-        if (session.pending?.kind === 'device' && equal(session.pending.id, data.attemptId)) delete session.pending;
+        if (session.pending?.kind === 'device' && equal(session.pending.id, data.attemptId)) { delete session.pending; await save(session); }
         json(response, 200, { cancelled: true }); return true;
       }
       if (url.pathname === '/api/auth/device/poll' && request.method === 'POST') {
         const data = await body(request);
         const pending = session.pending;
         if (pending?.kind !== 'device' || !equal(pending.id, data.attemptId)) throw new HttpError(409, 'This sign-in attempt has ended. Start again to get a new code.');
-        if (pending.expires <= now()) { delete session.pending; throw new HttpError(410, 'Your code has expired. Start again to get a new code.'); }
-        if (pending.polling || pending.nextPollAt > now()) { waiting(response, pending); return true; }
-        pending.polling = true; pending.nextPollAt = now() + pending.interval;
-        const ensureActive = () => {
-          if (find(request) !== session || session.pending !== pending) throw new HttpError(409, 'This sign-in attempt was cancelled. Start again if you want to sign in.');
-        };
+        if (pending.expires <= now()) { delete session.pending; await save(session); throw new HttpError(410, 'Your code has expired. Start again to get a new code.'); }
+        if (pending.pollingUntil > now() || pending.nextPollAt > now()) { waiting(response, pending); return true; }
+        pending.pollingUntil = now() + 65_000; pending.nextPollAt = now() + pending.interval;
+        await save(session);
+        const finishWaiting = async () => { pending.pollingUntil = 0; await save(session); waiting(response, pending); };
         try {
           const upstream = await oauthRequest('oauth/access_token', { client_id: config.clientId,
             device_code: pending.deviceCode, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' });
           const result = await upstream.json();
-          ensureActive();
+          await active(session);
           pending.nextPollAt = now() + pending.interval;
           if (result.error === 'slow_down' || upstream.status === 429) {
             pending.interval = Math.max(pending.interval + 5000, Number.isFinite(result.interval) ? result.interval * 1000 : 0);
             pending.nextPollAt = now() + pending.interval;
-            waiting(response, pending); return true;
+            await finishWaiting(); return true;
           }
-          if (result.error === 'authorization_pending') { waiting(response, pending); return true; }
-          if (result.error === 'access_denied') { delete session.pending; throw new HttpError(403, 'You cancelled access on GitHub. Start again when you are ready.'); }
+          if (result.error === 'authorization_pending') { await finishWaiting(); return true; }
+          if (result.error === 'access_denied') { delete session.pending; await save(session); throw new HttpError(403, 'You cancelled access on GitHub. Start again when you are ready.'); }
           if (['expired_token', 'token_expired', 'incorrect_device_code'].includes(result.error)) {
-            delete session.pending; throw new HttpError(410, 'Your code has expired or is no longer valid. Start again to get a new code.');
+            delete session.pending; await save(session); throw new HttpError(410, 'Your code has expired or is no longer valid. Start again to get a new code.');
           }
           if (!upstream.ok || typeof result.access_token !== 'string' || !result.access_token) throw new HttpError(502, 'Could not check your GitHub approval. Check your connection and try again.');
           const user = await account(result.access_token);
-          ensureActive();
-          session = create(response, session, { user, token: result.access_token,
+          session = await create(response, session, { user, token: result.access_token,
             tokenAge: Number.isFinite(result.expires_in) && result.expires_in > 0 ? result.expires_in * 1000 : SESSION_AGE });
           json(response, 200, { status: 'authenticated', session: visible(session) }); return true;
-        } finally { pending.polling = false; }
+        } catch (error) {
+          pending.pollingUntil = 0;
+          if (session.pending === pending) await save(session).catch(conflict => { if (!(conflict instanceof SessionConflict)) throw conflict; });
+          throw error;
+        }
       }
       if (url.pathname === '/api/auth/callback' && request.method === 'GET') {
         const pending = session?.pending;
         const code = url.searchParams.get('code');
         if (pending?.kind !== 'redirect' || pending.expires <= now() || !equal(pending.state, url.searchParams.get('state'))) throw new HttpError(400, 'Sign-in expired or could not be verified. Please start again.');
         delete session.pending;
+        await save(session);
         if (url.searchParams.has('error')) throw new HttpError(400, 'GitHub sign-in was cancelled. You can try again.');
         if (!code || code.length > 512) throw new HttpError(400, 'GitHub did not return a valid sign-in code.');
         const exchanged = await fetcher('https://github.com/login/oauth/access_token', { method: 'POST', redirect: 'error',
@@ -206,22 +218,22 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
         const data = await exchanged.json();
         if (typeof data.access_token !== 'string' || !data.access_token) throw new HttpError(401, 'GitHub could not complete sign-in. Please start again.');
         const user = await account(data.access_token);
-        if (find(request) !== session) throw new HttpError(400, 'Sign-in was cancelled in another tab. Please start again.');
-        create(response, session, { user, token: data.access_token, tokenAge: Number.isFinite(data.expires_in) && data.expires_in > 0 ? data.expires_in * 1000 : SESSION_AGE });
+        await create(response, session, { user, token: data.access_token, tokenAge: Number.isFinite(data.expires_in) && data.expires_in > 0 ? data.expires_in * 1000 : SESSION_AGE });
         response.writeHead(303, { Location: `${config.origin}/`, 'Cache-Control': 'no-store' }); response.end(); return true;
       }
       if (url.pathname === '/api/auth/token' && request.method === 'POST') {
         if (!config.allowTokenSignIn) throw new HttpError(404, 'This sign-in method is unavailable. Continue with GitHub instead.');
-        limit(request);
+        await limit(request);
         const data = await body(request);
         if (typeof data.token !== 'string' || !/^[A-Za-z0-9_]{20,255}$/.test(data.token.trim())) throw new HttpError(400, 'Enter a valid GitHub personal access token.');
         const token = data.token.trim(); const user = await account(token);
-        if (find(request) !== session) throw new HttpError(400, 'Your session changed. Please start again.');
-        session = create(response, session, { user, token });
+        session = await create(response, session, { user, token });
         json(response, 200, visible(session)); return true;
       }
       if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
-        session = create(response, session);
+        // Logout invalidates the latest snapshot even if another tab just updated the repository.
+        const current = await find(request);
+        session = await create(response, current);
         json(response, 200, visible(session)); return true;
       }
       signedIn(session);
@@ -243,8 +255,8 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
         const [owner, name] = info.full_name.split('/');
         const branch = data.branch?.trim() || info.default_branch;
         if (!owner || !name || !branch) throw new HttpError(502, 'GitHub returned an invalid repository.');
-        if (find(request) !== session) throw new HttpError(401, 'Sign in to continue.');
         session.repo = { owner, name, branch };
+        await save(session);
         json(response, 200, visible(session)); return true;
       }
       if (url.pathname.startsWith('/api/github/') && request.method === 'GET') {
@@ -275,7 +287,7 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
             // Never forward Authorization to the signed download host.
             upstream = await fetcher(target.href, { redirect: 'error', signal: controller.signal });
           }
-          if (upstream.status === 401) { sessions.delete(session.id); cookie(response, '', 0); }
+          if (upstream.status === 401) { await sessions.delete(session.id); cookie(response, '', 0); }
           const headers = { 'Content-Type': upstream.headers.get('content-type') ?? 'application/octet-stream', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
           const remaining = upstream.headers.get('x-ratelimit-remaining');
           if (remaining) headers['X-RateLimit-Remaining'] = remaining;
@@ -292,8 +304,9 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
         const reason = error instanceof HttpError ? error.message : 'GitHub sign-in could not finish. Please try again.';
         response.writeHead(303, { Location: `${config.origin}/?auth_error=${encodeURIComponent(reason)}`, 'Cache-Control': 'no-store' }); response.end();
       } else {
-        if (error.status === 401 && session?.user) { sessions.delete(session.id); cookie(response, '', 0); }
-        json(response, error instanceof HttpError ? error.status : 502, { error: error instanceof HttpError ? error.message : 'The connection to GitHub failed. Please try again.' });
+        if (error.status === 401 && session?.user) { await sessions.delete(session.id); cookie(response, '', 0); }
+        const known = error instanceof HttpError || error instanceof SessionConflict || error instanceof StoreUnavailable;
+        json(response, known ? error.status : 502, { error: known ? error.message : 'The connection to GitHub failed. Please try again.' });
       }
       return true;
     }

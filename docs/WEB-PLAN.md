@@ -52,13 +52,15 @@ npm run preview:web     # serves frontend + /api on http://127.0.0.1:8082
 
 ## Hosting
 
-This is now a Node-backed website. Uploading `dist-web` to static hosting alone does **not** provide sign-in or authenticated media access. Deploy the Node project with its dependencies and `dist-web`, then run `npm run preview:web` behind HTTPS.
+The selected host is one **Vercel Hobby project** for the static frontend and Node API, with Upstash Redis for shared sessions. See the [deployment guide](WEB-DEPLOYMENT.md) for exact settings, free-plan limits and live verification status.
+
+The Vercel deployment serves `dist-web` as static assets and `api/index.mjs` as a Node function on the same origin. Uploading `dist-web` alone does **not** provide sign-in or authenticated media access. Standalone Node hosting remains supported with `npm run preview:web` behind HTTPS.
 
 Set `WEB_ORIGIN` to the exact public HTTPS origin, configure the client ID, and use `HOST=0.0.0.0` when required. For direct redirects, also configure the client secret and callback `<WEB_ORIGIN>/api/auth/callback`. A reverse proxy must preserve the configured Host header. The server rejects unexpected hosts and requires HTTPS for non-loopback origins; Secure cookies are enabled for HTTPS. Public origins and `NODE_ENV=production` require the settings for the chosen sign-in method at startup (client ID for codes; ID and secret for explicit redirect mode). This catches missing configuration, while a real sign-in is still required to verify the registration and secret.
 
-Sessions live in one Node process and expire on server restart. They have a maximum lifetime of eight hours, shortened to the GitHub token expiry when supplied. Expiry requires signing in again. There is no automatic refresh-token rotation or persistent session store yet. Use a single instance for this version; shared persistent sessions and deployment-specific rate limiting are required before horizontal scaling. No service worker caches private media.
+Vercel sessions live in shared Redis and survive individual function restarts. Local preview defaults to an in-memory store whose sessions expire on restart. Sessions have a maximum lifetime of eight hours, shortened to the GitHub token expiry when supplied. Expiry requires signing in again; automatic refresh-token rotation is not implemented. Atomic version checks and rotation prevent stale instances or cancelled approvals from restoring an invalid session. Pending approval leases and sign-in rate counters are shared on Vercel; preview and production namespaces are isolated by origin. No service worker caches private media.
 
-No public deployment, commits, or pushes were performed. Code issuance has been checked against GitHub using the existing registration; real-account consent and private-release verification remain. Fixtures exercise completed authorization without a personal token.
+The website is deployed at [https://gitgallery-umber.vercel.app](https://gitgallery-umber.vercel.app). Public HTTP and fresh desktop/phone browser checks passed for sign-in code issuance, pending approval, cancellation, session reload, demo media and video playback, with no browser errors or failed site requests. Real-account consent and private-release verification remain; fixtures exercise completed authorization without a personal token. Deployment used the local folder, without a GitHub App repository connection. No source commits or pushes were performed.
 
 ## Architecture and security
 
@@ -82,7 +84,7 @@ The browser limits media requests to four concurrent downloads, thumbnails to 12
 
 Truncated recursive trees trigger explicit subtree traversal. Incomplete subtrees or listings above the 50,000-entry guard produce an error. Failed metadata shows a warning and falls back to path metadata. No repository file is modified by this website.
 
-HEIC and some MOV codecs depend on browser support; unsupported originals can still be downloaded. Signed-in release downloads go through the server to avoid browser redirect/CORS problems, but unsupported redirects, failed downloads and originals above the browser limit offer **Open on GitHub**. Large-file streaming and transcoding are not implemented. Real private release downloads still need verification with a configured account.
+HEIC and some MOV codecs depend on browser support; unsupported originals can still be downloaded. Signed-in release downloads go through the server to avoid browser redirect/CORS problems, but unsupported redirects, failed downloads and originals above the browser limit offer **Open on GitHub**. The server streams relay responses, but the browser still buffers permitted media into blobs. Progressive private-video streaming and transcoding are not implemented. Real private release downloads still need verification with a configured account.
 
 ## Screenshots
 
@@ -103,7 +105,7 @@ cd app
 npm run test:web
 ```
 
-This runs TypeScript, 12 library unit tests, 18 server authentication/configuration tests, a production export, and 16 Chromium browser tests. The browser suite starts isolated Node servers on 8092 (redirect) and 8093 (approval codes) with fixture GitHub responses; it exercises the actual session cookies, CSRF, OAuth callback, repository picker, authenticated media gateway, reloads and cross-tab logout. No test writes to GitHub or uses a personal token.
+This runs TypeScript, 12 library unit tests, 27 server authentication/configuration/store tests, a production export, and 16 Chromium browser tests. The browser suite starts isolated Node servers on 8092 (redirect) and 8093 (approval codes) with fixture GitHub responses; it exercises the actual session cookies, CSRF, OAuth callback, repository picker, authenticated media gateway, reloads and cross-tab logout. No test writes to GitHub or uses a personal token.
 
 Coverage includes production startup readiness, optional-token enforcement, on-page setup guidance, device-code onboarding, slow-down handling, expired/denied codes and cancellation races, invalid/denied/replayed OAuth callbacks, credential isolation, wrong origins, session expiry, token errors, repository access bounds, signed-release redirects, demo opt-in, real-library empty states, desktop/phone layouts, 1,001-item pagination, 500 MiB pointer fallback, video playback/seeking, downloads, themes and collection persistence. Browser captures were inspected. Fresh Android/iOS production Hermes bundle exports passed on 2026-10-20. Source maps confirm the browser UI, web entry and web auth server are excluded. The shared parser source is identical to its original implementation, native configuration is unchanged, and existing dependency entries were not upgraded. This does not claim a new emulator/device regression pass.
 
@@ -112,7 +114,7 @@ Coverage includes production startup readiness, optional-token enforcement, on-p
 1. Complete a real account/repository/private-release consent test; configure optional redirect sign-in for larger public deployments. Add Safari/Firefox and accessibility verification before public release.
 2. Browser uploads: picker/drag-drop, date extraction, previews, compression, tier routing, retry/cancel and a durable queue; test writes only in a throwaway repository.
 3. Define a shared collection schema before syncing favourites/albums between mobile and web. Add virtualisation, cached indexes and incremental refresh.
-4. Deployment hardening for the chosen host: persistent sessions, refresh-token rotation, shared rate limiting and large-file streaming.
+4. Add refresh-token rotation and complete live private-media streaming/bandwidth checks. Vercel public deployment checks, shared Redis sessions and sign-in rate limits are implemented.
 
 ## Official references
 

@@ -704,12 +704,15 @@ The browser roadmap is tracked in [WEB-PLAN.md](WEB-PLAN.md). This extends the e
 - [x] Consumer sign-in without developer setup prompts; clear retry state, production configuration gate and website-operator setup guide.
 - [x] 24 optimised web screenshots, smaller README previews and repeatable capture script.
 - [x] Guided approval-code sign-in using the existing registration, with live code issuance verified and no client-secret prerequisite.
+- [x] Vercel API entry, static-hosting configuration and streaming; shared Redis sessions, atomic authorization transitions and sign-in rate counters.
+- [x] Authentication regression tests against real temporary Redis, including cold-handler session continuity, cancellation, logout and replay protection.
+- [x] Public Vercel deployment with permanent free Redis; verified desktop/phone onboarding, real code issuance/polling/cancel, session reload, demo and video playback. Added the public link to README.
 - [ ] Complete real-account consent/private-release verification; configure redirect sign-in for higher-traffic deployment.
 - [ ] Browser upload queue, preview generation and tier routing, verified against a throwaway repository.
 - [ ] Shared collection schema, virtualised large libraries and cached incremental indexing.
-- [ ] Real private-release compatibility, Safari/Firefox, accessibility and deployment verification.
+- [ ] Real private-release compatibility, Safari/Firefox and accessibility verification.
 
-The web version is a read-only companion served by Node. Mobile continues to handle backup/upload, and browser collections do not yet sync to mobile. Verification covers 12 library tests, 18 server authentication/configuration tests, and 16 Chromium browser tests with fixture GitHub responses. No hosting deployment or live-account OAuth verification is claimed.
+The web version is a read-only companion served by Node. Mobile continues to handle backup/upload, and browser collections do not yet sync to mobile. Verification covers 12 library tests, 27 server authentication/configuration/store tests, and 16 Chromium browser tests with fixture GitHub responses. All 20 authentication tests additionally passed against real temporary Redis; the Vercel Node production builder includes streaming and excludes environment files. The public website is deployed and smoke-tested at [https://gitgallery-umber.vercel.app](https://gitgallery-umber.vercel.app); full real-account consent and private-release checks remain.
 
 ## Open questions
 
