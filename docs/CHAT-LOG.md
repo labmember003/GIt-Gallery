@@ -1490,6 +1490,132 @@ absent from both, client ID present in both (sign-in breaks without it), `gitgal
 
 ---
 
+## Browser companion — 2026-10-19
+
+**👤 User:**
+> this project is in react so can we also build an web interface....? like a website also....please scope and start building
+
+**👤 User, while work continued:**
+> continue bro
+
+**🤖 Assistant — implementation summary:**
+
+Scoped and built the first web milestone inside the existing Expo project. `App.web.tsx` selects a responsive React DOM gallery with a desktop sidebar, phone navigation, light/dark themes, search, media filters, date sorting, multi-select, photo zoom, video playback, original downloads, and browser-local favourites/albums. The demo contains 36 photos and 3 playable clips using optimised local assets.
+
+A separate read-only GitHub adapter opens existing public libraries without a token and private libraries with a fine-grained Contents-read token held only in memory. It understands native canonical paths, legacy paths, metadata, previews and release pointers. Truncated trees, connection errors and browser download bounds are handled explicitly. Private release redirects and large originals may require the Open on GitHub fallback. Browser collections do not sync to the mobile app.
+
+The roadmap and run commands are in `WEB-PLAN.md`. OAuth with a backend token exchange, browser uploads, shared collections, and release/deployment verification are subsequent milestones. The local production preview runs at `http://127.0.0.1:8082`; nothing was deployed, committed or pushed.
+
+Verification passed: TypeScript, 12 unit tests, 7 Chromium browser tests (including a 1,001-item fixture and 500 MiB pointer), web export, Android/iOS bundle exports, and a live public-repository connection. Browser screenshots were inspected. Private authentication was fixture-tested, not tested with a personal credential; native bundles were smoke-checked without claiming a new device regression pass.
+
+---
+
+## Web screenshot capture — 2026-10-19
+
+**👤 User:**
+> looks great now lets finalize it, i hope this is not final, because it has images and albums like random images albums and i also didnt signed in yet on webpage...so lets finalize it now?
+
+**🤖 Assistant:**
+
+Started replacing the default demo entry with real GitHub authentication, a secure server session, and repository selection. Browser OAuth needs a client secret that is not present in the existing native configuration; a separate `.env.web.example` was supplied and local configuration requested. The native development token is not used as a browser sign-in bypass.
+
+**👤 User, before the entry flow changed:**
+> bro wait, before switching off the demo take some good screenshots bro, just like we did of android and iOS, and create a new subfolder inside screeenshots and put it there
+
+**🤖 Assistant — capture summary:**
+
+Captured and visually reviewed 24 direct browser screenshots in `screenshots/web`, covering desktop light/dark galleries, albums, favourites, three photo viewers, video playback, selection, album selection, settings, and mobile layouts. Full captures are 1600 × 1040 (desktop) and 860 × 1864 (mobile). WebP captures plus smaller README previews total 3.58 MiB, compared with 17.14 MiB of source PNGs. The PNGs remain outside the repository. Added a capture manifest with checksums, a repeatable capture script, and raw GitHub image links in both README galleries. No commits or pushes.
+
+
+---
+
+## Web sign-in implementation — 2026-10-19
+
+**👤 User, while verification continued:**
+> continue bro
+
+**🤖 Assistant — implementation summary:**
+
+Completed the website entry flow: sign-in is now the default and the preserved demo is opt-in. A Node server implements GitHub OAuth with state/PKCE, a personal-token alternative, HttpOnly sessions, CSRF checks, repository selection, an authenticated read-only media gateway, expiry and logout. The chosen real repository survives reloads; signing out clears the gallery in other tabs. Public repositories remain available without sign-in. No native development token is reused.
+
+Added server and browser coverage for OAuth callbacks, repository access limits, credentials, release redirects, session expiry, reloads, cross-tab logout, empty libraries and mobile onboarding. The complete web check passed: TypeScript, 12 library unit tests, 8 server tests, a production build and 12 Chromium browser tests. A development-server smoke check loaded all 39 demo items without browser errors; generated assets contained no native development credentials. Updated setup and hosting documentation: the authenticated website requires the Node server, and sessions currently live in one process.
+
+The OAuth App client ID and secret still need local configuration in gitignored `app/.env.web`, followed by real-account consent and private-release verification. Automated authentication uses injected GitHub fixtures. Browser uploads and collections shared with mobile remain future work. The 24 demo screenshots are preserved in `screenshots/web`; no commits, pushes or deployment were performed.
+
+
+---
+
+## Web GitHub button configuration — 2026-10-19
+
+**👤 User:**
+> bro why Continue with GitHub button is disabled?
+
+**🤖 Assistant:**
+
+Checked the running server and local configuration: `app/.env.web` does not exist, neither web OAuth client setting is configured, and `/api/session` reports `oauthAvailable: false`. The button is deliberately disabled until both the client ID and client secret are available. The implemented web authorization-code flow differs from the mobile Device Flow configuration. To enable it, create a separate GitHub OAuth App with homepage `http://127.0.0.1:8082` and callback `http://127.0.0.1:8082/api/auth/callback`, copy `.env.web.example` to `.env.web`, fill the two values locally, and restart the web server. Personal-token sign-in is available meanwhile. No credentials were printed or changed; no commits or pushes.
+
+
+---
+
+## Sign-in for ordinary website users — 2026-10-19
+
+**👤 User:**
+> bro? we're making app for user not for me...cant we properly implement? if there's a constraint, atleast give proper explaination for dumb user bro
+
+**🤖 Assistant:**
+
+Clarified that GitHub registration and server credentials are a one-time responsibility of the website operator. Every visitor should simply click Continue with GitHub, approve access and choose their own library. The native app uses Device Flow; the normal browser redirect flow requires a GitHub-issued client secret. The existing mobile registration can be reused if the operator controls its callback, so a separate registration is optional.
+
+Updated the product flow: token sign-in and its endpoint are disabled by default, with explicit operator opt-in under Advanced sign-in; unavailable GitHub sign-in shows a plain message and a working retry action, without developer configuration instructions. Retry refreshes readiness and CSRF after a server restart. Added beginner-friendly sign-in guidance, production startup checks, a credential-safe `npm run check:web` command and `WEB-AUTH-SETUP.md` explaining roles and exact setup.
+
+Prepared gitignored `app/.env.web` with the existing public app ID and no token or client secret. The running preview was restarted. The configuration check correctly reports the remaining client secret as missing; GitHub's matching callback and a real-account authorization still need verification. The secret must come from the owner of the GitHub app registration; source code cannot derive it. No ordinary visitor must configure these settings.
+
+Verification: TypeScript, production build, 12 library tests, 13 server/configuration tests and 13 browser tests passed. Tests cover consumer sign-in, retry recovery, default token rejection, production readiness and two visitors' independent identities/repositories/logout. Desktop and mobile captures were visually checked. Demo screenshots were preserved. No commits or pushes.
+
+
+---
+
+## Guided GitHub approval-code onboarding — 2026-10-20
+
+**👤 User:**
+> wot tf? it still says GitHub sign-in is unavailable
+> Please try again later. You can still explore the demo while we get sign-in ready.
+>
+> , like there's nothing there bro........
+
+**👤 User, clarifying the requirement:**
+> wot tf? it still says GitHub sign-in is unavailable
+> Please try again later. You can still explore the demo while we get sign-in ready.
+>
+> , like there's nothing there bro........
+> , i was saying if there is a constraint then explain user propper steps for onborading bro
+
+**🤖 Assistant:**
+
+Acknowledged that changing the unavailable message had left the user blocked. Verified the existing mobile registration against GitHub's live Device Flow endpoint: code issuance works, so the website can use genuine approval-code authorization without a new client secret. Implemented a guided in-app flow with a copyable code, numbered instructions, a fixed GitHub approval link, automatic polling, expiry countdown, cancellation and recovery. The normal user signs in on GitHub and returns to choose their photo repository. Unconfigured copies show actual setup steps for the website operator instead of a generic waiting message.
+
+The private device credential stays on the Node server, bound to the session. Polling respects GitHub's interval and slow-down responses; cancelled, expired, denied, overlapping or unrelated attempts cannot create a signed-in session. Successful authorization validates the account and rotates the HttpOnly cookie. Optional redirect OAuth remains available when a secret is configured; token login remains an advanced opt-in.
+
+Rebuilt and started the preview at `http://127.0.0.1:8082`. A live browser smoke check clicked Continue with GitHub, received a real code, opened GitHub's login page, received authorization-pending from the real provider, and cancelled cleanly with no browser errors. Human approval and real private-library verification remain for the account owner. No personal token or authentication bypass was used.
+
+Verification covered TypeScript, production export, 12 library tests, 18 server/configuration tests and 16 browser tests. A new keyboard-focus restoration test failed initially; fixed the return focus and reran all three device onboarding browser tests successfully. Desktop and mobile screenshots were inspected. Documentation now distinguishes approval-code sign-in (no secret) from optional redirect sign-in and records GitHub's documented device-flow submission limit. Existing demo screenshots were preserved; nothing committed or pushed.
+
+
+---
+
+## Mobile impact check after web onboarding — 2026-10-20
+
+**👤 User:**
+> i hope in this process you have changed anything in mobile version, i'm assuming i dont need to test it again
+
+**🤖 Assistant:**
+
+Interpreted the request as checking that mobile was not changed. Reviewed the full working diff: the recent sign-in work is confined to the web entry, browser components and Node server. Mobile screens, authentication, upload code, Android/iOS project files and native app settings are unchanged. During the earlier web implementation, the shared canonical-path parser was moved into a pure module and the timeline import changed. Compared its source with HEAD and verified the parser is identical. The package lock adds web/testing packages but modifies no existing package entries or versions.
+
+Ran fresh Android and iOS production Hermes bundle exports with source maps and native development credentials excluded. Both succeeded (1,233 Android modules; 1,237 iOS modules). Source maps contain no browser UI, web entry or web authentication-server modules. No mobile app was installed or replaced. This is bundle verification, not a new emulator/device regression pass; the scope and results do not indicate a need to repeat the full mobile test cycle for the recent web sign-in changes.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -1509,5 +1635,6 @@ absent from both, client ID present in both (sign-in breaks without it), `gitgal
 | Testing | ✅ **Self-tested on emulator/simulator** — nothing reported done without being run; visual parity with Immich counts as correctness; bugs found get fixed, not just logged |
 | Git | ✅ **Never commit/push without an explicit ask.** Personal identity (`avishishtgupta@gmail.com`, `labmember003`) set locally — global config is the work email. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
 | Repo root | ✅ **The workspace root**, so `README`/`CLAUDE.md`/`docs/` ship with the code. `reference/` stays out — AGPL bulk and an upstream duplicate |
+| Web companion | ✅ **Read-only web companion with server-backed sign-in.** Responsive React DOM gallery, repository picker, restored sessions and browser-local collections; demo is opt-in. Guided GitHub approval codes reuse the existing registration without a client secret; live code issuance and pending approval are verified. Optional redirect OAuth remains available. Real-account consent, uploads and shared collections remain. See `WEB-PLAN.md`. |
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

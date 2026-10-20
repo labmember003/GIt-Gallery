@@ -1,0 +1,561 @@
+{
+  "capturedAt": "2026-10-19T13:23:11.284Z",
+  "platform": "web",
+  "browser": "Chromium 156.0.8078.4",
+  "demo": true,
+  "description": "Direct browser viewport captures of the running demo; no frames, overlays, or compositing.",
+  "captures": [
+    {
+      "file": "01-gallery-light.webp",
+      "title": "Gallery — light",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "01-gallery-light.png",
+        "bytes": 1068703,
+        "sha256": "e6dddcc08857724fd94cb576aad9e4533e74a56dca933cd8f2aebb0487313e35"
+      },
+      "bytes": 172722,
+      "sha256": "463dc939b3e5566069fa0fa76f0bb969392598c0aee484fc1c2730e3f3feff56",
+      "preview": {
+        "file": "../previews/web/01-gallery-light.webp",
+        "bytes": 48204,
+        "sha256": "09efbba475137ee111fc6b51916dff682886f3da71bf73e494734d01e05e587f"
+      }
+    },
+    {
+      "file": "02-gallery-dark.webp",
+      "title": "Gallery — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "02-gallery-dark.png",
+        "bytes": 1069670,
+        "sha256": "70ae9af83655cfba8916d23894dd52918f9a8142666992a4f823888d9ac883c6"
+      },
+      "bytes": 171794,
+      "sha256": "fb05724372df1e5fa4e57ec0210da2c4e332ea74cf046ad07a6606536784e881",
+      "preview": {
+        "file": "../previews/web/02-gallery-dark.webp",
+        "bytes": 49300,
+        "sha256": "68cbaab9e08e17b804d3b0dc54480cf6ae1d4e1bf29f6119d3a7ebbaf8cf47ce"
+      }
+    },
+    {
+      "file": "03-albums-light.webp",
+      "title": "Albums — light",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "03-albums-light.png",
+        "bytes": 561148,
+        "sha256": "90b2f4e0ef11cef471c48fa04d919c3668c4cab6c1976fc294532259526a2cca"
+      },
+      "bytes": 112600,
+      "sha256": "60e043660797a666e1745def7b85c8b8258d44f132a75ffc460bb9730e8c0f34",
+      "preview": {
+        "file": "../previews/web/03-albums-light.webp",
+        "bytes": 32226,
+        "sha256": "4c9a4b64f4b581328b732fa17a6a38b50258737a943c36e6e76d8f90d3c5c2b7"
+      }
+    },
+    {
+      "file": "04-albums-dark.webp",
+      "title": "Albums — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "04-albums-dark.png",
+        "bytes": 562682,
+        "sha256": "591c212fbe8b92cf9a0d46b0509d5b5bc5b098fc1647d1adda5d9221bfa24cc3"
+      },
+      "bytes": 111960,
+      "sha256": "38caf0c8fe21df0e6a15d374fb4e252dd82d0e17c6b47e8cb5f4dff9cde7ee2f",
+      "preview": {
+        "file": "../previews/web/04-albums-dark.webp",
+        "bytes": 31990,
+        "sha256": "55ff1ad3358345afe6cac93b6f937ad9e1eabfa8b59293855ec766d994061c20"
+      }
+    },
+    {
+      "file": "05-favourites-light.webp",
+      "title": "Favourites — light",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "05-favourites-light.png",
+        "bytes": 803646,
+        "sha256": "b8cf6b3bec93fe63a8d4a925287dd10854b193c3316ffade5408affe8acb3287"
+      },
+      "bytes": 132934,
+      "sha256": "397c34010a72f476480ab71df0479b0b987b2e690cb9f708759e3e344aa5dbc0",
+      "preview": {
+        "file": "../previews/web/05-favourites-light.webp",
+        "bytes": 37072,
+        "sha256": "1fdef72ea000501871ff4f0effcb13ab4d4eaf4c37849f5b5539769940d73403"
+      }
+    },
+    {
+      "file": "06-favourites-dark.webp",
+      "title": "Favourites — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "06-favourites-dark.png",
+        "bytes": 804497,
+        "sha256": "f8a38bb345a4ef2b11d124fbee8cfa6dae5ada3dc4ec1de98c90270712b99e48"
+      },
+      "bytes": 132502,
+      "sha256": "c4e089fc3995e3dac0cfcb1ca975b4b6fcf8929ede292c44c354587dc83e4783",
+      "preview": {
+        "file": "../previews/web/06-favourites-dark.webp",
+        "bytes": 37108,
+        "sha256": "97bc6e0ac21349ce1daf3b2daa699cc1e62a4a98808aeb3c8f7401455fba6ac7"
+      }
+    },
+    {
+      "file": "07-riviera-viewer.webp",
+      "title": "Riviera photo viewer",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "07-riviera-viewer.png",
+        "bytes": 776409,
+        "sha256": "35bd984dba8742f1e36fbc0d72914ecd011f397ca9d20da17dd23475c568fe29"
+      },
+      "bytes": 108578,
+      "sha256": "ced2e4383e3d4f994492d1ec539cf1f135363f2cf76e93e9f104b67b19cc9eb1",
+      "preview": {
+        "file": "../previews/web/07-riviera-viewer.webp",
+        "bytes": 29576,
+        "sha256": "0ba49cc309bfc161ae885d1de0420b71cb2a9726b305aee8fa82dc9d8cac2741"
+      }
+    },
+    {
+      "file": "08-santorini-viewer.webp",
+      "title": "Santorini photo viewer",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "08-santorini-viewer.png",
+        "bytes": 710652,
+        "sha256": "a348da8105aff0ace501b8eb9d925d12eae251d96e11207327c39ffaafb3ca08"
+      },
+      "bytes": 68324,
+      "sha256": "41a0aa31ecb0fccb26a3bd2164f0a8749836f10e752ec419b778b79afb022d6d",
+      "preview": {
+        "file": "../previews/web/08-santorini-viewer.webp",
+        "bytes": 18626,
+        "sha256": "ea30779d4519dc93ab44b1910096d3b3e19373eb08a63363b0f724fa8d4fa8eb"
+      }
+    },
+    {
+      "file": "09-alpine-viewer.webp",
+      "title": "Alpine photo viewer",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "09-alpine-viewer.png",
+        "bytes": 1171926,
+        "sha256": "ab2591254a8c3500aacbce97723a4e70bc1f9d6161fb83377649514ca3792775"
+      },
+      "bytes": 132632,
+      "sha256": "488780cb3061eb7692b9113755e0e91c440edb030deba3bde8d94828383f238d",
+      "preview": {
+        "file": "../previews/web/09-alpine-viewer.webp",
+        "bytes": 37386,
+        "sha256": "732afe087f85a7778c2f181ef991fb53ca005c70c5fc4417af2467392882bc6c"
+      }
+    },
+    {
+      "file": "10-ocean-video-player.webp",
+      "title": "Ocean video playback",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "10-ocean-video-player.png",
+        "bytes": 461553,
+        "sha256": "26f8cd223c81566927cb94bd0c4969cd634eeef3df90aba352396139e2d541fd"
+      },
+      "bytes": 54308,
+      "sha256": "b890e2369dfa01cf130d96eeac813272592bdde35ee1dfbca91831af8d2f1c16",
+      "preview": {
+        "file": "../previews/web/10-ocean-video-player.webp",
+        "bytes": 14814,
+        "sha256": "e0aa92b7ea8143e360ac7a06283107ecdf18ba1933bc2ef62c51a0867a26de0e"
+      }
+    },
+    {
+      "file": "11-multi-select-light.webp",
+      "title": "Multi-selection — light",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "11-multi-select-light.png",
+        "bytes": 1048069,
+        "sha256": "e704baae2052471349beee72ae3326d9d473bccd30a65c4bd041fac2545f6f33"
+      },
+      "bytes": 177096,
+      "sha256": "c0bb2a6dbb6f5c52269365b44a0b30a7c4dc247983f7f815de54a33e7365b689",
+      "preview": {
+        "file": "../previews/web/11-multi-select-light.webp",
+        "bytes": 49830,
+        "sha256": "a9b1c2c462e847c652d139e355674040d1f11a19af8e93dfe246cd98017bc4d6"
+      }
+    },
+    {
+      "file": "12-multi-select-dark.webp",
+      "title": "Multi-selection — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "12-multi-select-dark.png",
+        "bytes": 1047943,
+        "sha256": "defb764e0b96bbfddd1ef42bd309370fbeda720697fa981e2976aa589b1a001e"
+      },
+      "bytes": 174906,
+      "sha256": "875ef6891e17d39880780c68c0956233c0200cb177b4e68e7942d2997c1855ac",
+      "preview": {
+        "file": "../previews/web/12-multi-select-dark.webp",
+        "bytes": 50550,
+        "sha256": "594b0d70859cc06c9ff7599ee35c22faedab41f4c6caf8f6f101ca91e3a3afac"
+      }
+    },
+    {
+      "file": "13-add-to-album.webp",
+      "title": "Add to album",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "13-add-to-album.png",
+        "bytes": 480910,
+        "sha256": "b864e396b54900cb309769c41ec7233c3a0666e0ea37d970dee233d7bb3ef177"
+      },
+      "bytes": 40394,
+      "sha256": "f902cb49e70bfe0319137c06119b8e3cb089a54afe85d148de205063b304a334",
+      "preview": {
+        "file": "../previews/web/13-add-to-album.webp",
+        "bytes": 14706,
+        "sha256": "c0db5192a8408f013bbe8c45cdd7f0400597ccd76225d834b5727e90728515f6"
+      }
+    },
+    {
+      "file": "14-coastal-album-light.webp",
+      "title": "Coastal album — light",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "14-coastal-album-light.png",
+        "bytes": 815766,
+        "sha256": "6876cfdb6b8758ab9fbf4b2c6f379f50b05bd5dba5526f6f52ab08eae7311987"
+      },
+      "bytes": 136248,
+      "sha256": "9469dbdc4fed06c0baf1441d784696233ed9ed79de89fcd1a6aa22ec27f602f2",
+      "preview": {
+        "file": "../previews/web/14-coastal-album-light.webp",
+        "bytes": 37698,
+        "sha256": "a6797e29506c7d56d4e26d1761bbe80c499bbf67ca0e91875eb4ba8f1e0b7212"
+      }
+    },
+    {
+      "file": "15-mountain-album-dark.webp",
+      "title": "Mountain album — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "15-mountain-album-dark.png",
+        "bytes": 685974,
+        "sha256": "89796ce59af9c891f5cf34d0249b8bbe350a670d44d0330e9bd7fed2e0ec982e"
+      },
+      "bytes": 115518,
+      "sha256": "a11c9e1d543b51126199273ff31116f8912daa4de03e9630b56354b6961b3c55",
+      "preview": {
+        "file": "../previews/web/15-mountain-album-dark.webp",
+        "bytes": 32392,
+        "sha256": "bdd378f373a5354ee35f9fda6d6a4ff2c6460203790f53a6e3ddfe75405a6b8c"
+      }
+    },
+    {
+      "file": "16-city-album-dark.webp",
+      "title": "City album — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "16-city-album-dark.png",
+        "bytes": 317401,
+        "sha256": "af433ff9dd1714222170f72c9b2177e35fc0fe26c2c028e44c464aebd7e8192d"
+      },
+      "bytes": 65956,
+      "sha256": "3408e86992fa662024db2c6c017ebe0781a0cfd27be6ca9e75a1df3b8cd88a53",
+      "preview": {
+        "file": "../previews/web/16-city-album-dark.webp",
+        "bytes": 19032,
+        "sha256": "42abaea6f247455d9d86065be61f18a77370c961eb32a4140c875df838848486"
+      }
+    },
+    {
+      "file": "17-settings-light.webp",
+      "title": "Settings — light",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "17-settings-light.png",
+        "bytes": 123608,
+        "sha256": "60c24765ebeacb3a93489791cab5829489decf6875934bf2324a9a1cb75acea8"
+      },
+      "bytes": 53988,
+      "sha256": "9aae263a0d37ee29135cebc8797d7a3f24073d503443a1db67c37608309a3955",
+      "preview": {
+        "file": "../previews/web/17-settings-light.webp",
+        "bytes": 16816,
+        "sha256": "a7af0deed07bf41d3169d8210e11956b12d0c7a0a4049c36d803fc397d3af33e"
+      }
+    },
+    {
+      "file": "18-settings-dark.webp",
+      "title": "Settings — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "18-settings-dark.png",
+        "bytes": 124891,
+        "sha256": "1a394ea1a19dddaa58ac9f3a0a143011e66d49ce884a437dfb19fbcdf093ac1b"
+      },
+      "bytes": 51362,
+      "sha256": "e423c83c57f9f5ec0d6594242ff7a603f6114477c52361928be6b4f40fffbe79",
+      "preview": {
+        "file": "../previews/web/18-settings-dark.webp",
+        "bytes": 16724,
+        "sha256": "05c4094cb3ec8be2c2ed4c2b88c75b57ac1ec797a657c454a25b319931873ee8"
+      }
+    },
+    {
+      "file": "19-mobile-gallery-light.webp",
+      "title": "Mobile gallery — light",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "deviceScaleFactor": 2,
+      "width": 860,
+      "height": 1864,
+      "original": {
+        "file": "19-mobile-gallery-light.png",
+        "bytes": 996399,
+        "sha256": "63c825c5364c53a0ed3938de1213140b772575c16e589851d473680edac7cc0b"
+      },
+      "bytes": 171298,
+      "sha256": "08780af45d1c253e5ea36caa5da4e15f67e5476a58fd5a4feeb4e69df89ff899",
+      "preview": {
+        "file": "../previews/web/19-mobile-gallery-light.webp",
+        "bytes": 49094,
+        "sha256": "1a1f30aac4aa902317a434f3916fb8ed94b6859879cf258c551ee0f8e2e746da"
+      }
+    },
+    {
+      "file": "20-mobile-gallery-dark.webp",
+      "title": "Mobile gallery — dark",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "deviceScaleFactor": 2,
+      "width": 860,
+      "height": 1864,
+      "original": {
+        "file": "20-mobile-gallery-dark.png",
+        "bytes": 998455,
+        "sha256": "4f234ce5cf410c6e2cfc06dec87a680dc913f440f24baf8cc5abb2fadbbfdae6"
+      },
+      "bytes": 170142,
+      "sha256": "3da7e082bb222d3bdf597e7e0c44ceea93402c29c25b5f06bc03987c4290a984",
+      "preview": {
+        "file": "../previews/web/20-mobile-gallery-dark.webp",
+        "bytes": 49050,
+        "sha256": "83f1fb5780176f4354b7908ad6a8e58e8d83b687a6eb86d7fe2c9671afe656e0"
+      }
+    },
+    {
+      "file": "21-mobile-albums.webp",
+      "title": "Mobile albums",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "deviceScaleFactor": 2,
+      "width": 860,
+      "height": 1864,
+      "original": {
+        "file": "21-mobile-albums.png",
+        "bytes": 1249128,
+        "sha256": "56b34cc86f5b4ca3052b764be481a7314cdcce496d6193c25cbb08232c629023"
+      },
+      "bytes": 218668,
+      "sha256": "de2d6cc2aece03e271a157d5c4e1cc6ff2cecaad59c23bf55adebb5447561d52",
+      "preview": {
+        "file": "../previews/web/21-mobile-albums.webp",
+        "bytes": 61636,
+        "sha256": "de29cd5ce0686d565a981ea30b0c2080e1311bb1117de4644dcc072844661aeb"
+      }
+    },
+    {
+      "file": "22-mobile-viewer.webp",
+      "title": "Mobile photo viewer",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "deviceScaleFactor": 2,
+      "width": 860,
+      "height": 1864,
+      "original": {
+        "file": "22-mobile-viewer.png",
+        "bytes": 1450044,
+        "sha256": "c87062a02efcc7a54d6456c2e3b15232eb2161e47cb42b764e54d6a7fb169766"
+      },
+      "bytes": 222956,
+      "sha256": "4fe373d621b246211c8a75dff57608fb3875a3096282e5c6c25a8a54c74ff9bd",
+      "preview": {
+        "file": "../previews/web/22-mobile-viewer.webp",
+        "bytes": 59808,
+        "sha256": "83394fb74d39248577970102877c6016ec5cf5958d4c016336a7559c3c58211a"
+      }
+    },
+    {
+      "file": "23-mobile-navigation.webp",
+      "title": "Mobile navigation",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "deviceScaleFactor": 2,
+      "width": 860,
+      "height": 1864,
+      "original": {
+        "file": "23-mobile-navigation.png",
+        "bytes": 379280,
+        "sha256": "fd96c2b58a4c7378b515725efaed3aaf639391d7a6331c2ae2b4bcf9eb995153"
+      },
+      "bytes": 68816,
+      "sha256": "5df6274c2af8c7388fed88645dcbc73392117b4127bb89336df3ad5d70ec1007",
+      "preview": {
+        "file": "../previews/web/23-mobile-navigation.webp",
+        "bytes": 23018,
+        "sha256": "5ba9eed8a124177d5698e9aa98c013569c833b6c5bdbe519c5375b30a8831a98"
+      }
+    },
+    {
+      "file": "24-videos-grid-dark.webp",
+      "title": "Video library — dark",
+      "viewport": {
+        "width": 1600,
+        "height": 1040
+      },
+      "deviceScaleFactor": 1,
+      "width": 1600,
+      "height": 1040,
+      "original": {
+        "file": "24-videos-grid-dark.png",
+        "bytes": 263063,
+        "sha256": "3893012c2e32d0799e65922b0ead6df18605d4f56ef3c2e73886297e96396589"
+      },
+      "bytes": 56690,
+      "sha256": "ac5d5d31fc9c13bc17b8792741d276059b1ac6a2c65a0aadf1cdcbe3bb3f1065",
+      "preview": {
+        "file": "../previews/web/24-videos-grid-dark.webp",
+        "bytes": 16468,
+        "sha256": "c7cba4257481e054a7a09b53c96d4d2f783c4fc1337581129dd2f1c26fc62cbc"
+      }
+    }
+  ]
+}

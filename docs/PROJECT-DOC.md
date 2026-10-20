@@ -2,8 +2,8 @@
 
 > **Working name:** GitGallery
 > **One line:** A photo/video gallery app that stores your library in *your own private GitHub repo*, with an Immich-quality UI.
-> **Status:** Built and self-tested on **both** platforms. Android feature-complete for v1; iOS builds via CocoaPods and passes the same flow-for-flow test pass (2026-09-20).
-> **Last updated:** 2026-09-17
+> **Status:** Android and iOS v1 built and self-tested. A responsive, read-only web companion includes server-backed sign-in and repository selection; real-account authorization verification, browser uploads, and shared collections remain. See [WEB-PLAN.md](WEB-PLAN.md).
+> **Last updated:** 2026-10-20
 
 ---
 
@@ -16,9 +16,9 @@ After digging into both codebases, the answer is **no — not by modifying Immic
 ### The goal
 
 - Store photos/videos in a **private GitHub repo** (free tier), not a self-hosted server, not Google Photos.
-- **No infrastructure to run.** No Postgres, no Docker, no VPS, no electricity bill.
+- **Mobile connects directly to GitHub.** The optional website uses a small Node server for authentication and private media access; no separate media database is required.
 - **Immich-grade UI/UX** — because Immich's interface is genuinely excellent and is the reason we started here.
-- Ship on **Android + iOS**.
+- Ship on **Android + iOS**, with a companion browser gallery in the same Expo project.
 
 ### The non-goal
 
@@ -186,12 +186,16 @@ Cloned at `reference/GitGalleryApp` — commit `b27971c`, last activity **2025-1
 
 > These were originally marked impossible. That was wrong: GitHub can't do the ML, but **the phone can**. Cost is upload-time compute and app size, not infrastructure. See BIG-BRAIN-IDEAS §S2.
 
+### Browser companion
+
+The browser companion provides a responsive React DOM gallery with search/filter/sort, photo/video viewing and downloads, browser-local favourites/albums, and read-only access to existing GitGallery repositories. It starts at sign-in; sample media loads only through Try the demo. GitHub OAuth establishes an HttpOnly server session, with personal-token access available only as an operator-enabled advanced option, and the selected repository survives reloads. Public repositories can also be opened without signing in. Credentials stay in server memory; sessions expire within eight hours or on server restart. Native SQLite, filesystem, media-library and SecureStore APIs have browser-specific replacements. The shared path parser and timeline grouping preserve repository compatibility. [WEB-PLAN.md](WEB-PLAN.md) covers setup, hosting, limits, verification and remaining work. Guided approval-code sign-in works with the existing client ID and no secret; live code issuance is verified. Completed authorization is fixture-tested and still needs real-account consent. A client secret enables optional direct redirects. Configuration is a one-time website operator task; normal users never set up tokens or OAuth apps. Production startup checks require complete OAuth settings. See [WEB-AUTH-SETUP.md](WEB-AUTH-SETUP.md). Browser uploads and collections shared with mobile are not implemented.
+
 ### ❌ Out of scope (accepted)
 
 - Server-side ML of any kind
 - Map view *(only if GPS is stored in the index — filenames can't carry it)*
 - Live server-side transcoding
-- Web app (mobile-first; Immich's web UI stays as reference only)
+- Native desktop application
 
 ---
 
@@ -229,7 +233,7 @@ Immich ships 10 selectable presets (indigo, deepPurple, pink, red, orange, yello
 |---|---|---|
 | Android | Primary | Feature-complete for v1; verified on emulator |
 | iOS | Supported | Builds (CocoaPods, 100 pods, 0 errors) and verified on simulator: timeline, viewer, video, favourites, albums, settings, cloud read, upload end-to-end. Limited-photo-access mode explicitly handled |
-| Web | Out of scope | Expo web exists but untested; Immich web is reference only |
+| Web | Read-only companion | React DOM through Expo web with a Node session server, sign-in, repository selection and responsive gallery. Live consent verification, uploads and cross-device collections remain |
 | Desktop | Out of scope | Immich itself has no desktop app either |
 
 ---
@@ -305,3 +309,4 @@ per-repo because the machine's global config is the work email.
 | D8 | **Tier storage by file size** (git / release assets) | Release assets allow 2 GiB with no total-size limit and don't touch git history — this kills the 100 MB cap *and* video transcoding. Putting *everything* in releases was rejected: 1000-assets-per-release, flat namespace, and losing the tree stack. |
 | D9 | **Stub pointers in git for tier-2 files** | Preserves path/date/dimension encoding and keeps albums, dedup and Merkle sync tier-agnostic. Same pattern Git LFS uses. |
 | D10 | Tier threshold is **25 MiB** (measured, 2026-09-18) | The blob API's real cliff is a ~50 MB request body ≈ **37 MiB raw** after base64 — *not* the documented 100 MiB, which applies to git push. 35 MiB→201, 40 MiB→422. 25 MiB leaves headroom. The originally planned 50 MiB would have failed in production. |
+| D11 | **Browser UI in the existing Expo project** | `App.web.tsx` selects React DOM; share pure path/timeline logic and repository formats. Use a read-only adapter behind a Node authentication gateway, with credentials in server memory and HttpOnly browser sessions. Demo is opt-in; uploads and shared collections remain separate milestones. |

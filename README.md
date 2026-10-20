@@ -2,7 +2,7 @@
 
 A photo/video gallery app that stores your library in **your own private GitHub repo**, with an **Immich-quality UI**.
 
-No server. No Docker. No monthly bill.
+Your media lives in GitHub. Android and iOS connect directly; the web app uses a small Node server for secure sign-in.
 
 > **Status: v1 complete.** Android + iOS, tested on emulator/simulator and on real hardware
 > (iPhone 13, Galaxy S24 Ultra, ~15,000-asset library). GitHub sign-in works end to end.
@@ -11,7 +11,7 @@ No server. No Docker. No monthly bill.
 
 ## Screenshots
 
-Android and iOS with a curated demo library. Click any screenshot to open the full-resolution image.
+Android, iOS, and web with a curated demo library. Click any screenshot to open the full-resolution image.
 
 ### Android
 
@@ -83,7 +83,38 @@ Android and iOS with a curated demo library. Click any screenshot to open the fu
   </tr>
 </table>
 
-[Browse all 44 screenshots](screenshots/README.md), including cloud views, more albums, settings, and iOS onboarding.
+### Web
+
+Desktop and mobile browser captures of the demo library.
+
+<table>
+  <tr><th>Gallery — light</th><th>Gallery — dark</th></tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/01-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/01-gallery-light.webp" alt="Web — Gallery — light" width="420" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/02-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/02-gallery-dark.webp" alt="Web — Gallery — dark" width="420" /></a></td>
+  </tr>
+  <tr><th>Albums — light</th><th>Favourites — dark</th></tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/03-albums-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/03-albums-light.webp" alt="Web — Albums — light" width="420" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/06-favourites-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/06-favourites-dark.webp" alt="Web — Favourites — dark" width="420" /></a></td>
+  </tr>
+  <tr><th>Ocean video playback</th><th>Multi-selection — dark</th></tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/10-ocean-video-player.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/10-ocean-video-player.webp" alt="Web — Ocean video playback" width="420" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/12-multi-select-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/12-multi-select-dark.webp" alt="Web — Multi-selection — dark" width="420" /></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr><th>Mobile gallery — light</th><th>Mobile gallery — dark</th><th>Mobile photo viewer</th></tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/19-mobile-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/19-mobile-gallery-light.webp" alt="Web — Mobile gallery — light" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/20-mobile-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/20-mobile-gallery-dark.webp" alt="Web — Mobile gallery — dark" width="240" /></a></td>
+    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/22-mobile-viewer.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/22-mobile-viewer.webp" alt="Web — Mobile photo viewer" width="240" /></a></td>
+  </tr>
+</table>
+
+[Browse all 68 screenshots](screenshots/README.md), including all 24 web captures, cloud views, albums, settings, and iOS onboarding.
 
 ---
 
@@ -157,11 +188,30 @@ See **[BIG-BRAIN-IDEAS.md](docs/BIG-BRAIN-IDEAS.md)** for how each of these is a
 
 ## Platforms
 
-Android and iOS, both shipped and both tested on real hardware. Web & desktop out of scope.
+Android and iOS, both shipped and both tested on real hardware. A **web companion** now lives in the same Expo project: a responsive gallery with search, photo/video viewing, downloads, light/dark themes, and browser-local favourites and albums. It opens with sign-in and a repository picker. Your selected library survives page reloads; sample photos appear only when you choose **Try the demo**.
+
+Users sign in with GitHub and choose their own repository; no token or developer setup is required from visitors. Authentication uses a server session with an HttpOnly cookie. Credentials stay on the server. Public repositories can also be opened without signing in. Browser access is read-only; use the mobile app for uploads. Web albums/favourites remain local to this browser. See **[the web scope and development guide](docs/WEB-PLAN.md)**. A native desktop application remains out of scope.
 
 ---
 
 ## Running it
+
+**Web preview:**
+
+```bash
+cd app
+npm install
+npm run web             # http://127.0.0.1:8082 (Node + Metro)
+# Production preview instead:
+npm run build:web
+npm run preview:web     # http://127.0.0.1:8082
+```
+
+**Website operator setup, once for all users:** set the existing registration’s client ID in `app/.env.web` and enable Device Flow on GitHub. Visitors click **Continue with GitHub**, follow the on-screen copy-code/approval steps, and return to choose their library. No client secret is needed for this flow. A configured client secret enables optional direct browser redirects. [Plain-language setup guide](docs/WEB-AUTH-SETUP.md). Run `npm run check:web` from `app/` to check configuration without exposing secrets. Token login is an optional advanced feature, disabled by default.
+
+The web scripts exclude native development credentials and `.env` from website builds. The Node server is required for sign-in; publishing `dist-web` alone is insufficient. [Web setup, deployment, and limitations](docs/WEB-PLAN.md).
+
+**Android / iOS:**
 
 ```bash
 cd app
@@ -212,6 +262,7 @@ guarded by `if (!token)`, so a real signed-in session always wins.
 
 ## What's not done
 
+- **Web:** browser uploads and collections shared with mobile. Originals above the 80 MiB browser limit use an Open on GitHub fallback. Live approval-code issuance is verified; completing authorization and private-release checks still requires real-account consent. Public deployments should configure redirect sign-in for scale. See [WEB-PLAN.md](docs/WEB-PLAN.md).
 - **Select All** only covers the page of the timeline that has loaded, not the whole library.
 - **Scope narrowing** — see the warning above.
 - On-device ML search / face grouping — deliberately deferred (Phase 6 stretch).

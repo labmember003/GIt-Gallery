@@ -1,0 +1,353 @@
+[
+  {
+    "filename": "GGSHOT_01_riviera.jpg",
+    "title": "riviera",
+    "album": "Coastal escapes",
+    "photoId": "1516483638261-f4dbaf036963",
+    "source": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963",
+    "date": "2026-10-12T18:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_02_santorini.jpg",
+    "title": "santorini",
+    "album": "Coastal escapes",
+    "photoId": "1533105079780-92b9be482077",
+    "source": "https://images.unsplash.com/photo-1533105079780-92b9be482077",
+    "date": "2026-10-12T17:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_03_ocean.jpg",
+    "title": "ocean",
+    "album": "Coastal escapes",
+    "photoId": "1500375592092-40eb2168fd21",
+    "source": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21",
+    "date": "2026-10-12T16:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_04_tropical-beach.jpg",
+    "title": "tropical-beach",
+    "album": "Coastal escapes",
+    "photoId": "1507525428034-b723cf961d3e",
+    "source": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+    "date": "2026-10-12T15:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_05_island-cove.jpg",
+    "title": "island-cove",
+    "album": "Coastal escapes",
+    "photoId": "1519046904884-53103b34b206",
+    "source": "https://images.unsplash.com/photo-1519046904884-53103b34b206",
+    "date": "2026-10-12T14:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_06_mediterranean.jpg",
+    "title": "mediterranean",
+    "album": "Coastal escapes",
+    "photoId": "1499793983690-e29da59ef1c2",
+    "source": "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2",
+    "date": "2026-10-12T13:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_07_italian-summer.jpg",
+    "title": "italian-summer",
+    "album": "Coastal escapes",
+    "photoId": "1498307833015-e7b400441eb8",
+    "source": "https://images.unsplash.com/photo-1498307833015-e7b400441eb8",
+    "date": "2026-10-12T12:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_08_turquoise-sea.jpg",
+    "title": "turquoise-sea",
+    "album": "Coastal escapes",
+    "photoId": "1514282401047-d79a71a590e8",
+    "source": "https://images.unsplash.com/photo-1514282401047-d79a71a590e8",
+    "date": "2026-10-12T11:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_09_sunset-coast.jpg",
+    "title": "sunset-coast",
+    "album": "Coastal escapes",
+    "photoId": "1473116763249-2faaef81ccda",
+    "source": "https://images.unsplash.com/photo-1473116763249-2faaef81ccda",
+    "date": "2026-10-12T10:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_10_alpine-summit.jpg",
+    "title": "alpine-summit",
+    "album": "Into the mountains",
+    "photoId": "pexels-417074",
+    "source": "https://www.pexels.com/photo/417074/",
+    "date": "2026-10-11T18:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_11_mountain-lake.jpg",
+    "title": "mountain-lake",
+    "album": "Into the mountains",
+    "photoId": "1501785888041-af3ef285b470",
+    "source": "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+    "date": "2026-10-11T17:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_12_mirror-lake.jpg",
+    "title": "mirror-lake",
+    "album": "Into the mountains",
+    "photoId": "1470770841072-f978cf4d019e",
+    "source": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e",
+    "date": "2026-10-11T16:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_13_night-sky.jpg",
+    "title": "night-sky",
+    "album": "Into the mountains",
+    "photoId": "1519681393784-d120267933ba",
+    "source": "https://images.unsplash.com/photo-1519681393784-d120267933ba",
+    "date": "2026-10-11T15:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_14_wild-peaks.jpg",
+    "title": "wild-peaks",
+    "album": "Into the mountains",
+    "photoId": "1469474968028-56623f02e42e",
+    "source": "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+    "date": "2026-10-11T14:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_15_lake-louise.jpg",
+    "title": "lake-louise",
+    "album": "Into the mountains",
+    "photoId": "pexels-414612",
+    "source": "https://www.pexels.com/photo/414612/",
+    "date": "2026-10-11T13:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_16_alpine-forest.jpg",
+    "title": "alpine-forest",
+    "album": "Into the mountains",
+    "photoId": "1441974231531-c6227db76b6e",
+    "source": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+    "date": "2026-10-11T12:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_17_misty-hills.jpg",
+    "title": "misty-hills",
+    "album": "Into the mountains",
+    "photoId": "pexels-1366919",
+    "source": "https://www.pexels.com/photo/1366919/",
+    "date": "2026-10-11T11:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_18_mountain-trail.jpg",
+    "title": "mountain-trail",
+    "album": "Into the mountains",
+    "photoId": "1454496522488-7a8e488e8606",
+    "source": "https://images.unsplash.com/photo-1454496522488-7a8e488e8606",
+    "date": "2026-10-11T10:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_19_kyoto.jpg",
+    "title": "kyoto",
+    "album": "Japan in bloom",
+    "photoId": "1493976040374-85c8e12f0c0e",
+    "source": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e",
+    "date": "2026-10-05T18:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_20_cherry-blossoms.jpg",
+    "title": "cherry-blossoms",
+    "album": "Japan in bloom",
+    "photoId": "1522383225653-ed111181a951",
+    "source": "https://images.unsplash.com/photo-1522383225653-ed111181a951",
+    "date": "2026-10-05T17:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_21_tokyo-at-night.jpg",
+    "title": "tokyo-at-night",
+    "album": "Japan in bloom",
+    "photoId": "1519608487953-e999c86e7455",
+    "source": "https://images.unsplash.com/photo-1519608487953-e999c86e7455",
+    "date": "2026-10-05T16:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_22_japan-street.jpg",
+    "title": "japan-street",
+    "album": "Japan in bloom",
+    "photoId": "1545569341-9eb8b30979d9",
+    "source": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9",
+    "date": "2026-10-05T15:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_23_japanese-garden.jpg",
+    "title": "japanese-garden",
+    "album": "Japan in bloom",
+    "photoId": "1528164344705-47542687000d",
+    "source": "https://images.unsplash.com/photo-1528164344705-47542687000d",
+    "date": "2026-10-05T14:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_24_city-lights.jpg",
+    "title": "city-lights",
+    "album": "City after dark",
+    "photoId": "1519501025264-65ba15a82390",
+    "source": "https://images.unsplash.com/photo-1519501025264-65ba15a82390",
+    "date": "2026-10-05T13:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_25_skyline.jpg",
+    "title": "skyline",
+    "album": "City after dark",
+    "photoId": "1480714378408-67cf0d13bc1b",
+    "source": "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b",
+    "date": "2026-10-05T12:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_26_night-bridge.jpg",
+    "title": "night-bridge",
+    "album": "City after dark",
+    "photoId": "1514565131-fce0801e5785",
+    "source": "https://images.unsplash.com/photo-1514565131-fce0801e5785",
+    "date": "2026-10-05T11:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_27_neon-city.jpg",
+    "title": "neon-city",
+    "album": "City after dark",
+    "photoId": "pexels-3052361",
+    "source": "https://www.pexels.com/photo/3052361/",
+    "date": "2026-10-05T10:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_28_golden-dunes.jpg",
+    "title": "golden-dunes",
+    "album": "Golden hour",
+    "photoId": "1509316785289-025f5b846b35",
+    "source": "https://images.unsplash.com/photo-1509316785289-025f5b846b35",
+    "date": "2026-10-04T18:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_29_desert-waves.jpg",
+    "title": "desert-waves",
+    "album": "Golden hour",
+    "photoId": "1473580044384-7ba9967e16a0",
+    "source": "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0",
+    "date": "2026-10-04T17:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_30_canyon.jpg",
+    "title": "canyon",
+    "album": "Golden hour",
+    "photoId": "1469854523086-cc02fe5d8800",
+    "source": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800",
+    "date": "2026-10-04T16:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_31_forest-wildlife.jpg",
+    "title": "forest-wildlife",
+    "album": "Slow weekends",
+    "photoId": "1472396961693-142e6e269027",
+    "source": "https://images.unsplash.com/photo-1472396961693-142e6e269027",
+    "date": "2026-10-04T15:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_32_woodland.jpg",
+    "title": "woodland",
+    "album": "Slow weekends",
+    "photoId": "1448375240586-882707db888b",
+    "source": "https://images.unsplash.com/photo-1448375240586-882707db888b",
+    "date": "2026-10-04T14:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_33_green-valley.jpg",
+    "title": "green-valley",
+    "album": "Slow weekends",
+    "photoId": "pexels-572897",
+    "source": "https://www.pexels.com/photo/572897/",
+    "date": "2026-10-04T13:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_34_golden-light.jpg",
+    "title": "golden-light",
+    "album": "Golden hour",
+    "photoId": "1470252649378-9c29740c9fa8",
+    "source": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8",
+    "date": "2026-10-04T12:24:00+05:30",
+    "favorite": true
+  },
+  {
+    "filename": "GGSHOT_35_flower-field.jpg",
+    "title": "flower-field",
+    "album": "Slow weekends",
+    "photoId": "1490750967868-88aa4486c946",
+    "source": "https://images.unsplash.com/photo-1490750967868-88aa4486c946",
+    "date": "2026-10-04T11:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_36_flowers.jpg",
+    "title": "flowers",
+    "album": "Slow weekends",
+    "photoId": "1462275646964-a0e3386b89fa",
+    "source": "https://images.unsplash.com/photo-1462275646964-a0e3386b89fa",
+    "date": "2026-10-04T10:24:00+05:30",
+    "favorite": false
+  },
+  {
+    "filename": "GGSHOT_37_ocean-drift.mp4",
+    "title": "ocean-drift",
+    "album": "Coastal escapes",
+    "source": "https://www.pexels.com/video/drone-footage-of-waves-crashing-on-the-shore-5927954/",
+    "date": "2026-10-12T15:21:00+05:30",
+    "favorite": true,
+    "preview": "GGTHUMB_37_ocean-drift.jpg"
+  },
+  {
+    "filename": "GGSHOT_38_island-aerial.mp4",
+    "title": "island-aerial",
+    "album": "Coastal escapes",
+    "source": "https://www.pexels.com/video/drone-footage-of-waves-crashing-on-the-shore-5927954/",
+    "date": "2026-10-12T09:50:00+05:30",
+    "favorite": false,
+    "preview": "GGTHUMB_38_island-aerial.jpg"
+  },
+  {
+    "filename": "GGSHOT_39_window-seat.mp4",
+    "title": "window-seat",
+    "album": "Coastal escapes",
+    "source": "https://www.pexels.com/video/854550/",
+    "date": "2026-10-12T09:15:00+05:30",
+    "favorite": false,
+    "preview": "GGTHUMB_39_window-seat.jpg"
+  }
+]
