@@ -689,6 +689,28 @@ Sequencing note: Phase 4 is the biggest chunk but also the most parallelizable a
 
 ---
 
+## Browser companion — gallery and sign-in (2026-10-19)
+
+The browser roadmap is tracked in [WEB-PLAN.md](WEB-PLAN.md). This extends the existing Expo app with a dedicated React DOM entry rather than replacing the mobile UI.
+
+- [x] SDK-compatible web dependencies and safe development/export/preview scripts.
+- [x] Responsive timeline, search/filter/sort, light/dark theme, selection, viewer and downloads.
+- [x] Optimised local demo photos and playable videos.
+- [x] Browser-local favourites and albums, isolated per account/repository/branch.
+- [x] Read-only GitHub adapter for public/private repositories, canonical and legacy paths, metadata and release pointers, with truncation and download-size guards.
+- [x] Unit and production-browser regression coverage for gallery flows, connection errors and credential isolation.
+- [x] GitHub OAuth with state/PKCE and server-side token exchange; optional advanced token sign-in (off by default), HttpOnly sessions and repository selection.
+- [x] Default sign-in entry, explicit demo, restored repository, session expiry and cross-tab logout.
+- [x] Consumer sign-in without developer setup prompts; clear retry state, production configuration gate and website-operator setup guide.
+- [x] 24 optimised web screenshots, smaller README previews and repeatable capture script.
+- [x] Guided approval-code sign-in using the existing registration, with live code issuance verified and no client-secret prerequisite.
+- [ ] Complete real-account consent/private-release verification; configure redirect sign-in for higher-traffic deployment.
+- [ ] Browser upload queue, preview generation and tier routing, verified against a throwaway repository.
+- [ ] Shared collection schema, virtualised large libraries and cached incremental indexing.
+- [ ] Real private-release compatibility, Safari/Firefox, accessibility and deployment verification.
+
+The web version is a read-only companion served by Node. Mobile continues to handle backup/upload, and browser collections do not yet sync to mobile. Verification covers 12 library tests, 18 server authentication/configuration tests, and 16 Chromium browser tests with fixture GitHub responses. No hosting deployment or live-account OAuth verification is claimed.
+
 ## Open questions
 
 1. **App name** — "GitGallery" is inherited from upstream. Rename before publishing?

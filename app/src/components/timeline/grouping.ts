@@ -10,7 +10,7 @@
  * `getItemLayout` stay cheap on long lists.
  */
 
-import { parseCanonicalPath } from '@/services/sync/pathScheme';
+import { parseCanonicalPath } from '@/services/sync/pathMetadata';
 
 export type TimelineGroupable = {
   id: string;

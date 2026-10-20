@@ -2,5 +2,9 @@ node_modules/
 build-*
 .DS_Store
 .env
+.env.web
 .expo/
 .vscode/
+dist-web/
+playwright-report/
+test-results/

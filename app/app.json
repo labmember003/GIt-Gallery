@@ -41,7 +41,12 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "GitGallery",
+      "shortName": "GitGallery",
+      "description": "Your photos and videos, in your own GitHub repository.",
+      "bundler": "metro",
+      "output": "single"
     },
     "plugins": [
       [

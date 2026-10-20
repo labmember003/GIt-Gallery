@@ -6,9 +6,18 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "node scripts/web.mjs dev",
+    "build:web": "node scripts/web.mjs build",
+    "preview:web": "node scripts/web.mjs preview",
+    "typecheck": "tsc --noEmit",
+    "test:web:unit": "tsx --test src/web/__tests__/*.test.ts",
+    "test:web": "npm run typecheck && npm run test:web:unit && npm run test:web:server && npm run build:web && playwright test",
+    "screenshots:web": "node scripts/capture-web.mjs",
+    "test:web:server": "node --test server/*.test.mjs",
+    "check:web": "node scripts/check-web.mjs"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
     "@material/material-color-utilities": "^0.2.7",
     "@octokit/rest": "^22.0.0",
@@ -34,16 +43,20 @@
     "jpeg-js": "^0.4.4",
     "process": "^0.11.10",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-paper": "^5.14.5",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "~4.16.0",
+    "react-native-web": "^0.21.0",
     "thumbhash": "^0.1.1",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/react": "~19.1.0",
     "react-native-get-random-values": "^2.0.0",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.2"
   },
   "private": true
