@@ -4,7 +4,7 @@
 
 The frontend and backend run in one Vercel Hobby project, `applicationsplit-1607s-projects/gitgallery`, with a free Upstash Redis resource for shared sessions. Production deployment and public desktop/phone browser checks passed on 2026-10-20.
 
-The account-owner marketplace acceptance is complete. The permanent `gitgallery-sessions` resource is available, reports the Free plan, and is connected only to this project for production and preview. Its creation explicitly disabled automatic paid upgrades and the paid production pack. Functions and Redis use Mumbai (`bom1`); builds run on Vercel’s build infrastructure. Node 22 and approval-code sign-in are configured. The Vercel project has no GitHub App repository connection; deployment used the local folder.
+The account-owner marketplace acceptance is complete. The permanent `gitgallery-sessions` resource is available, reports the Free plan, and is connected only to this project for production and preview. Its creation explicitly disabled automatic paid upgrades and the paid production pack. Functions and Redis use Mumbai (`bom1`); builds run on Vercel’s build infrastructure. Node 22 and approval-code sign-in are configured. The Vercel project is connected to `labmember003/GIt-Gallery`, with `main` as its production branch and `app` as its root directory.
 
 ## What runs where
 
@@ -28,10 +28,13 @@ Upstash advertises a free Redis tier with 500,000 commands/month and roughly 250
 
 ## Project settings
 
-Use the `app` folder as the project root when importing the GitHub repository in the dashboard. The current CLI link was created from inside `app/`, where the linked root is `.`.
+The project's Root Directory is `app`, relative to the Git repository root. Git deployments read the build configuration from `app/vercel.json`.
 
 | Setting | Value |
 | --- | --- |
+| Git repository | `labmember003/GIt-Gallery` |
+| Production branch | `main` |
+| Root directory | `app` |
 | Framework preset | Other |
 | Node.js | 22.x |
 | Install command | `npm ci --include=dev` |
@@ -43,18 +46,22 @@ Use the `app` folder as the project root when importing the GitHub repository in
 
 ## GitHub permissions
 
-Deploying the local folder with the Vercel CLI does not require granting the Vercel GitHub App repository access. No GitHub integration is needed for that deployment method.
+The project's Git connection, production branch and root directory were verified through the Vercel API on 2026-10-20. Pushes to `main` are configured to deploy to the production URL; other branches receive preview deployments. Check the deployment's commit SHA and final status in Vercel to confirm each release. See [Vercel for GitHub](https://vercel.com/docs/git/vercel-for-github).
 
-If automatic GitHub deployments are enabled later, select **Only select repositories** when configuring the GitHub App, and select only **labmember003/GIt-Gallery**. Do not select all repositories. Connect the project with repository root `app`. Deployment authorization does not authorize committing or pushing source changes; those remain the user's call.
+Keep the GitHub App installation on **Only select repositories**, selecting only **labmember003/GIt-Gallery**. Do not select all repositories. Deployment authorization does not authorize committing or pushing source changes; those remain the user's call.
+
+GitHub App installation and account authorization are separate steps. Selecting one repository during installation does not necessarily connect the GitHub identity to the Vercel account. Vercel can subsequently redirect to an account-authorization screen; its documented user permission is read access to email addresses. GitHub's standard authorization screen may also describe identity verification, identifying accessible resources and acting on the user's behalf. For a GitHub App, repository operations on the user's behalf are limited to the intersection of the user's and app's permissions; authorizing the account does not itself change an installation from selected repositories to all repositories. Verify the actual permission list and use `labmember003` for the Vercel GitHub login connection. Account connections are managed under the Vercel avatar → Settings → Authentication. Then connect the repository under the existing project's Settings → Git. See [GitHub installation versus authorization](https://docs.github.com/en/apps/using-github-apps/authorizing-github-apps), [Vercel user permissions](https://vercel.com/docs/git/vercel-for-github#user-permissions) and [Vercel account connections](https://vercel.com/docs/accounts#login-methods-and-connections).
 
 ## Configure sign-in and shared sessions
 
-1. Sign in with `vercel login`, then link the existing project from `app/` using `vercel link --project gitgallery --scope applicationsplit-1607s-projects`.
+1. Use the existing `gitgallery` project's dashboard, with Git repository `labmember003/GIt-Gallery`, production branch `main` and Root Directory `app`.
 2. Connect **Upstash for Redis**, selecting its free plan, automatic upgrades off and the paid production pack off. Vercel requires the account owner to accept the provider's marketplace terms on first use. Connect the resource to this project for production and preview.
 3. Set `GITHUB_CLIENT_ID` to the existing GitGallery registration's client ID and set `WEB_AUTH_MODE=device`. Device Flow must be enabled on that registration. Keep `WEB_ALLOW_TOKEN_SIGN_IN=false`.
 4. The Redis integration must provide `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, or the supported `KV_REST_API_URL` and `KV_REST_API_TOKEN` aliases. Store these in Vercel's server environment, never a public Expo variable or a tracked file.
 5. Keep Vercel's system environment variables enabled. The server uses the production project domain in production and the deployment domain in preview. An explicit `WEB_ORIGIN` can override this; scope it carefully so previews do not accidentally use the production origin.
-6. Run `vercel deploy --prod` from `app/`. A custom domain is optional.
+6. Push an authorized commit to `main`, then follow its deployment in Vercel. A custom domain is optional.
+
+If a manual CLI deployment is needed, run `vercel login` and `vercel link --project gitgallery --scope applicationsplit-1607s-projects` from the **repository root**, then run `vercel deploy --prod` there. The configured Root Directory already selects `app`; do not upload `app/` as though it were the repository root. See [Vercel CLI for repositories with project subdirectories](https://vercel.com/docs/monorepos#add-a-monorepo-through-vercel-cli).
 
 For direct redirect sign-in instead of approval codes, add a server-only `GITHUB_CLIENT_SECRET`, set `WEB_AUTH_MODE=redirect`, and register the exact public callback `<WEB_ORIGIN>/api/auth/callback`. See [the sign-in guide](WEB-AUTH-SETUP.md). Visitors never configure OAuth credentials. GitHub's documented Device Flow verification-code submission limit makes redirect sign-in preferable for a larger audience.
 
@@ -80,4 +87,4 @@ The temporary test database expires after 72 hours and must not be used as the p
 
 Automatic library setup is deployed in production (`dpl_EEz1GC2oAnQH9SLasYfABAqNMc4g`). Fresh desktop and phone browser sessions verified the new setup explanation, protected nested `/api/library/setup` route (401 while signed out), real sign-in code issuance/cancellation, and all 39 demo items, with zero browser errors or horizontal overflow. Local checks passed TypeScript, 12 library tests, 39 server tests and 21 browser tests. Four setup integration tests additionally passed against real temporary Redis with simulated GitHub responses. Actual GitHub repository creation/reuse through a visitor-approved account remains to be confirmed; no production user token was inspected.
 
-The website and demo links are near the top of `README.md`. Documentation/source changes remain local until the user commits and pushes them; publishing the Vercel website does not publish those Git changes.
+The website and demo links are near the top of `README.md`. Git pushes and Vercel deployments are separate outcomes: verify that the deployment for the pushed commit reaches READY before treating a release as live.

@@ -1818,6 +1818,52 @@ Updated README and web setup, hosting, architecture and implementation documenta
 
 ---
 
+## GitHub automatic deployment status — 2026-10-20
+
+**👤 User:**
+> is vercel directly connected to github, if i push to github, will it auto deploy on vercel also?
+
+**🤖 Assistant:**
+
+Checked the live Vercel project API: `gitgallery` has no GitHub connection (`link: null`), and its root directory is unset because deployments upload the local `app/` folder. Confirmed that a GitHub push currently does not trigger deployment. Explained that automatic deployment requires connecting only `labmember003/GIt-Gallery`, setting Root Directory to `app`, and using `main` as the production branch. Verified official Vercel documentation for production-branch deployments and previews. Updated the deployment guide to make the current manual deployment behavior explicit. No GitHub permissions, project settings, application code, deployments, commits or pushes were changed.
+
+---
+
+## Rechecking the GitHub connection — 2026-10-20
+
+**👤 User:**
+> now?
+
+**🤖 Assistant:**
+
+Rechecked the live Vercel project and the workspace's project list. The only matching project is `gitgallery`; its Git connection is still null and its root directory remains unset. Its latest production deployment is still the CLI deployment `dpl_EEz1GC2oAnQH9SLasYfABAqNMc4g`. Confirmed that GitHub pushes do not yet deploy automatically, and pointed to the existing project's Git settings to connect `labmember003/GIt-Gallery`, with root `app` and production branch `main`. No project settings, permissions, deployments, commits or pushes were changed.
+
+---
+
+## GitHub account authorization versus repository installation — 2026-10-20
+
+**👤 User:**
+> from github i gave access to specific repo, but now on vercel when i click connect it just redirect me to github where i am being asked to give account access
+
+**🤖 Assistant:**
+
+Reviewed official GitHub and Vercel documentation and rechecked the Vercel account/project. The project still has no Git repository link. Explained that installing Vercel for a selected repository and authorizing its connection to a GitHub account are separate steps. Vercel documents read access to email addresses as its user permission; GitHub App authorization may also describe verifying identity, identifying accessible resources and acting on the user's behalf. Such repository actions remain limited by both the user's and the GitHub App's permissions; account authorization does not itself switch the installation to all repositories. Asked the user to copy the exact permission names so the actual prompt can be checked before recommending approval. Preserved the requirement to use labmember003 and select only GIt-Gallery. Updated the deployment guide with the distinction and official sources. No account grants, project connection, deployment, commits or pushes were made.
+
+---
+
+## Verify automatic deployment with a small commit — 2026-10-20
+
+**👤 User:**
+> now i hope its connected, now can you push a small commit so that vercel starts redeploying and also keep and eye also that deploying started or not
+
+**🤖 Assistant:**
+
+Confirmed through the Vercel API that `gitgallery` is now connected to `labmember003/GIt-Gallery`, with production branch `main`. Corrected its unset Root Directory to `app` and verified the saved setting. Updated hosting documentation to describe Git deployments and the repository-root CLI workflow. No GitHub installation permissions were changed.
+
+Fetched `origin/main` and verified the local branch matched it. Verified the personal Git identity, `Avishisht Gupta <avishishtgupta@gmail.com>`. Preparing the explicitly requested documentation commit and normal push, followed by monitoring for a Git-triggered deployment matching its commit SHA. Application code is unchanged.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -1838,6 +1884,6 @@ Updated README and web setup, hosting, architecture and implementation documenta
 | Git | ✅ **Never commit/push without an explicit ask.** Personal identity (`avishishtgupta@gmail.com`, `labmember003`) set locally — global config is the work email. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
 | Repo root | ✅ **The workspace root**, so `README`/`CLAUDE.md`/`docs/` ship with the code. `reference/` stays out — AGPL bulk and an upstream duplicate |
 | Web companion | ✅ **Read-only web companion with server-backed sign-in.** Responsive React DOM gallery, automatic private library creation/reuse, custom-library discovery, optional repository picker, restored sessions and browser-local collections; demo is opt-in. Guided GitHub approval codes reuse the existing registration without a client secret; live code issuance and pending approval are verified. Optional redirect OAuth remains available. Real-account consent, uploads and shared collections remain. See `WEB-PLAN.md`. |
-| Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Local deployment granted no GitHub repository access; any later Git integration is limited to `labmember003/GIt-Gallery`. Full private-library consent verification remains. |
+| Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Git integration connects `labmember003/GIt-Gallery`, production branch `main`, root `app`; keep GitHub App access limited to that repository. Full private-library consent verification remains. |
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |
