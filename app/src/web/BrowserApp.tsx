@@ -4,6 +4,7 @@ import { GitHubSource } from './github';
 import { Icon } from './Icon';
 import { ConnectDialog } from './ConnectDialog';
 import { RepositoryPicker } from './RepositoryPicker';
+import { LibrarySetup } from './LibrarySetup';
 import { SignIn } from './SignIn';
 import { sessionFetch, sessionRequest, type WebSession } from './session';
 import type { Library, MediaSource } from './types';
@@ -98,7 +99,8 @@ export default function BrowserApp() {
     {demo ? loadError ? <div className="auth-loading"><p role="alert">{loadError}</p><button className="button secondary" onClick={() => setRetry(retry + 1)}>Try again</button></div> : <Loading label="Opening the demo…" />
       : !session ? bootError ? <div className="auth-loading"><Icon name="cloud" size={35} /><h1>Unable to connect</h1><p role="alert">{bootError}</p><button className="button primary" onClick={reloadSession}>Try again</button><button className="text-button" onClick={() => { setDemo(true); setDemoUrl(true); }}>Try the demo</button></div> : <Loading label="Checking your session…" />
       : !session.user ? <SignIn session={session} initialError={error} onSession={accept} onDemo={() => { setDemo(true); setDemoUrl(true); setError(''); }} onPublic={() => setPublicDialog(true)} />
-      : !repo || picker ? <RepositoryPicker session={session} onSession={accept} onSignOut={signOut} onExpired={expired} onCancel={repo ? () => setPicker(false) : undefined} />
+      : picker ? <RepositoryPicker session={session} onSession={accept} onSignOut={signOut} onExpired={expired} onCancel={() => setPicker(false)} />
+      : !repo ? <LibrarySetup session={session} onSession={accept} onManual={() => setPicker(true)} onSignOut={signOut} onExpired={expired} />
       : loadError ? <div className="auth-loading"><Icon name="cloud" size={35} /><h1>Could not open your library</h1><p role="alert">{loadError}</p><button className="button primary" onClick={() => setRetry(retry + 1)}>Try again</button><button className="button secondary" onClick={() => setPicker(true)}>Choose another repository</button><button className="text-button" onClick={signOut}>Sign out</button></div>
       : <Loading label="Opening your photo library…" />}
     {publicDialog && <ConnectDialog onClose={() => setPublicDialog(false)} onConnected={(library, source) => { guestRef.current?.source.dispose(); const next = { library, source, key: library.id }; guestRef.current = next; setGuest(next); setPublicDialog(false); }} />}

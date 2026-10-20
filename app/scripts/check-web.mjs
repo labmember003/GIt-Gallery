@@ -20,6 +20,6 @@ if (missing.length) {
   process.exitCode = 1;
 } else {
   console.log(signInMethod(config) === 'device'
-    ? 'Approval-code sign-in is configured. Device Flow must be enabled on the GitHub registration. Visitors copy a code, approve on GitHub, and return to choose their library.'
+    ? 'Approval-code sign-in is configured. Device Flow must be enabled on the GitHub registration. Visitors copy a code, approve on GitHub, and return to their automatically prepared library.'
     : 'Redirect sign-in is configured. Complete a real GitHub sign-in to verify the secret, callback and repository access.');
 }

@@ -1762,6 +1762,62 @@ Added prominent **Open GitGallery Web** and **Try the demo** links near the top 
 
 ---
 
+## Repository management and web onboarding — 2026-10-20
+
+**👤 User:**
+> on login it says, YOUR LIBRARY STARTS HERE
+> Choose your photo repository
+> Open the repository you use with GitGallery on your phone. Only its backed-up photos and videos will appear.
+>
+> Find a repository…
+> 0 repositories loaded
+> No repositories available
+> Check that your account or token has access to your photo repository. You can also enter its name below.
+>
+> Open a repository or a different branch by name
+> Opening a repository does not change its files.,
+
+**👤 User:**
+> on login it says,
+> 'YOUR LIBRARY STARTS HERE
+> Choose your photo repository
+> Open the repository you use with GitGallery on your phone. Only its backed-up photos and videos will appear.
+>
+> Find a repository…
+> 0 repositories loaded
+> No repositories available
+> Check that your account or token has access to your photo repository. You can also enter its name below.
+>
+> Open a repository or a different branch by name
+> Opening a repository does not change its files'
+>
+> my question is werent we managing repository etc ourselfs?
+
+**🤖 Assistant:**
+
+Checked native repository setup, SecureStore persistence, web selection and the production request log. Mobile offers creation of a private repository (default `gitgallery-photos`) or selection of an existing one, then manages backup files in the chosen repository. Its selected repository is stored locally on that device. The web companion currently opens existing repositories and keeps its own session selection; it does not inherit the phone's selection, automatically discover a library, or create a repository. Explained that the web onboarding is incomplete relative to that expectation, and that the zero-repository result is a separate unresolved listing/access issue. Production recorded HTTP 200 for the list request, which does not establish the underlying cause. No private session tokens were inspected. Updated WEB-PLAN.md to make the current behavior and onboarding gaps explicit. No application changes, deployment, commits, pushes or native changes were made in this exchange.
+
+---
+
+## Automatic repository discovery and creation — 2026-10-20
+
+**👤 User:**
+> cant we like do  it on our own, like creating repo and if already created use that....
+
+**🤖 Assistant:**
+
+Implemented and deployed automatic library setup after GitHub sign-in. The server first reuses the mobile default `username/gitgallery-photos` and its actual default branch. If absent, it paginates accessible repositories and identifies custom libraries using the mobile repository description or canonical/legacy GitGallery directories. One custom library opens automatically; multiple custom libraries offer a choice. When a complete scan finds none, the app creates an initialized private `gitgallery-photos` repository in the signed-in user's account. Existing files are not edited. A simultaneous name conflict reopens the same name instead of creating numbered duplicates.
+
+Added a CSRF-protected `/api/library/setup` route with an expiring shared-session lease, polling for concurrent tabs, atomic session version checks and a logout check before creation. Failed access, missing private scopes, partial large-account discovery and creation failures provide actionable retry/manual-selection paths. Fixed the manual picker's stale-response handling and distinction between listing failures and genuinely empty results. Updated sign-in/device instructions to explain automatic setup before approval. Browser uploads remain a separate milestone; mobile continues to fill the library.
+
+TypeScript, 12 library tests and all 39 server tests passed. The initial browser run passed 19 tests and exposed two omissions in the new test fixtures (a custom repository metadata response and opening the phone navigation before selecting Settings); corrected those fixtures and reran the affected flows. After inspecting phone/desktop captures and improving recovery-button spacing, a complete browser run passed all 21 tests. Four new setup integration tests also passed against real temporary Redis, using simulated GitHub responses, including fresh-handler continuity, setup leases, retry, logout and private-creation parameters.
+
+Deployed production build `dpl_EEz1GC2oAnQH9SLasYfABAqNMc4g` to **https://gitgallery-umber.vercel.app**. Fresh 1440px and 390px browser contexts verified the new onboarding copy, enabled sign-in, protected nested setup endpoint, real GitHub approval-code issuance/cancellation and 39 decoded demo items, with zero browser errors or horizontal overflow. Live and local screenshots were inspected. Actual repository creation/reuse with a visitor-approved real GitHub account remains unverified; no production user token was inspected or reused. The user can refresh the existing signed-in tab to start automatic setup.
+
+Updated README and web setup, hosting, architecture and implementation documentation. Deployment used the existing local-folder Vercel project without changing GitHub integration permissions. No native application code, dependency versions, commits or pushes changed.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -1781,7 +1837,7 @@ Added prominent **Open GitGallery Web** and **Try the demo** links near the top 
 | Testing | ✅ **Self-tested on emulator/simulator** — nothing reported done without being run; visual parity with Immich counts as correctness; bugs found get fixed, not just logged |
 | Git | ✅ **Never commit/push without an explicit ask.** Personal identity (`avishishtgupta@gmail.com`, `labmember003`) set locally — global config is the work email. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
 | Repo root | ✅ **The workspace root**, so `README`/`CLAUDE.md`/`docs/` ship with the code. `reference/` stays out — AGPL bulk and an upstream duplicate |
-| Web companion | ✅ **Read-only web companion with server-backed sign-in.** Responsive React DOM gallery, repository picker, restored sessions and browser-local collections; demo is opt-in. Guided GitHub approval codes reuse the existing registration without a client secret; live code issuance and pending approval are verified. Optional redirect OAuth remains available. Real-account consent, uploads and shared collections remain. See `WEB-PLAN.md`. |
+| Web companion | ✅ **Read-only web companion with server-backed sign-in.** Responsive React DOM gallery, automatic private library creation/reuse, custom-library discovery, optional repository picker, restored sessions and browser-local collections; demo is opt-in. Guided GitHub approval codes reuse the existing registration without a client secret; live code issuance and pending approval are verified. Optional redirect OAuth remains available. Real-account consent, uploads and shared collections remain. See `WEB-PLAN.md`. |
 | Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Local deployment granted no GitHub repository access; any later Git integration is limited to `labmember003/GIt-Gallery`. Full private-library consent verification remains. |
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

@@ -1,6 +1,6 @@
 # GitGallery web
 
-The browser companion uses the existing Expo project and a small Node server for authentication. It opens with a welcome/sign-in screen. Demo photos are loaded only through **Try the demo**; signed-in users choose their real GitGallery repository. The gallery is read-only; Android and iOS remain the upload clients.
+The browser companion uses the existing Expo project and a small Node server for authentication. It opens with a welcome/sign-in screen. Demo photos are loaded only through **Try the demo**; after sign-in, GitGallery opens an existing library or creates a private one automatically. The gallery is read-only; Android and iOS remain the upload clients.
 
 ## Implemented
 
@@ -8,7 +8,8 @@ The browser companion uses the existing Expo project and a small Node server for
 |---|---|
 | Sign-in | Guided GitHub approval codes using the existing client ID; optional browser redirects with state/PKCE when a secret is configured; advanced token login is opt-in |
 | Sessions | HttpOnly, SameSite cookie; credentials held on the server; selected repository restored after reload |
-| Repository picker | Account repositories, loaded-list search, pagination, manual owner/name and branch entry |
+| Library setup | Reuse the mobile default, discover custom libraries, or create a private initialized repository automatically |
+| Repository picker | Multiple-library choice and optional switching; account repositories, loaded-list search, pagination, manual owner/name and branch entry |
 | Gallery | Responsive desktop/phone layouts, date groups, search, filters, sorting, compact grid, multi-select |
 | Viewer | Photo zoom, keyboard navigation, video playback, original downloads |
 | Collections | Favourites and albums saved in this browser, separated by account/repository/branch |
@@ -19,9 +20,19 @@ The browser companion uses the existing Expo project and a small Node server for
 
 A real library starts with empty favourites/albums unless this browser already has saved collections for that account and repository. These collections do not sync with the mobile app. A public connection opened without sign-in must be reopened after a reload.
 
+Mobile saves its chosen repository in that device's SecureStore. Web discovers the library independently after GitHub approval:
+
+1. Open `username/gitgallery-photos` if accessible, preserving its actual default branch. This is the mobile default and takes precedence over custom libraries.
+2. Otherwise page through accessible repositories and detect the mobile description `Private repo for GitGallery` or a `gitgallery/` directory containing `library`, `images` or `meta`. One match opens automatically; several matches require a choice.
+3. With a complete search and no match, create `gitgallery-photos` in the signed-in user's account with `private: true` and `auto_init: true`. Reuse an existing name after a simultaneous-creation conflict; never make numbered duplicates.
+
+Discovery uses six concurrent directory checks, at most ten repository pages and a 100-second request deadline. Failed access, missing private-repository OAuth scope, incomplete scans and creation failures stop setup and offer retry/manual selection. A failed repository listing is not displayed as an empty account. A 120-second shared-session lease prevents overlapping setup across function instances; session version checks reject stale results and check for logout before creation. Interrupted creation is recovered by looking up the same deterministic repository name on retry.
+
+The new library starts empty. Back up photos from mobile to that same repository, then refresh the website. Existing repository files are not changed during discovery or selection; browser photo uploads remain out of scope.
+
 ## Local setup
 
-These are **website operator** instructions, completed once for all visitors. End users only sign in with their own GitHub account and choose a library. [Plain-language sign-in setup and explanation](WEB-AUTH-SETUP.md).
+These are **website operator** instructions, completed once for all visitors. End users sign in with their own GitHub account; library setup is automatic unless several existing libraries need a choice. [Plain-language sign-in setup and explanation](WEB-AUTH-SETUP.md).
 
 ```bash
 cd app
@@ -30,7 +41,7 @@ npm install
 cp .env.web.example .env.web
 ```
 
-Use an OAuth App you own with **Device Flow enabled**. Set `GITHUB_CLIENT_ID` in `app/.env.web`; `WEB_AUTH_MODE=auto` uses approval codes when no client secret is present. The existing mobile registration was verified to issue a code through GitHub on 2026-10-20. Visitors get step-by-step instructions to copy the code, open GitHub, approve access and return to choose their library. Tokens and private device credentials remain on the server.
+Use an OAuth App you own with **Device Flow enabled**. Set `GITHUB_CLIENT_ID` in `app/.env.web`; `WEB_AUTH_MODE=auto` uses approval codes when no client secret is present. The existing mobile registration was verified to issue a code through GitHub on 2026-10-20. Visitors get step-by-step instructions to copy the code, open GitHub, approve access and return to their automatically prepared library. Tokens and private device credentials remain on the server.
 
 A client secret and callback are optional, for direct browser redirects. To use that flow, set `GITHUB_CLIENT_SECRET` and register `http://127.0.0.1:8082/api/auth/callback`. `WEB_AUTH_MODE=redirect` requires those settings; `WEB_AUTH_MODE=device` always uses codes. The native `.env` and development-token bypass are never loaded for web sign-in.
 
@@ -65,16 +76,17 @@ The website is deployed at [https://gitgallery-umber.vercel.app](https://gitgall
 ## Architecture and security
 
 - `app/App.web.tsx` selects `src/web/BrowserApp.tsx`. It restores sessions, gates the gallery, and loads the demo module only when explicitly selected.
-- `src/web/SignIn.tsx`, `DeviceSignIn.tsx` and `RepositoryPicker.tsx` handle onboarding, copy-code approval, expiry, cancellation and library selection. `WebApp.tsx` renders an actual selected library or the explicit demo.
+- `src/web/SignIn.tsx`, `DeviceSignIn.tsx`, `LibrarySetup.tsx` and `RepositoryPicker.tsx` handle onboarding, copy-code approval, expiry, cancellation, automatic library setup and optional selection. `WebApp.tsx` renders an actual selected library or the explicit demo.
 - `src/web/session.ts` sends same-origin requests. The browser receives account information and a CSRF token, never the server’s GitHub access token or OAuth secret.
 - `server/auth.mjs` requests device codes and polls with provider-enforced intervals, supports redirect code exchange with state/PKCE, validates identity with GitHub, rotates session IDs on sign-in, enforces session expiry, and implements logout. State-changing requests require both the exact Origin and session CSRF token.
+- `server/library-setup.mjs` discovers existing libraries and creates only the fixed private default when no existing library is found. The CSRF-protected `/api/library/setup` route owns session leases and saves the selected repository. Repository creation is separate from the read-only media gateway.
 - `server/site.mjs` serves the frontend and API on one origin, with security headers and static-file range support. It also proxies Metro during development.
 - The authenticated media gateway allows only read endpoints under the selected repository. GitHub credentials are attached on the server. Release redirects are restricted to HTTPS GitHub content hosts and receive no Authorization header.
 - `src/web/github.ts` normalises the GitHub tree through the same fetch contract for public direct reads and authenticated server reads. `library.ts` interprets paths/metadata; `storage.ts` validates browser-local collections.
 - The pure parser in `src/services/sync/pathMetadata.ts` and timeline grouping are shared with native. SQLite, SecureStore, filesystem, and device-photo APIs stay outside the browser graph.
 - Expo builds disable dotenv loading and strip native development credentials and the web client secret from the bundler environment. The server’s `.env.web` is never part of `dist-web`.
 
-OAuth requests GitHub’s `repo` scope to access private libraries. That scope grants broader permissions than this read-only web gateway uses; GitHub OAuth Apps do not offer a private-repository read-only scope. Fine-grained PATs allow repository-specific read permission. A GitHub App integration is a future option for narrower OAuth permissions. Signing out ends the local website session; revoke the app grant separately in GitHub settings if needed.
+OAuth requests GitHub’s `repo` scope to access private libraries. That scope allows private repository creation and grants broader permissions than the read-only media gateway uses; GitHub OAuth Apps do not offer a private-repository read-only scope. Fine-grained PATs allow repository-specific read permission. A GitHub App integration is a future option for narrower OAuth permissions. Signing out ends the local website session; revoke the app grant separately in GitHub settings if needed.
 
 GitHub documents a limit of 50 code submissions per hour per app for Device Flow. Direct redirect sign-in is the deployment path for higher traffic. See the [official device-flow limits](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#rate-limits-for-the-device-flow).
 
@@ -82,7 +94,7 @@ GitHub documents a limit of 50 code submissions per hour per app for Device Flow
 
 The browser limits media requests to four concurrent downloads, thumbnails to 12 MiB, metadata files to 8 MiB, and originals to 80 MiB. Completed media cache entries have a 96 MiB byte budget; in-flight requests and decoded images can temporarily exceed that. These are app safeguards, not GitHub service limits. The timeline initially renders 120 items and supports Load more; large libraries still need virtualisation and persistent indexing.
 
-Truncated recursive trees trigger explicit subtree traversal. Incomplete subtrees or listings above the 50,000-entry guard produce an error. Failed metadata shows a warning and falls back to path metadata. No repository file is modified by this website.
+Truncated recursive trees trigger explicit subtree traversal. Incomplete subtrees or listings above the 50,000-entry guard produce an error. Failed metadata shows a warning and falls back to path metadata. Existing repository files are not modified; first-time library creation initializes a new private repository with a README.
 
 HEIC and some MOV codecs depend on browser support; unsupported originals can still be downloaded. Signed-in release downloads go through the server to avoid browser redirect/CORS problems, but unsupported redirects, failed downloads and originals above the browser limit offer **Open on GitHub**. The server streams relay responses, but the browser still buffers permitted media into blobs. Progressive private-video streaming and transcoding are not implemented. Real private release downloads still need verification with a configured account.
 
@@ -105,9 +117,9 @@ cd app
 npm run test:web
 ```
 
-This runs TypeScript, 12 library unit tests, 27 server authentication/configuration/store tests, a production export, and 16 Chromium browser tests. The browser suite starts isolated Node servers on 8092 (redirect) and 8093 (approval codes) with fixture GitHub responses; it exercises the actual session cookies, CSRF, OAuth callback, repository picker, authenticated media gateway, reloads and cross-tab logout. No test writes to GitHub or uses a personal token.
+This runs TypeScript, 12 library unit tests, 39 server authentication/configuration/store/setup tests, a production export, and 21 Chromium browser tests. The browser suite starts isolated Node servers on 8092 (redirect) and 8093 (approval codes) with fixture GitHub responses; it exercises the actual session cookies, CSRF, OAuth callback, repository picker, authenticated media gateway, reloads and cross-tab logout. No test writes to GitHub or uses a personal token.
 
-Coverage includes production startup readiness, optional-token enforcement, on-page setup guidance, device-code onboarding, slow-down handling, expired/denied codes and cancellation races, invalid/denied/replayed OAuth callbacks, credential isolation, wrong origins, session expiry, token errors, repository access bounds, signed-release redirects, demo opt-in, real-library empty states, desktop/phone layouts, 1,001-item pagination, 500 MiB pointer fallback, video playback/seeking, downloads, themes and collection persistence. Browser captures were inspected. Fresh Android/iOS production Hermes bundle exports passed on 2026-10-20. Source maps confirm the browser UI, web entry and web auth server are excluded. The shared parser source is identical to its original implementation, native configuration is unchanged, and existing dependency entries were not upgraded. This does not claim a new emulator/device regression pass.
+Coverage includes automatic creation/reuse, custom-library discovery, multi-library choice, pagination, setup leases, logout during discovery, creation conflicts, access errors/retry, production startup readiness, optional-token enforcement, on-page setup guidance, device-code onboarding, slow-down handling, expired/denied codes and cancellation races, invalid/denied/replayed OAuth callbacks, credential isolation, wrong origins, session expiry, token errors, repository access bounds, signed-release redirects, demo opt-in, real-library empty states, desktop/phone layouts, 1,001-item pagination, 500 MiB pointer fallback, video playback/seeking, downloads, themes and collection persistence. Browser captures were inspected. Fresh Android/iOS production Hermes bundle exports passed on 2026-10-20. Source maps confirm the browser UI, web entry and web auth server are excluded. The shared parser source is identical to its original implementation, native configuration is unchanged, and existing dependency entries were not upgraded. This does not claim a new emulator/device regression pass.
 
 ## Remaining work
 
@@ -120,6 +132,7 @@ Coverage includes production startup readiness, optional-token enforcement, on-p
 
 - ✅ [Expo web workflow](https://docs.expo.dev/workflow/web/): platform-specific React DOM interfaces and export.
 - ✅ [GitHub OAuth authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps): callback, client secret, state, PKCE, identity validation and token expiration.
+- ✅ [GitHub private repository creation](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user): `repo` scope, `private` and `auto_init` options. [Directory reads](https://docs.github.com/en/rest/repos/contents#get-repository-content) identify GitGallery data without downloading media.
 - ✅ [GitHub repository listing](https://docs.github.com/en/rest/repos/repos#list-repositories-for-the-authenticated-user): authenticated repository selection.
 - ✅ [GitHub blob reads](https://docs.github.com/en/rest/git/blobs#get-a-blob) and [release downloads](https://docs.github.com/en/rest/releases/assets#get-a-release-asset): read permission and binary redirects. ⚠️ Live private-release compatibility awaits account verification.
 - ✅ [GitHub CORS](https://docs.github.com/en/rest/using-the-rest-api/using-cors-and-jsonp-to-make-cross-origin-requests): direct public reads.
