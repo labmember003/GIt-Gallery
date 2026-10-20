@@ -701,6 +701,7 @@ The browser roadmap is tracked in [WEB-PLAN.md](WEB-PLAN.md). This extends the e
 - [x] Unit and production-browser regression coverage for gallery flows, connection errors and credential isolation.
 - [x] GitHub OAuth with state/PKCE and server-side token exchange; optional advanced token sign-in (off by default), HttpOnly sessions and repository selection.
 - [x] Default sign-in entry, explicit demo, restored repository, session expiry and cross-tab logout.
+- [x] Automatic private library creation/reuse, custom-library discovery, multiple-library selection and recovery from access failures/creation races.
 - [x] Consumer sign-in without developer setup prompts; clear retry state, production configuration gate and website-operator setup guide.
 - [x] 24 optimised web screenshots, smaller README previews and repeatable capture script.
 - [x] Guided approval-code sign-in using the existing registration, with live code issuance verified and no client-secret prerequisite.
@@ -712,7 +713,7 @@ The browser roadmap is tracked in [WEB-PLAN.md](WEB-PLAN.md). This extends the e
 - [ ] Shared collection schema, virtualised large libraries and cached incremental indexing.
 - [ ] Real private-release compatibility, Safari/Firefox and accessibility verification.
 
-The web version is a read-only companion served by Node. Mobile continues to handle backup/upload, and browser collections do not yet sync to mobile. Verification covers 12 library tests, 27 server authentication/configuration/store tests, and 16 Chromium browser tests with fixture GitHub responses. All 20 authentication tests additionally passed against real temporary Redis; the Vercel Node production builder includes streaming and excludes environment files. The public website is deployed and smoke-tested at [https://gitgallery-umber.vercel.app](https://gitgallery-umber.vercel.app); full real-account consent and private-release checks remain.
+The web version browses media read-only and manages initial private repository creation through Node. Mobile continues to handle backup/upload, and browser collections do not yet sync to mobile. Verification covers 12 library tests, 39 server authentication/configuration/store/setup tests, and 21 Chromium browser tests with fixture GitHub responses. The existing 20 authentication tests and four additional library-setup integration tests passed against real temporary Redis with simulated GitHub responses; the Vercel Node production builder includes streaming and excludes environment files. The public website is deployed and smoke-tested at [https://gitgallery-umber.vercel.app](https://gitgallery-umber.vercel.app); full real-account consent and private-release checks remain.
 
 ## Open questions
 

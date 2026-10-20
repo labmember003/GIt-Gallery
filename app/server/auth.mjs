@@ -3,6 +3,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { signInMethod } from './config.mjs';
 import { createSessionStore, SessionConflict, StoreUnavailable } from './session-store.mjs';
+import { prepareLibrary, selectedRepository, repositorySummary, LibrarySetupError } from './library-setup.mjs';
 
 const SESSION_AGE = 8 * 60 * 60 * 1000;
 const COOKIE = 'gg_session';
@@ -237,13 +238,39 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
         json(response, 200, visible(session)); return true;
       }
       signedIn(session);
+      if (url.pathname === '/api/library/setup' && request.method === 'POST') {
+        await body(request);
+        if (session.repo) { json(response, 200, { status: 'ready', session: visible(session), created: false }); return true; }
+        if (session.librarySetupUntil > now()) { json(response, 202, { status: 'pending', retryAfter: 2 }); return true; }
+        session.librarySetupUntil = now() + 120_000;
+        await save(session);
+        const deadline = AbortSignal.timeout(100_000);
+        try {
+          const result = await prepareLibrary({ login: session.user.login, beforeCreate: () => active(session),
+            request: (path, values) => values === undefined
+              ? github(path, session.token, 'application/vnd.github+json', AbortSignal.any([deadline, AbortSignal.timeout(15_000)]))
+              : fetcher(`https://api.github.com${path}`, { method: 'POST', redirect: 'error',
+                signal: AbortSignal.any([deadline, AbortSignal.timeout(30_000)]),
+                headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${session.token}`, 'Content-Type': 'application/json',
+                  'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'GitGallery-Web' }, body: JSON.stringify(values) }) });
+          delete session.librarySetupUntil;
+          if (result.repository) session.repo = selectedRepository(result.repository);
+          await save(session);
+          json(response, 200, result.choices ? { status: 'choose', repositories: result.choices }
+            : { status: 'ready', session: visible(session), created: result.created });
+        } catch (error) {
+          delete session.librarySetupUntil;
+          await save(session).catch(conflict => { if (!(conflict instanceof SessionConflict)) throw conflict; });
+          throw error;
+        }
+        return true;
+      }
       if (url.pathname === '/api/repositories' && request.method === 'GET') {
         const page = Number(url.searchParams.get('page') ?? 1);
         if (!Number.isSafeInteger(page) || page < 1 || page > 100) throw new HttpError(400, 'Invalid repository page.');
         const upstream = await check(await github(`/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`, session.token));
         const repos = await upstream.json();
-        json(response, 200, { repositories: repos.map((repo) => ({ id: repo.id, fullName: repo.full_name,
-          description: repo.description, private: repo.private, branch: repo.default_branch, writable: !!repo.permissions?.push })),
+        json(response, 200, { repositories: repos.map(repositorySummary),
           hasMore: (upstream.headers.get('link') ?? '').includes('rel="next"') }); return true;
       }
       if (url.pathname === '/api/repository' && request.method === 'POST') {
@@ -305,7 +332,7 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
         response.writeHead(303, { Location: `${config.origin}/?auth_error=${encodeURIComponent(reason)}`, 'Cache-Control': 'no-store' }); response.end();
       } else {
         if (error.status === 401 && session?.user) { await sessions.delete(session.id); cookie(response, '', 0); }
-        const known = error instanceof HttpError || error instanceof SessionConflict || error instanceof StoreUnavailable;
+        const known = error instanceof HttpError || error instanceof SessionConflict || error instanceof StoreUnavailable || error instanceof LibrarySetupError;
         json(response, known ? error.status : 502, { error: known ? error.message : 'The connection to GitHub failed. Please try again.' });
       }
       return true;

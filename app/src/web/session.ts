@@ -9,6 +9,7 @@ export type WebSession = {
   signInMethod: 'device' | 'redirect' | null;
   tokenSignInAvailable: boolean;
 };
+export type Repository = { id: number; fullName: string; description: string | null; private: boolean; branch: string; writable: boolean };
 export type DeviceChallenge = {
   method: 'device'; attemptId: string; userCode: string; verificationUri: string; expiresAt: number; interval: number;
 };

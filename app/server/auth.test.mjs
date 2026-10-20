@@ -10,6 +10,7 @@ const TOKEN = 'test_token_for_fixture_only_1234567890';
 const SECRET = 'fixture_client_secret_only';
 const SHA = 'a'.repeat(40);
 const DEVICE = { device_code: 'server_only_device_code_fixture', user_code: 'ABCD-EFGH', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 };
+const REPOSITORY_LIST = 'https://api.github.com/user/repos?per_page=100&page=1&sort=updated&affiliation=owner,collaborator,organization_member';
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...headers } });
 async function setup(t, overrides = {}, options = {}) {
   let time = Date.now();
@@ -47,6 +48,82 @@ async function setup(t, overrides = {}, options = {}) {
   async function login() { await session(); const response = await call('/api/auth/token', { token: TOKEN }); const result = await response.json(); assert.equal(response.status, 200); csrf = result.csrf; return result; }
   return { call, session, login, requests, config, advance(ms) { time += ms; }, getCookie: () => cookie, getCsrf: () => csrf };
 }
+
+test('automatic setup is authenticated, CSRF protected, and restores an existing library across Vercel instances', async t => {
+  const app = await setup(t, {
+    'https://api.github.com/repos/tester/gitgallery-photos': () => json({ full_name: 'tester/gitgallery-photos', default_branch: 'trunk', private: true }),
+  }, { freshInstance: true });
+  await app.session();
+  assert.equal((await app.call('/api/library/setup', {})).status, 401);
+  await app.login();
+  assert.equal((await app.call('/api/library/setup', {}, { 'X-GitGallery-CSRF': 'wrong' })).status, 403);
+  const prepared = await app.call('/api/index?__gg_path=library%2Fsetup', {});
+  assert.equal(prepared.status, 200);
+  const result = await prepared.json();
+  assert.equal(result.status, 'ready'); assert.equal(result.created, false);
+  assert.deepEqual(result.session.selectedRepo, { owner: 'tester', name: 'gitgallery-photos', branch: 'trunk' });
+  assert.equal(JSON.stringify(result).includes(TOKEN), false);
+  assert.deepEqual((await app.session()).selectedRepo, result.session.selectedRepo);
+  const calls = app.requests.length;
+  assert.equal((await (await app.call('/api/library/setup', {})).json()).status, 'ready');
+  assert.equal(app.requests.length, calls);
+  const query = await app.call('/api/index?__gg_path=repositories&page=2');
+  assert.equal(query.status, 200);
+  assert.match(app.requests.at(-1).url, /page=2&/);
+});
+
+test('first-time automatic setup creates a private initialized repository with only server-held credentials', async t => {
+  let writes = 0;
+  const app = await setup(t, {
+    [REPOSITORY_LIST]: () => json([]),
+    'https://api.github.com/user/repos': options => {
+      writes++; assert.equal(options.method, 'POST');
+      assert.equal(options.headers.Authorization, `Bearer ${TOKEN}`);
+      assert.deepEqual(JSON.parse(options.body), { name: 'gitgallery-photos', description: 'Private repo for GitGallery', private: true, auto_init: true });
+      return json({ full_name: 'tester/gitgallery-photos', default_branch: 'main', private: true }, 201);
+    },
+  });
+  await app.login();
+  const response = await app.call('/api/library/setup', {});
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.created, true); assert.equal(result.session.selectedRepo.name, 'gitgallery-photos');
+  assert.equal(JSON.stringify(result).includes(TOKEN), false);
+  assert.equal((await app.call('/api/library/setup', {})).status, 200); assert.equal(writes, 1);
+});
+
+test('another cold handler waits for active setup and logout prevents a late creation', async t => {
+  let entered; let release;
+  const reached = new Promise(resolve => { entered = resolve; });
+  const gate = new Promise(resolve => { release = resolve; });
+  let writes = 0;
+  const app = await setup(t, {
+    'https://api.github.com/repos/tester/gitgallery-photos': async () => { entered(); await gate; return json({}, 404); },
+    [REPOSITORY_LIST]: () => json([]),
+    'https://api.github.com/user/repos': () => { writes++; return json({}, 201); },
+  }, { freshInstance: true });
+  await app.login();
+  const pending = app.call('/api/library/setup', {});
+  await reached;
+  const concurrent = await app.call('/api/library/setup', {});
+  assert.equal(concurrent.status, 202); assert.equal((await concurrent.json()).status, 'pending');
+  await app.call('/api/auth/logout', {});
+  release();
+  assert.equal((await pending).status, 409); assert.equal(writes, 0);
+  assert.equal((await app.session()).user, null);
+});
+
+test('a failed setup releases its lease so retry can discover an existing library', async t => {
+  let failed = true;
+  const app = await setup(t, {
+    'https://api.github.com/repos/tester/gitgallery-photos': () => failed ? json({}, 403) : json({ full_name: 'tester/gitgallery-photos', default_branch: 'main', private: true }),
+  });
+  await app.login();
+  const denied = await app.call('/api/library/setup', {});
+  assert.equal(denied.status, 403); assert.match((await denied.json()).error, /sign out and sign in/);
+  failed = false;
+  assert.equal((await (await app.call('/api/library/setup', {})).json()).status, 'ready');
+});
 
 test('OAuth uses state and PKCE, rotates the cookie, and exposes no credentials', async t => {
   const app = await setup(t); const initial = await app.session(); const old = app.getCookie();

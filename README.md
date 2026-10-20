@@ -183,9 +183,9 @@ See **[BIG-BRAIN-IDEAS.md](docs/BIG-BRAIN-IDEAS.md)** for how each of these is a
 
 ## Platforms
 
-Android and iOS, both shipped and both tested on real hardware. A **web companion** now lives in the same Expo project: a responsive gallery with search, photo/video viewing, downloads, light/dark themes, and browser-local favourites and albums. It opens with sign-in and a repository picker. Your selected library survives page reloads; sample photos appear only when you choose **Try the demo**.
+Android and iOS, both shipped and both tested on real hardware. A **web companion** now lives in the same Expo project: a responsive gallery with search, photo/video viewing, downloads, light/dark themes, and browser-local favourites and albums. After sign-in, it opens your existing GitGallery library or creates a private one automatically. Your selected library survives page reloads; sample photos appear only when you choose **Try the demo**.
 
-Users sign in with GitHub and choose their own repository; no token or developer setup is required from visitors. Authentication uses a server session with an HttpOnly cookie. Credentials stay on the server. Public repositories can also be opened without signing in. Browser access is read-only; use the mobile app for uploads. Web albums/favourites remain local to this browser. See **[the web scope and development guide](docs/WEB-PLAN.md)**. A native desktop application remains out of scope.
+Users sign in with GitHub; GitGallery reuses `gitgallery-photos`, discovers custom libraries, or creates a private repository for a first-time user. Multiple custom libraries offer a choice. No token or developer setup is required from visitors. Authentication uses a server session with an HttpOnly cookie. Credentials stay on the server. Public repositories can also be opened without signing in. Photo browsing is read-only; use the mobile app for uploads to the same repository. Web albums/favourites remain local to this browser. See **[the web scope and development guide](docs/WEB-PLAN.md)**. A native desktop application remains out of scope.
 
 ---
 
@@ -202,7 +202,7 @@ npm run build:web
 npm run preview:web     # http://127.0.0.1:8082
 ```
 
-**Website operator setup, once for all users:** set the existing registration’s client ID in `app/.env.web` and enable Device Flow on GitHub. Visitors click **Continue with GitHub**, follow the on-screen copy-code/approval steps, and return to choose their library. No client secret is needed for this flow. A configured client secret enables optional direct browser redirects. [Plain-language setup guide](docs/WEB-AUTH-SETUP.md). Run `npm run check:web` from `app/` to check configuration without exposing secrets. Token login is an optional advanced feature, disabled by default.
+**Website operator setup, once for all users:** set the existing registration’s client ID in `app/.env.web` and enable Device Flow on GitHub. Visitors click **Continue with GitHub**, follow the on-screen copy-code/approval steps, and return to their automatically prepared library. No client secret is needed for this flow. A configured client secret enables optional direct browser redirects. [Plain-language setup guide](docs/WEB-AUTH-SETUP.md). Run `npm run check:web` from `app/` to check configuration without exposing secrets. Token login is an optional advanced feature, disabled by default.
 
 The web scripts exclude native development credentials and `.env` from website builds. The Node backend is required for sign-in; publishing `dist-web` alone is insufficient. Frontend and API are configured for one Vercel project, with shared Redis sessions. [Vercel deployment guide](docs/WEB-DEPLOYMENT.md) · [Web setup and limitations](docs/WEB-PLAN.md).
 

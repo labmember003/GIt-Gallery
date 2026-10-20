@@ -78,4 +78,6 @@ Local verification covers TypeScript, 12 library tests, 27 server/configuration/
 
 The temporary test database expires after 72 hours and must not be used as the production session store. The deployed app uses the permanent, account-owned `gitgallery-sessions` resource instead.
 
+Automatic library setup is deployed in production (`dpl_EEz1GC2oAnQH9SLasYfABAqNMc4g`). Fresh desktop and phone browser sessions verified the new setup explanation, protected nested `/api/library/setup` route (401 while signed out), real sign-in code issuance/cancellation, and all 39 demo items, with zero browser errors or horizontal overflow. Local checks passed TypeScript, 12 library tests, 39 server tests and 21 browser tests. Four setup integration tests additionally passed against real temporary Redis with simulated GitHub responses. Actual GitHub repository creation/reuse through a visitor-approved account remains to be confirmed; no production user token was inspected.
+
 The website and demo links are near the top of `README.md`. Documentation/source changes remain local until the user commits and pushes them; publishing the Vercel website does not publish those Git changes.
