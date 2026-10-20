@@ -228,6 +228,8 @@ Direct viewport captures of the running demo, made before the sign-in entry flow
 
 ### Mobile browser
 
+These captures show the responsive web app at phone screen sizes. The native Android and iOS app captures are in their own sections above.
+
 <table>
   <tr><th>Mobile gallery — light</th><th>Mobile gallery — dark</th><th>Mobile albums</th></tr>
   <tr>

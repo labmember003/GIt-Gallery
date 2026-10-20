@@ -11,7 +11,7 @@ Your media lives in GitHub. Android and iOS connect directly; the web app uses a
 
 ## Screenshots
 
-Android, iOS, and web with a curated demo library. Click any screenshot to open the full-resolution image.
+Android and iOS apps, followed by the web app in a desktop browser, with a curated demo library. Click any screenshot to open the full-resolution image.
 
 ### Android
 
@@ -85,7 +85,7 @@ Android, iOS, and web with a curated demo library. Click any screenshot to open 
 
 ### Web
 
-Desktop and mobile browser captures of the demo library.
+Desktop browser captures of the demo library.
 
 <table>
   <tr><th>Gallery — light</th><th>Gallery — dark</th></tr>
@@ -105,14 +105,7 @@ Desktop and mobile browser captures of the demo library.
   </tr>
 </table>
 
-<table>
-  <tr><th>Mobile gallery — light</th><th>Mobile gallery — dark</th><th>Mobile photo viewer</th></tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/19-mobile-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/19-mobile-gallery-light.webp" alt="Web — Mobile gallery — light" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/20-mobile-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/20-mobile-gallery-dark.webp" alt="Web — Mobile gallery — dark" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/22-mobile-viewer.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/22-mobile-viewer.webp" alt="Web — Mobile photo viewer" width="240" /></a></td>
-  </tr>
-</table>
+[View the web app on mobile browsers](screenshots/README.md#mobile-browser).
 
 [Browse all 68 screenshots](screenshots/README.md), including all 24 web captures, cloud views, albums, settings, and iOS onboarding.
 
