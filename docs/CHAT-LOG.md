@@ -1614,6 +1614,18 @@ Interpreted the request as checking that mobile was not changed. Reviewed the fu
 
 Ran fresh Android and iOS production Hermes bundle exports with source maps and native development credentials excluded. Both succeeded (1,233 Android modules; 1,237 iOS modules). Source maps contain no browser UI, web entry or web authentication-server modules. No mobile app was installed or replaced. This is bundle verification, not a new emulator/device regression pass; the scope and results do not indicate a need to repeat the full mobile test cycle for the recent web sign-in changes.
 
+
+---
+
+## Screenshot presentation order — 2026-10-20
+
+**👤 User:**
+> why in readme android ss came then ios then desktop then why again android appeared? feels inconsistent bro
+
+**🤖 Assistant:**
+
+Identified the apparent repeat as the web app's phone-sized browser screenshots displayed immediately after desktop screenshots without a separate heading in the main README. Kept the main overview in Android → iOS → Web order, showing desktop browser images in the Web section. Replaced the inline phone-browser row with a direct link to the full screenshot gallery's Mobile browser section and clarified that those captures show the responsive website. All screenshots remain available, and embedded images retain raw GitHub URLs. Only Markdown documentation changed; nothing committed or pushed.
+
 ---
 
 ## Decisions reached
