@@ -337,6 +337,38 @@ test('API gateway only reads the selected repository and uses the server token',
   assert.equal(app.requests.length, count);
 });
 
+test('Vercel wildcard capture metadata does not block repository, tree or blob reads', async t => {
+  const app = await setup(t, {}, { freshInstance: true });
+  await app.login(); await app.call('/api/repository', { repository: 'tester/photos' });
+  for (const publicPath of ['github/repos/tester/photos', 'github/repos/tester/photos/git/trees/main', `github/repos/tester/photos/git/blobs/${SHA}`]) {
+    for (const pathname of ['/api/index', `/api/${publicPath}`]) {
+      const tree = publicPath.includes('/trees/');
+      const blob = publicPath.includes('/blobs/');
+      const query = new URLSearchParams({ ...(tree ? { recursive: '1' } : {}), __gg_path: publicPath, path: publicPath });
+      const response = await app.call(`${pathname}?${query}`, undefined, { Accept: blob ? 'application/vnd.github.raw+json' : 'application/vnd.github+json' });
+      assert.equal(response.status, 200, await response.text());
+      assert.equal(app.requests.at(-1).url, `https://api.github.com/${publicPath.slice('github/'.length)}${tree ? '?recursive=1' : ''}`);
+    }
+  }
+});
+
+test('Vercel capture cleanup still rejects ambiguous routing, unknown queries and other repositories', async t => {
+  const app = await setup(t, {}, { freshInstance: true });
+  await app.login(); await app.call('/api/repository', { repository: 'tester/photos' });
+  const count = app.requests.length;
+  const path = 'github/repos/tester/photos';
+  const metadata = new URLSearchParams({ __gg_path: path, path });
+  for (const query of [
+    `${metadata}&unexpected=1`, `${metadata}&path=${path}`, `${metadata}&__gg_path=${path}`,
+    new URLSearchParams({ __gg_path: path, path: 'github/repos/other/private' }).toString(),
+  ]) {
+    assert.equal((await app.call(`/api/index?${query}`, undefined, { Accept: 'application/vnd.github+json' })).status, 400);
+  }
+  const other = new URLSearchParams({ __gg_path: 'github/repos/other/private', path: 'github/repos/other/private' });
+  assert.equal((await app.call(`/api/index?${other}`, undefined, { Accept: 'application/vnd.github+json' })).status, 403);
+  assert.equal(app.requests.length, count);
+});
+
 test('release redirect never receives the token and arbitrary destinations are rejected', async t => {
   const asset = 'https://api.github.com/repos/tester/photos/releases/assets/123';
   const signed = 'https://release-assets.githubusercontent.com/file?signature=test';

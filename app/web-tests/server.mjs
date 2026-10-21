@@ -1,5 +1,6 @@
 // Isolated test server. No real GitHub requests or credentials are used.
 import { createSiteServer } from '../server/site.mjs';
+import { createVercelHandler } from '../server/vercel.mjs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 const photo = await readFile('public/demo/riviera.webp');
@@ -61,8 +62,26 @@ const fetcher = async (input, options = {}) => {
   if (url.pathname === `/repos/tester/photos/git/blobs/${sha}`) return new Response(photo, { headers: { 'content-type': 'image/webp' } });
   return json({}, 404);
 };
-const server = createSiteServer({ origin: 'http://127.0.0.1:8092', clientId: 'test-client', clientSecret: 'test-secret', allowTokenSignIn: true }, { root: resolve('dist-web'), fetcher });
-const deviceServer = createSiteServer({ origin: 'http://127.0.0.1:8093', clientId: 'test-client', clientSecret: '', allowTokenSignIn: false }, { root: resolve('dist-web'), fetcher });
+function createHostedFixture(config) {
+  const server = createSiteServer(config, { root: resolve('dist-web'), fetcher });
+  const [serveStatic] = server.listeners('request');
+  const api = createVercelHandler(config, { fetcher });
+  server.removeAllListeners('request');
+  server.on('request', (request, response) => {
+    const url = new URL(request.url, config.origin);
+    if (!url.pathname.startsWith('/api/')) { void serveStatic(request, response); return; }
+    // Mirror the deployed rewrite, including Vercel's implicit wildcard capture.
+    const path = url.pathname.slice('/api/'.length);
+    url.pathname = '/api/index';
+    url.searchParams.append('__gg_path', path);
+    url.searchParams.append('path', path);
+    request.url = `${url.pathname}${url.search}`;
+    void api(request, response);
+  });
+  return server;
+}
+const server = createHostedFixture({ origin: 'http://127.0.0.1:8092', clientId: 'test-client', clientSecret: 'test-secret', allowTokenSignIn: true });
+const deviceServer = createHostedFixture({ origin: 'http://127.0.0.1:8093', clientId: 'test-client', clientSecret: '', allowTokenSignIn: false });
 deviceServer.listen(8093, '127.0.0.1');
 server.listen(8092, '127.0.0.1', () => console.log('Fixture website ready at http://127.0.0.1:8092'));
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { for (const site of [server, deviceServer]) { site.closeAllConnections(); site.close(); } });

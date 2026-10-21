@@ -19,11 +19,16 @@ export function createVercelHandler(config, options) {
       const url = new URL(request.url, config.origin);
       const routed = url.searchParams.get('__gg_path');
       if (routed !== null) {
-        if (url.searchParams.getAll('__gg_path').length !== 1 || routed.length > 4096 || /^[\/]/.test(routed) || /[\\?#\x00-\x20]/.test(routed)) {
+        // Vercel also adds the source's :path* capture to the query, even when
+        // the destination explicitly forwards it as __gg_path.
+        const captures = url.searchParams.getAll('path');
+        if (url.searchParams.getAll('__gg_path').length !== 1 || routed.length > 4096 || /^[\/]/.test(routed) || /[\\?#\x00-\x20]/.test(routed)
+          || (captures.length > 0 && (captures.length !== 1 || captures[0] !== routed))) {
           response.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Invalid API request.' })); return;
         }
         if (url.pathname === '/api/index' || url.pathname === '/api/index.mjs') url.pathname = `/api/${routed}`;
         url.searchParams.delete('__gg_path');
+        url.searchParams.delete('path');
         request.url = `${url.pathname}${url.search}`;
       }
       if (!await auth(request, response)) response.writeHead(404).end();
