@@ -42,7 +42,7 @@ The project's Root Directory is `app`, relative to the Git repository root. Git 
 | Output directory | `dist-web` |
 | API | `api/index.mjs` |
 
-`app/vercel.json` declares the build, Mumbai function region, function duration, API rewrite and response headers. Every `/api/:path*` request is sent to `api/index.mjs`; the handler restores the public route and removes internal routing metadata. The explicit rewrite supports nested sign-in and repository/media routes. The function explicitly enables response streaming. The native project directories, local environment files and test output are excluded by `.vercelignore`. Expo builds disable dotenv loading and remove server secrets from the bundler's environment.
+`app/vercel.json` declares the build, Mumbai function region, function duration, API rewrite and response headers. Every `/api/:path*` request is sent to `api/index.mjs`; the handler restores the public route and removes both `__gg_path` and Vercel's implicit `path` wildcard capture. Duplicate or mismatched routing values are rejected. Public queries such as `recursive=1` remain subject to the GitHub gateway's allowlist. The explicit rewrite supports nested sign-in and repository/media routes. The function explicitly enables response streaming. The native project directories, local environment files and test output are excluded by `.vercelignore`. Expo builds disable dotenv loading and remove server secrets from the bundler's environment.
 
 ## GitHub permissions
 
@@ -75,7 +75,11 @@ Local preview still works without Redis using a single-process memory store, wit
 
 ## Verification and live status
 
-Production deployment `dpl_GS93SQLgeB8nTzXfqypm2W6ELaTX` is READY and aliased to the live URL above. Unauthenticated HTTPS requests to the page, session API, demo image and credits JSON all returned HTTP 200. Session cookies include HttpOnly, Secure and SameSite=Lax; the API uses no-store.
+Production deployment `dpl_95JhyuE5d2NaiMF6LS8pJyqbvVaA` is READY and aliased to the live URL above. It includes the Vercel routing fix verified on 2026-10-21: the platform's implicit `path` query parameter previously caused repository reads to fail with HTTP 400 after successful sign-in and library setup. An isolated Vercel preview using fixture accounts reproduced the failure before the fix and returned HTTP 200 for repository/tree reads afterward; unsupported queries and cross-repository reads remained blocked. All 41 server tests and 21 browser tests passed, with browser fixtures now exercising the Vercel rewrite format. Desktop/phone captures were inspected.
+
+The routing fix and regression tests belong in the Git source used by automatic deployments. Publish authorized changes with terminal `git commit` and `git push`, using `Avishisht Gupta <avishishtgupta@gmail.com>` as both author and committer, then verify the matching Vercel deployment. Application sign-in remains enabled and token sign-in disabled; no fixture authentication is included in production. Dependency versions and native code were not changed. The production build reported 56 dependency audit findings; dependency remediation is separate from this routing fix.
+
+Live checks after this deployment returned 200 for the public page, demo image and session API, and 401 for unsigned repository reads. Secure session-cookie flags and no-store API responses were verified. Both temporary fixture deployments were removed. The affected user's retry is still needed to confirm their real library opens.
 
 Fresh Chromium contexts at 1440×1000 and 390×844 verified welcome/sign-in, real GitHub code issuance, authorization-pending polling, cancellation, session persistence across reload, 39 demo media cards, video playback/seeking and no horizontal overflow. The GitHub approval link opened github.com. Both runs reported zero browser errors and zero failed site requests; desktop and phone captures were inspected. No personal token or approval bypass was used.
 

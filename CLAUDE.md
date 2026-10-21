@@ -58,12 +58,14 @@ If a test fails, say it failed and show the output. If something couldn't be tes
 
 Write and edit files freely — but `git commit` and `git push` are **the user's call, every time**. The standing "don't ask, just execute" rule covers doing the work, not version control.
 
+When authorized, use terminal `git commit` and `git push` commands. Set both author and committer to the user's personal identity below; never use an assistant/bot identity or add AI co-author trailers. Verify both identities on the resulting commit before pushing through the `github-personal` SSH alias.
+
 This repo is a **personal** project. Its identity is set locally and must stay that way:
 
 ```
 user.name  = Avishisht Gupta
 user.email = avishishtgupta@gmail.com
-origin     = git@github-personal:labmember003/my-project.git
+origin     = git@github-personal:labmember003/GIt-Gallery.git
 upstream   = Sumit189/GitGalleryApp (fork base, read-only)
 ```
 

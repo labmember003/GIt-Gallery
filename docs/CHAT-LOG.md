@@ -1860,7 +1860,41 @@ Reviewed official GitHub and Vercel documentation and rechecked the Vercel accou
 
 Confirmed through the Vercel API that `gitgallery` is now connected to `labmember003/GIt-Gallery`, with production branch `main`. Corrected its unset Root Directory to `app` and verified the saved setting. Updated hosting documentation to describe Git deployments and the repository-root CLI workflow. No GitHub installation permissions were changed.
 
-Fetched `origin/main` and verified the local branch matched it. Verified the personal Git identity, `Avishisht Gupta <avishishtgupta@gmail.com>`. Preparing the explicitly requested documentation commit and normal push, followed by monitoring for a Git-triggered deployment matching its commit SHA. Application code is unchanged.
+Fetched `origin/main` and verified the local branch matched it. Created and pushed documentation commit `d8517bac1cb93278aac8e9a4c21b93efd4ee24e3` using the normal TruffleHog commit/push hooks. GitHub confirms both author and committer are `labmember003`, with personal identity `Avishisht Gupta <avishishtgupta@gmail.com>`. Application code is unchanged.
+
+Observed Vercel deployment `dpl_DLoTmZNa5B1TNCdS17CHTTQ3zLEC` move from BUILDING to READY. Its source is `git`, target is production and Git commit SHA matches the push. Vercel assigned `gitgallery-umber.vercel.app` to this deployment. Live HTTP checks passed for the page, JavaScript bundle, session endpoint and demo image; anonymous library setup correctly returned 401, with secure session-cookie flags and no-store API responses. The first HTTP smoke attempt incorrectly concatenated a relative demo path and failed during TLS; corrected the test's URL resolution and reran successfully. No full application or native regression suite was rerun for this documentation-only change. Post-deployment verification notes remain local rather than creating a second deployment solely to publish the result.
+
+---
+
+## Fix post-sign-in library opening on Vercel — 2026-10-21
+
+**👤 User:**
+> after succesfull sign in also, i'm getting, Could not open your library
+> GitHub could not complete the request (400). Try again.
+>
+> Try again
+> Choose another repository, idk, see vercel logs, do anything to fix this..i was using application.split@gmail.com as the chrome profile for doing this
+
+**🤖 Assistant:**
+
+Read Vercel request logs: GitHub approval and automatic library setup succeeded, followed by HTTP 400 on the repository metadata request for the signed-in GitHub account `applicationsplit`. Chrome's profile email is not used by GitGallery to select the library. The initial 12-hour runtime-log query exceeded Hobby retention; the supported 30-minute window contained no application exception logs.
+
+Reproduced the failure in an isolated Vercel preview using only synthetic accounts, an in-memory session store and fixture GitHub responses. Vercel adds a `path` query parameter for the rewrite's wildcard, alongside explicit `__gg_path`. The adapter removed only the latter, so the gateway rejected the leftover query before contacting GitHub. Patched the adapter to validate and strip both routing fields while retaining duplicate/mismatch rejection, query restrictions and selected-repository access checks. No private user tokens, session data or photos were inspected.
+
+Added two server regression tests and changed the browser fixture server to pass API requests through Vercel's actual handler with both rewrite fields. The new positive test failed with the same HTTP 400 before the fix; afterward all 41 server tests and all 21 browser tests passed. Local and production web builds succeeded, and desktop/phone screenshots were inspected. A second isolated Vercel preview returned 200 for repository and recursive tree requests, while unknown queries returned 400 and other repositories returned 403.
+
+Deployed the production-only entry point and source snapshot as `dpl_95JhyuE5d2NaiMF6LS8pJyqbvVaA`, READY at **https://gitgallery-umber.vercel.app**. The deployment contains no fixture authentication or local environment files. Public page, demo image and session checks returned 200; unsigned repository access remained 401, secure session-cookie flags were present and token sign-in remained disabled. Removed both temporary preview deployments after verification. Asked the user to refresh their existing signed-in tab or click Try again; real-account confirmation is still pending. No native code, dependencies, GitHub installation permissions, commits or pushes were changed. The local fix must be included in the next Git push to preserve it in automatic deployments. The production build's dependency audit findings were documented separately from the routing fix.
+
+---
+
+## Publish the routing fix with the personal Git identity — 2026-10-21
+
+**👤 User:**
+> commit and push it also, and always remember to push it via git commands only, i mean it should not contain name as claude/codex, it should be commited by my name only
+
+**🤖 Assistant:**
+
+Recorded the standing preference in the project's Git instructions: authorized commits and pushes use terminal Git commands, both author and committer use `Avishisht Gupta <avishishtgupta@gmail.com>`, and no assistant identity or AI co-author trailer is added. Verified the local identity and personal SSH remote, fetched `origin/main`, and confirmed there were no incoming commits. Reviewed the routing fix, its regression tests and accompanying documentation for the requested commit. The unchanged implementation already passed 41 server tests, 21 browser tests and both local and production builds. The release check is to verify the resulting author/committer, push normally with the existing hooks, and follow Vercel's deployment for the pushed SHA.
 
 ---
 
@@ -1881,7 +1915,7 @@ Fetched `origin/main` and verified the local branch matched it. Verified the per
 | Docs upkeep | ✅ Updated every exchange; dropped ideas deleted, not archived |
 | iOS dependency manager | ✅ **CocoaPods** — user chose it over SPM when asked; Expo's autolinking targets Pods and an SPM port would have been a rewrite |
 | Testing | ✅ **Self-tested on emulator/simulator** — nothing reported done without being run; visual parity with Immich counts as correctness; bugs found get fixed, not just logged |
-| Git | ✅ **Never commit/push without an explicit ask.** Personal identity (`avishishtgupta@gmail.com`, `labmember003`) set locally — global config is the work email. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
+| Git | ✅ **Never commit/push without an explicit ask.** Use terminal Git commands, with `Avishisht Gupta <avishishtgupta@gmail.com>` as both author and committer (`labmember003`); no assistant identity or AI co-author trailers. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
 | Repo root | ✅ **The workspace root**, so `README`/`CLAUDE.md`/`docs/` ship with the code. `reference/` stays out — AGPL bulk and an upstream duplicate |
 | Web companion | ✅ **Read-only web companion with server-backed sign-in.** Responsive React DOM gallery, automatic private library creation/reuse, custom-library discovery, optional repository picker, restored sessions and browser-local collections; demo is opt-in. Guided GitHub approval codes reuse the existing registration without a client secret; live code issuance and pending approval are verified. Optional redirect OAuth remains available. Real-account consent, uploads and shared collections remain. See `WEB-PLAN.md`. |
 | Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Git integration connects `labmember003/GIt-Gallery`, production branch `main`, root `app`; keep GitHub App access limited to that repository. Full private-library consent verification remains. |
