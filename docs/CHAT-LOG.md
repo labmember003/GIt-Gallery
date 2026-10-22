@@ -1898,6 +1898,40 @@ Recorded the standing preference in the project's Git instructions: authorized c
 
 ---
 
+## Add browser photo and video uploads — 2026-10-21
+
+**👤 User:**
+> [Image #1] [Image #2] wtf bro, where the upload etc button, bro wtf pleasE?
+
+The attached screenshots show `applicationsplit` signed in on the deployed website, an empty Photos library and an empty browser-local album named Test, with no upload action.
+
+**🤖 Assistant:**
+
+Acknowledged the missing capability and implemented browser uploads rather than just adding a button. Photos and album views now have an Upload button, empty-state upload action and gallery drag/drop. The accessible dialog supports multiple files, preparation/upload/save progress, retry, stop confirmation, permission guidance and a 500 MiB per-file limit. Originals are preserved, previews generated where the browser supports the codec, original filenames retained, and uploads from an album join that browser's album. The library refreshes after the batch. Onboarding and Settings now explain browser uploads; demo/public visitors are guided to sign in.
+
+Implemented a narrow authenticated upload API with Origin/CSRF checks, selected-repository binding, write-permission checks and shared-session version checks. Browser requests use 3 MiB chunks to stay below Vercel's 4.5 MB limit. GitHub stages verified chunks as unreferenced blobs; Redis holds metadata and SHA identifiers only. Finalization verifies the original checksum, uses ordinary Git blobs up to 25 MiB and streamed release assets with .ptr files above it, then atomically commits media, previews and merged metadata without forcing the branch. It preserves concurrent changes and recovers interrupted chunks, incomplete release assets and lost completion responses. Sixteen metadata buckets bound shard growth. Upload manifests last at most two hours within the sign-in session; reselecting files resumes where possible. Background uploads are still deferred. Temporary Git objects can remain until GitHub garbage collection; no immediate cleanup claim is made.
+
+TypeScript and the production build passed, as did 12 library tests, 49 server tests and 26 Chromium browser tests. Server tests include a full 500 MiB synthetic upload with a matching checksum. Browser tests verify exact original downloads, reload, album membership, duplicate handling, retry, stop/resume, drag/drop, invalid files, view-only guidance, responsive light/dark dialogs and playback of a >25 MiB uploaded video. The first browser run exposed a duplicate-result label that still said Saved; fixed it to say Already in your library and reran the complete suite successfully. Inspected all captured screenshots through contact sheets and full-size upload views.
+
+A protected isolated Vercel preview with temporary Redis and synthetic GitHub responses verified actual platform rewrites and separate 3 MiB binary requests: both a 5 MiB original and a 26 MiB release-backed original completed with matching hashes, intact README and metadata. Incorrect CSRF returned 403. Removed the preview afterward. No production visitor token, private photo or session contents were inspected. The available GitHub CLI identity is the work account, so it was not used for test writes in this personal project. Real GitHub private-library upload/download verification remains; fixtures do not establish upstream throughput or quota headroom.
+
+Deployed the production-only source snapshot through the Vercel CLI as **`dpl_3TVGfow4VmjvcU8exJrPYzME29tP`**, READY at **https://gitgallery-umber.vercel.app**. The live bundle contains uploads, anonymous upload API access returns 401, session-cookie flags remain secure, device sign-in stays enabled and token sign-in stays disabled. Three additional live browser tests passed for entry/demo, gallery/search/download/theme and phone navigation/dialogs. Screenshot inspection caught an existing test wait that could capture the dark loading screen before photos arrived; added an explicit 39-card wait, reran the affected live test successfully, and inspected the fully loaded dark gallery. The user can refresh the existing signed-in tab and choose Upload. Native code, dependencies and GitHub installation permissions were not changed. No commit or push was made for this task; all source changes need inclusion in the next explicitly authorized Git commit/push to keep automatic deployments consistent. Updated README, web/auth/deployment/upload guides and project planning docs. Existing dependency audit findings remain outside this feature.
+
+---
+
+## Publish browser uploads — 2026-10-22
+
+**👤 User:**
+> pushed?
+
+> push it
+
+**🤖 Assistant:**
+
+The upload feature was deployed directly to Vercel but had not been committed or pushed. The user now explicitly authorizes publishing it. Prepared the complete upload implementation, browser/server fixtures and regression tests, and updated documentation for a normal terminal Git commit and push to `origin/main`. Verified the local personal identity `Avishisht Gupta <avishishtgupta@gmail.com>` and the `github-personal` SSH remote; both author and committer use that identity, with no assistant attribution or co-author trailer. Fetched the remote and confirmed no incoming changes. Application sources and build settings match the already tested production snapshot: 12 library tests, 49 server tests, 26 browser tests and hosted upload checks passed previously. No implementation changes require a new regression run. Existing security hooks remain enabled. The release procedure verifies the resulting commit identity and remote SHA, then follows the Git-triggered Vercel deployment for that SHA and checks the live page/session/upload routes.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -1917,7 +1951,7 @@ Recorded the standing preference in the project's Git instructions: authorized c
 | Testing | ✅ **Self-tested on emulator/simulator** — nothing reported done without being run; visual parity with Immich counts as correctness; bugs found get fixed, not just logged |
 | Git | ✅ **Never commit/push without an explicit ask.** Use terminal Git commands, with `Avishisht Gupta <avishishtgupta@gmail.com>` as both author and committer (`labmember003`); no assistant identity or AI co-author trailers. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
 | Repo root | ✅ **The workspace root**, so `README`/`CLAUDE.md`/`docs/` ship with the code. `reference/` stays out — AGPL bulk and an upstream duplicate |
-| Web companion | ✅ **Read-only web companion with server-backed sign-in.** Responsive React DOM gallery, automatic private library creation/reuse, custom-library discovery, optional repository picker, restored sessions and browser-local collections; demo is opt-in. Guided GitHub approval codes reuse the existing registration without a client secret; live code issuance and pending approval are verified. Optional redirect OAuth remains available. Real-account consent, uploads and shared collections remain. See `WEB-PLAN.md`. |
-| Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Git integration connects `labmember003/GIt-Gallery`, production branch `main`, root `app`; keep GitHub App access limited to that repository. Full private-library consent verification remains. |
+| Web companion | ✅ **Web gallery with server-backed sign-in and browser uploads.** Automatic private library creation/reuse, custom-library discovery, restored sessions and browser-local collections; demo is opt-in. Uploads use 3 MiB chunks, progress/retry/stop, original preservation and mobile-compatible storage up to 500 MiB per file. Real sign-in and an empty library are confirmed by the user; real private upload/download verification and shared collections remain. Optional redirect OAuth supports larger deployments. See `WEB-PLAN.md`. |
+| Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Git integration connects `labmember003/GIt-Gallery`, production branch `main`, root `app`; keep GitHub App access limited to that repository. Real private upload/download verification remains; the user has confirmed real sign-in and an empty library. |
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

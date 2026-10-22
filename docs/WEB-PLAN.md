@@ -1,6 +1,6 @@
 # GitGallery web
 
-The browser companion uses the existing Expo project and a small Node server for authentication. It opens with a welcome/sign-in screen. Demo photos are loaded only through **Try the demo**; after sign-in, GitGallery opens an existing library or creates a private one automatically. The gallery is read-only; Android and iOS remain the upload clients.
+The browser companion uses the existing Expo project and a small Node server for authentication. It opens with a welcome/sign-in screen. Demo photos are loaded only through **Try the demo**; after sign-in, GitGallery opens an existing library or creates a private one automatically. Signed-in users can upload photos and videos from the browser; Android and iOS provide automatic device backup.
 
 ## Implemented
 
@@ -11,6 +11,7 @@ The browser companion uses the existing Expo project and a small Node server for
 | Library setup | Reuse the mobile default, discover custom libraries, or create a private initialized repository automatically |
 | Repository picker | Multiple-library choice and optional switching; account repositories, loaded-list search, pagination, manual owner/name and branch entry |
 | Gallery | Responsive desktop/phone layouts, date groups, search, filters, sorting, compact grid, multi-select |
+| Uploads | File picker and drag/drop, progress, retry/stop, original preservation, album membership, previews and tier routing; up to 500 MiB per file |
 | Viewer | Photo zoom, keyboard navigation, video playback, original downloads |
 | Collections | Favourites and albums saved in this browser, separated by account/repository/branch |
 | Demo | Explicit opt-in; 36 photos and 3 clips, separate from real libraries |
@@ -28,7 +29,7 @@ Mobile saves its chosen repository in that device's SecureStore. Web discovers t
 
 Discovery uses six concurrent directory checks, at most ten repository pages and a 100-second request deadline. Failed access, missing private-repository OAuth scope, incomplete scans and creation failures stop setup and offer retry/manual selection. A failed repository listing is not displayed as an empty account. A 120-second shared-session lease prevents overlapping setup across function instances; session version checks reject stale results and check for logout before creation. Interrupted creation is recovered by looking up the same deterministic repository name on retry.
 
-The new library starts empty. Back up photos from mobile to that same repository, then refresh the website. Existing repository files are not changed during discovery or selection; browser photo uploads remain out of scope.
+The new library starts empty. Choose **Upload** in Photos or an album, or drop files onto the gallery. Uploads appear automatically when the batch finishes. Mobile backups to the same repository also appear after refreshing. Discovery and repository selection do not change existing files. See [the upload protocol and limits](WEB-UPLOADS.md).
 
 ## Local setup
 
@@ -71,7 +72,7 @@ Set `WEB_ORIGIN` to the exact public HTTPS origin, configure the client ID, and 
 
 Vercel sessions live in shared Redis and survive individual function restarts. Local preview defaults to an in-memory store whose sessions expire on restart. Sessions have a maximum lifetime of eight hours, shortened to the GitHub token expiry when supplied. Expiry requires signing in again; automatic refresh-token rotation is not implemented. Atomic version checks and rotation prevent stale instances or cancelled approvals from restoring an invalid session. Pending approval leases and sign-in rate counters are shared on Vercel; preview and production namespaces are isolated by origin. No service worker caches private media.
 
-The website is deployed at [https://gitgallery-umber.vercel.app](https://gitgallery-umber.vercel.app). Public HTTP and fresh desktop/phone browser checks passed for sign-in code issuance, pending approval, cancellation, session reload, demo media and video playback, with no browser errors or failed site requests. Real-account consent and private-release verification remain; fixtures exercise completed authorization without a personal token. Vercel is connected to `labmember003/GIt-Gallery`, with production branch `main` and Root Directory `app`. Keep GitHub App access limited to that repository and verify each pushed commit's deployment status.
+The website is deployed at [https://gitgallery-umber.vercel.app](https://gitgallery-umber.vercel.app). Public HTTP and fresh desktop/phone browser checks passed for sign-in code issuance, pending approval, cancellation, session reload, demo media and video playback, with no browser errors or failed site requests. The user has confirmed real-account sign-in and an empty library; real private upload/download verification remains; fixtures exercise completed authorization without a personal token. Vercel is connected to `labmember003/GIt-Gallery`, with production branch `main` and Root Directory `app`. Keep GitHub App access limited to that repository and verify each pushed commit's deployment status.
 
 ## Architecture and security
 
@@ -80,13 +81,14 @@ The website is deployed at [https://gitgallery-umber.vercel.app](https://gitgall
 - `src/web/session.ts` sends same-origin requests. The browser receives account information and a CSRF token, never the server’s GitHub access token or OAuth secret.
 - `server/auth.mjs` requests device codes and polls with provider-enforced intervals, supports redirect code exchange with state/PKCE, validates identity with GitHub, rotates session IDs on sign-in, enforces session expiry, and implements logout. State-changing requests require both the exact Origin and session CSRF token.
 - `server/library-setup.mjs` discovers existing libraries and creates only the fixed private default when no existing library is found. The CSRF-protected `/api/library/setup` route owns session leases and saves the selected repository. Repository creation is separate from the read-only media gateway.
+- `server/uploads.mjs` implements selected-library writes behind Origin/CSRF checks. Browser requests use 3 MiB chunks, shared session manifests, Git blob staging and atomic non-forced commits; larger originals stream to release assets. See [WEB-UPLOADS.md](WEB-UPLOADS.md).
 - `server/site.mjs` serves the frontend and API on one origin, with security headers and static-file range support. It also proxies Metro during development.
 - The authenticated media gateway allows only read endpoints under the selected repository. GitHub credentials are attached on the server. Release redirects are restricted to HTTPS GitHub content hosts and receive no Authorization header.
 - `src/web/github.ts` normalises the GitHub tree through the same fetch contract for public direct reads and authenticated server reads. `library.ts` interprets paths/metadata; `storage.ts` validates browser-local collections.
 - The pure parser in `src/services/sync/pathMetadata.ts` and timeline grouping are shared with native. SQLite, SecureStore, filesystem, and device-photo APIs stay outside the browser graph.
 - Expo builds disable dotenv loading and strip native development credentials and the web client secret from the bundler environment. The server’s `.env.web` is never part of `dist-web`.
 
-OAuth requests GitHub’s `repo` scope to access private libraries. That scope allows private repository creation and grants broader permissions than the read-only media gateway uses; GitHub OAuth Apps do not offer a private-repository read-only scope. Fine-grained PATs allow repository-specific read permission. A GitHub App integration is a future option for narrower OAuth permissions. Signing out ends the local website session; revoke the app grant separately in GitHub settings if needed.
+OAuth requests GitHub’s `repo` scope to access private libraries. That scope allows private repository creation and photo/video uploads; GitHub OAuth Apps do not offer a private-repository read-only scope. Fine-grained PATs allow repository-specific Contents read/write permission for uploads; read-only connections can still browse. A GitHub App integration is a future option for narrower OAuth permissions. Signing out ends the local website session; revoke the app grant separately in GitHub settings if needed.
 
 GitHub documents a limit of 50 code submissions per hour per app for Device Flow. Direct redirect sign-in is the deployment path for higher traffic. See the [official device-flow limits](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#rate-limits-for-the-device-flow).
 
@@ -94,7 +96,7 @@ GitHub documents a limit of 50 code submissions per hour per app for Device Flow
 
 The browser limits media requests to four concurrent downloads, thumbnails to 12 MiB, metadata files to 8 MiB, and originals to 80 MiB. Completed media cache entries have a 96 MiB byte budget; in-flight requests and decoded images can temporarily exceed that. These are app safeguards, not GitHub service limits. The timeline initially renders 120 items and supports Load more; large libraries still need virtualisation and persistent indexing.
 
-Truncated recursive trees trigger explicit subtree traversal. Incomplete subtrees or listings above the 50,000-entry guard produce an error. Failed metadata shows a warning and falls back to path metadata. Existing repository files are not modified; first-time library creation initializes a new private repository with a README.
+Truncated recursive trees trigger explicit subtree traversal. Incomplete subtrees or listings above the 50,000-entry guard produce an error. Failed metadata shows a warning and falls back to path metadata. First-time library creation initializes a private repository with a README. Uploads preserve unrelated files and merge metadata; a non-forced ref update protects concurrent changes.
 
 HEIC and some MOV codecs depend on browser support; unsupported originals can still be downloaded. Signed-in release downloads go through the server to avoid browser redirect/CORS problems, but unsupported redirects, failed downloads and originals above the browser limit offer **Open on GitHub**. The server streams relay responses, but the browser still buffers permitted media into blobs. Progressive private-video streaming and transcoding are not implemented. Real private release downloads still need verification with a configured account.
 
@@ -117,14 +119,14 @@ cd app
 npm run test:web
 ```
 
-This runs TypeScript, 12 library unit tests, 39 server authentication/configuration/store/setup tests, a production export, and 21 Chromium browser tests. The browser suite starts isolated Node servers on 8092 (redirect) and 8093 (approval codes) with fixture GitHub responses; it exercises the actual session cookies, CSRF, OAuth callback, repository picker, authenticated media gateway, reloads and cross-tab logout. No test writes to GitHub or uses a personal token.
+This runs TypeScript, 12 library unit tests, 49 server authentication/configuration/store/setup/upload tests, a production export, and 26 Chromium browser tests. The browser suite starts isolated Node servers on 8092 (redirect) and 8093 (approval codes) with fixture GitHub responses; it exercises the actual session cookies, CSRF, OAuth callback, repository picker, authenticated media gateway, reloads and cross-tab logout. No test writes to GitHub or uses a personal token.
 
 Coverage includes automatic creation/reuse, custom-library discovery, multi-library choice, pagination, setup leases, logout during discovery, creation conflicts, access errors/retry, production startup readiness, optional-token enforcement, on-page setup guidance, device-code onboarding, slow-down handling, expired/denied codes and cancellation races, invalid/denied/replayed OAuth callbacks, credential isolation, wrong origins, session expiry, token errors, repository access bounds, signed-release redirects, demo opt-in, real-library empty states, desktop/phone layouts, 1,001-item pagination, 500 MiB pointer fallback, video playback/seeking, downloads, themes and collection persistence. Browser captures were inspected. Fresh Android/iOS production Hermes bundle exports passed on 2026-10-20. Source maps confirm the browser UI, web entry and web auth server are excluded. The shared parser source is identical to its original implementation, native configuration is unchanged, and existing dependency entries were not upgraded. This does not claim a new emulator/device regression pass.
 
 ## Remaining work
 
-1. Complete a real account/repository/private-release consent test; configure optional redirect sign-in for larger public deployments. Add Safari/Firefox and accessibility verification before public release.
-2. Browser uploads: picker/drag-drop, date extraction, previews, compression, tier routing, retry/cancel and a durable queue; test writes only in a throwaway repository.
+1. Complete real private-library upload/download verification with a throwaway repository; configure optional redirect sign-in for larger public deployments. Add Safari/Firefox and accessibility verification before public release.
+2. Browser background uploads and a persistent file queue; optional photo compression. Current uploads preserve originals and require this tab to stay open. Reselecting the same files resumes received parts while the session/upload manifest remains valid.
 3. Define a shared collection schema before syncing favourites/albums between mobile and web. Add virtualisation, cached indexes and incremental refresh.
 4. Add refresh-token rotation and complete live private-media streaming/bandwidth checks. Vercel public deployment checks, shared Redis sessions and sign-in rate limits are implemented.
 

@@ -9,7 +9,7 @@
     { "source": "/api/:path*", "destination": "/api/index?__gg_path=:path*" }
   ],
   "functions": {
-    "api/**/*.mjs": { "maxDuration": 150 }
+    "api/**/*.mjs": { "maxDuration": 300 }
   },
   "headers": [
     {

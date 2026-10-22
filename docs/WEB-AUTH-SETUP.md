@@ -18,11 +18,11 @@ The web version uses a Node server for those authorization requests and stores G
 2. When the approval-code screen appears, click **Copy code**.
 3. Click **Open GitHub to approve**. On GitHub, sign in, enter the code and approve GitGallery.
 4. Return to the GitGallery tab. It opens your existing GitGallery library, or creates a private `gitgallery-photos` repository if none is found.
-5. If several custom libraries are found, choose one. For a new library, use the mobile app to back up photos into the same repository, then refresh the website.
+5. If several custom libraries are found, choose one. For a new library, choose Upload to add photos and videos from this device. Mobile backups can use the same repository.
 
 The instructions, copy button, GitHub link, expiry countdown and waiting status are all in the app. An expired or denied code offers a new attempt. Cancellation stops the pending sign-in; a late response cannot authenticate a cancelled attempt. A network problem offers a check-again action.
 
-New users need a GitHub account. The website creates their private library automatically after approval; mobile uploads fill it with photos. Existing backups are reused. Browser uploads are not implemented. Access and setup failures provide retry, sign-out/reapproval and manual repository selection. GitGallery never treats a failed discovery as permission to create another library. If a shared website has no GitHub registration configured, its sign-in screen explains that the website owner must enable it and provides expandable setup steps for self-hosters, plus public-repository access.
+New users need a GitHub account. The website creates their private library automatically after approval; browser uploads and mobile backups fill it with photos. Existing backups are reused. Uploading requires write access to the selected repository. Access and setup failures provide retry, sign-out/reapproval and manual repository selection. GitGallery never treats a failed discovery as permission to create another library. If a shared website has no GitHub registration configured, its sign-in screen explains that the website owner must enable it and provides expandable setup steps for self-hosters, plus public-repository access.
 
 ## Why no new secret is needed here
 
@@ -73,4 +73,4 @@ Run the Node website behind HTTPS, set `WEB_ORIGIN` to its public origin, and se
 
 Personal-token login remains disabled by default. A self-hosting operator may explicitly enable `WEB_ALLOW_TOKEN_SIGN_IN=true`; it appears under **Advanced sign-in**. Ordinary users use the guided GitHub flow.
 
-See [WEB-PLAN.md](WEB-PLAN.md) for session limits, hosting and remaining features. Full authorization and private-release verification with a real account still require human consent; automated tests use fixture responses for that portion.
+See [WEB-PLAN.md](WEB-PLAN.md) for session limits, hosting and remaining features. The user has confirmed real-account authorization and an empty library. Real private upload/download verification remains; automated tests use fixture responses for that portion.

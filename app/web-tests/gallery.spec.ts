@@ -35,6 +35,7 @@ test('demo photos, search, viewer keyboard navigation, download, and theme', asy
   await page.getByRole('button', { name: 'Switch to dark theme' }).click();
   await page.reload();
   await expect(page.locator('.gg-app')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('.photo-card')).toHaveCount(39);
   await page.waitForFunction(() => Array.from(document.querySelectorAll<HTMLImageElement>('.photo-card img')).filter((image) => image.getBoundingClientRect().top < innerHeight).every((image) => image.complete && image.naturalWidth > 0));
   await page.screenshot({ path: testInfo.outputPath('desktop-dark.png') });
   expect(errors).toEqual([]);

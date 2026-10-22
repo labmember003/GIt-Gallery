@@ -30,7 +30,9 @@ export function assetsFromTree(entries: TreeEntry[], metadata: MetaEntry[] = [])
         ? info.previewRepoPath : paths.has(fallbackPreview) ? fallbackPreview : null;
       const date = [info?.createdAt, parsed.captureDate?.getTime(), info?.uploadedAt]
         .find((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0) ?? null;
-      const filename = path.split('/').pop() || 'Untitled';
+      const originalName = (info as (MetaEntry & { originalFilename?: string }) | undefined)?.originalFilename;
+      const filename = typeof originalName === 'string' && originalName.length > 0 && originalName.length <= 255
+        ? originalName : path.split('/').pop() || 'Untitled';
       return {
         id: path, repoPath: entry.path, filename,
         title: filename.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
