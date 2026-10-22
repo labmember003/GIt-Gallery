@@ -137,7 +137,7 @@ export class GitHubSource implements MediaSource {
   async connect(): Promise<Library> {
     let account = this.account;
     if (this.token) account = (await (await this.request('/user')).json() as { login: string }).login;
-    const repo = await (await this.request(this.base)).json() as { default_branch: string; full_name: string };
+    const repo = await (await this.request(this.base)).json() as { default_branch: string; full_name: string; permissions?: { push?: boolean }; archived?: boolean; disabled?: boolean };
     if (!this.repo.branch) this.repo.branch = repo.default_branch;
     let entries: TreeEntry[];
     try { entries = await this.listTree(); }
@@ -162,7 +162,7 @@ export class GitHubSource implements MediaSource {
     for (const entry of this.cache.values()) if (entry.url) URL.revokeObjectURL(entry.url);
     this.cache.clear();
     return { id: `${account}:${this.repo.owner}/${this.repo.name}@${this.repo.branch}`, name: repo.full_name,
-      source: 'github', repo: { ...this.repo }, assets, warnings, initialCollection: { favorites: [], albums: [] } };
+      source: 'github', repo: { ...this.repo }, assets, warnings, writable: !!repo.permissions?.push && !repo.archived && !repo.disabled, initialCollection: { favorites: [], albums: [] } };
   }
 
   private async acquire(): Promise<void> {

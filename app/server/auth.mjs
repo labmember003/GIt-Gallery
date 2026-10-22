@@ -4,6 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import { signInMethod } from './config.mjs';
 import { createSessionStore, SessionConflict, StoreUnavailable } from './session-store.mjs';
 import { prepareLibrary, selectedRepository, repositorySummary, LibrarySetupError } from './library-setup.mjs';
+import { createUploadHandler, UploadError } from './uploads.mjs';
 
 const SESSION_AGE = 8 * 60 * 60 * 1000;
 const COOKIE = 'gg_session';
@@ -102,6 +103,7 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
   function waiting(response, pending) {
     json(response, 200, { status: 'pending', retryAfter: Math.max(1, Math.ceil((pending.nextPollAt - now()) / 1000)) });
   }
+  const upload = createUploadHandler({ fetcher, now, save, active, body });
 
   return async function handle(request, response) {
     const url = new URL(request.url, config.origin);
@@ -238,6 +240,9 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
         json(response, 200, visible(session)); return true;
       }
       signedIn(session);
+      if (url.pathname.startsWith('/api/uploads/')) {
+        json(response, 200, await upload(request, url, session)); return true;
+      }
       if (url.pathname === '/api/library/setup' && request.method === 'POST') {
         await body(request);
         if (session.repo) { json(response, 200, { status: 'ready', session: visible(session), created: false }); return true; }
@@ -332,7 +337,7 @@ export function createAuthHandler(config, { fetcher = (...args) => fetch(...args
         response.writeHead(303, { Location: `${config.origin}/?auth_error=${encodeURIComponent(reason)}`, 'Cache-Control': 'no-store' }); response.end();
       } else {
         if (error.status === 401 && session?.user) { await sessions.delete(session.id); cookie(response, '', 0); }
-        const known = error instanceof HttpError || error instanceof SessionConflict || error instanceof StoreUnavailable || error instanceof LibrarySetupError;
+        const known = error instanceof HttpError || error instanceof SessionConflict || error instanceof StoreUnavailable || error instanceof LibrarySetupError || error instanceof UploadError;
         json(response, known ? error.status : 502, { error: known ? error.message : 'The connection to GitHub failed. Please try again.' });
       }
       return true;

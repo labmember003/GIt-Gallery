@@ -3,13 +3,20 @@ import { createSiteServer } from '../server/site.mjs';
 import { createVercelHandler } from '../server/vercel.mjs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { uploadGitHub } from './fixtures/upload-github.mjs';
 const photo = await readFile('public/demo/riviera.webp');
 const sha = 'a'.repeat(40);
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
 const devicePolls = new Map();
 const createdLibraries = new Map();
+const uploadLibraries = new Map();
 const fetcher = async (input, options = {}) => {
   const url = new URL(String(input));
+  const uploadAccount = options.headers?.Authorization?.match(/^Bearer test_upload_([a-z0-9]+)$/)?.[1];
+  if (uploadAccount) {
+    if (!uploadLibraries.has(uploadAccount)) uploadLibraries.set(uploadAccount, uploadGitHub({ owner: `upload-${uploadAccount}` }));
+    return uploadLibraries.get(uploadAccount).fetcher(input, options);
+  }
   if (url.href === 'https://github.com/login/device/code') {
     const deviceCode = `device_fixture_${devicePolls.size}`;
     devicePolls.set(deviceCode, 0);

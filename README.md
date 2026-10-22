@@ -185,7 +185,7 @@ See **[BIG-BRAIN-IDEAS.md](docs/BIG-BRAIN-IDEAS.md)** for how each of these is a
 
 Android and iOS, both shipped and both tested on real hardware. A **web companion** now lives in the same Expo project: a responsive gallery with search, photo/video viewing, downloads, light/dark themes, and browser-local favourites and albums. After sign-in, it opens your existing GitGallery library or creates a private one automatically. Your selected library survives page reloads; sample photos appear only when you choose **Try the demo**.
 
-Users sign in with GitHub; GitGallery reuses `gitgallery-photos`, discovers custom libraries, or creates a private repository for a first-time user. Multiple custom libraries offer a choice. No token or developer setup is required from visitors. Authentication uses a server session with an HttpOnly cookie. Credentials stay on the server. Public repositories can also be opened without signing in. Photo browsing is read-only; use the mobile app for uploads to the same repository. Web albums/favourites remain local to this browser. See **[the web scope and development guide](docs/WEB-PLAN.md)**. A native desktop application remains out of scope.
+Users sign in with GitHub; GitGallery reuses `gitgallery-photos`, discovers custom libraries, or creates a private repository for a first-time user. Multiple custom libraries offer a choice. No token or developer setup is required from visitors. Authentication uses a server session with an HttpOnly cookie. Credentials stay on the server. Public repositories can also be opened without signing in. Upload photos and videos from your browser with the **Upload** button or drag and drop (up to 500 MB per file). Progress, retry and stop controls are included; originals use the same library format as mobile backups. Web albums/favourites remain local to this browser. See **[the web scope and development guide](docs/WEB-PLAN.md)**. A native desktop application remains out of scope.
 
 ---
 
@@ -257,7 +257,7 @@ guarded by `if (!token)`, so a real signed-in session always wins.
 
 ## What's not done
 
-- **Web:** browser uploads and collections shared with mobile. Originals above the 80 MiB browser limit use an Open on GitHub fallback. Live approval-code issuance is verified; completing authorization and private-release checks still requires real-account consent. Public deployments should configure redirect sign-in for scale. See [WEB-PLAN.md](docs/WEB-PLAN.md).
+- **Web:** collections shared with mobile, persistent background uploads, and broader browser coverage. Originals above the 80 MiB browser limit use an Open on GitHub fallback. Real-account sign-in and an empty library are confirmed by the user. Uploads, downloads and large-video pointers are tested with isolated fixtures; real private-library upload verification remains. Public deployments should configure redirect sign-in for scale. See [WEB-PLAN.md](docs/WEB-PLAN.md).
 - **Select All** only covers the page of the timeline that has loaded, not the whole library.
 - **Scope narrowing** — see the warning above.
 - On-device ML search / face grouping — deliberately deferred (Phase 6 stretch).

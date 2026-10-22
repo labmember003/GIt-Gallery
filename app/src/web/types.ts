@@ -25,6 +25,7 @@ export type Library = {
   repo: RepoInfo | null;
   assets: WebAsset[];
   warnings: string[];
+  writable?: boolean;
   initialCollection: Collection;
 };
 
