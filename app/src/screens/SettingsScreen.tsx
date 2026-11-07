@@ -156,10 +156,12 @@ export default function SettingsScreen({ navigation }: any) {
     else navigation.navigate('RepoSetup');
   }
 
+  // Clearing the token is enough: the root navigator swaps Main for onboarding,
+  // which starts at Welcome. Resetting to 'Welcome' from here targets the tab
+  // navigator, which has no such route.
   function logout() {
     setAuthToken(null);
     setCurrentRepo(null);
-    navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
   }
 
   /**

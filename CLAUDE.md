@@ -23,6 +23,10 @@ iOS: Xcode 27.2, simulators on iOS 27.2 (iPhone 18 Pro is the default). `xcrun s
 
 Native Metro: `cd app && npx expo start --dev-client --port 8081` (loads `app/.env`); on Android also `adb reverse tcp:8081 tcp:8081`. `/Applications/Android Emulator.app` and `/Applications/iOS Simulator.app` boot the devices for the user.
 
+The AVD must keep `hw.cpu.ncore=4` (`~/.android/avd/Medium_Phone.avd/config.ini`). On one core, API 37's software compositor starves the CPU during a sync, uploads crawl at ~20 KB/s and GitHub rejects them with 401 after minutes.
+
+End-to-end test account: GitHub `applicationsplit`, signed in to the "Potato In" Chrome profile, where Device Flow codes are approved. Test library: `applicationsplit/gitgallery-e2e-nov7`. `uiautomator dump` stalls while a spinner animates; use `screencap` then.
+
 **Always look at the screenshots you take.** Read the PNG back — a screencap you never opened has verified nothing.
 
 ### What "tested" means

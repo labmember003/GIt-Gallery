@@ -34,19 +34,20 @@ export function getOctokit(): Octokit {
     auth: token,
     /**
      * Octokit logs every non-2xx as console.error. A large share of ours are
-     * *expected* 404s — "does this file exist yet?" probes before a create —
-     * which in dev pop LogBox over the app and, worse, bury genuine failures
-     * in noise. Downgrade those to debug and let everything else through.
+     * *expected*: 404s from "does this file exist yet?" probes before a create,
+     * and 304s from the conditional branch-head check (`hasRemoteChanged`).
+     * In dev those pop LogBox over the app — over the viewer's action bar — and
+     * bury genuine failures in noise. Drop them and let everything else through.
      */
     log: {
       debug: () => {},
       info: () => {},
       warn: (message: string) => {
-        if (/ - 404 /.test(message)) return;
+        if (/ - (304|404) /.test(message)) return;
         console.warn(message);
       },
       error: (message: string) => {
-        if (/ - 404 /.test(message)) return;
+        if (/ - (304|404) /.test(message)) return;
         console.error(message);
       },
     },

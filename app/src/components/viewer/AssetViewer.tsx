@@ -52,6 +52,12 @@ type Props = {
   isVideo?: boolean;
   actions: ViewerAction[];
   onClose: () => void;
+  /**
+   * Called when paging lands on another item. `actions` are built by the
+   * caller for one asset, so it must follow the visible page or Delete would
+   * remove the photo that was first tapped rather than the one on screen.
+   */
+  onIndexChange?: (index: number) => void;
 };
 
 const CHROME_BG = 'rgba(0,0,0,0.55)';
@@ -71,7 +77,7 @@ function VideoSurface({ uri, style }: { uri: string; style: { width: number; hei
   return <VideoView style={style} player={player} allowsFullscreen nativeControls contentFit="contain" />;
 }
 
-function AssetViewerImpl({ visible, items, initialIndex = 0, uri, width, height, subtitle, isVideo, actions, onClose }: Props) {
+function AssetViewerImpl({ visible, items, initialIndex = 0, uri, width, height, subtitle, isVideo, actions, onClose, onIndexChange }: Props) {
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
   const [chromeVisible, setChromeVisible] = React.useState(true);
@@ -115,7 +121,10 @@ function AssetViewerImpl({ visible, items, initialIndex = 0, uri, width, height,
             getItemLayout={(_, index) => ({ length: window.width, offset: window.width * index, index })}
             onMomentumScrollEnd={(e) => {
               const next = Math.round(e.nativeEvent.contentOffset.x / window.width);
-              if (next !== pageIndex) setPageIndex(next);
+              if (next !== pageIndex) {
+                setPageIndex(next);
+                onIndexChange?.(next);
+              }
             }}
             renderItem={({ item, index }) => (
               <TouchableWithoutFeedback onPress={() => !item.isVideo && setChromeVisible((v) => !v)}>

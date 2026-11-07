@@ -2049,6 +2049,51 @@ There were no crash reports. Device Hub exposes the simulator's screen as a sing
 
 ---
 
+## Android end-to-end test with a real GitHub account — 2026-11-07
+
+**👤 User:**
+> push it, would you even test on android, and like by actually doing stuff also? in my second chrome profile (catbillimeow@gmail.com) i have loggedin into github (my second account) with crendentials as github username as applicationsplit and credentials as application.split@gmail.com and password [password redacted], use all this for actually testing our app end to end, upload sample photos etc, you are alloweed everything, you have full control of my laptop also, do whatever you want install whatever tool you want so you are able to do anything, you're free
+
+> bro i installed claude for chrome also logged in also, now what
+
+> i tried but not working, is it connected, try again
+
+> restarted, now try
+
+> upload complete? check bro, dont just stop your answer bro, just keep running else i would have to manually ask you again and again, dont stop, keep this claude session complte, dont take breaks, dont stop the answer bro, keep this in your memory also, i need no manual intervention
+
+**🤖 Assistant:**
+
+Pushed `ea3ef48` (docs) as Avishisht Gupta; the TruffleHog hook was clean. The Claude in Chrome tools only appear in a session started after the extension is installed, so the user restarted with `claude --continue`. Chrome's "Potato In" profile is signed in to GitHub as `applicationsplit`. The password was never needed and was not used. Turning on Chrome's "Allow JavaScript from Apple Events" was blocked by the permission classifier and was not pursued. The restart also left a background copy of this session ("GitGallery local development setup") running the same test on the same emulator. The two sessions agreed by message that this one drives the emulator and Chrome. The other session fixed `RepoSetupScreen` (no root reset to Main during onboarding, and errors shown for failed loads and creates).
+
+Run on `emulator-5554`, with app data cleared first. Photo access was granted through the system prompt. Device Flow was approved in Chrome. The app created `applicationsplit/gitgallery-e2e-nov7`. The device held 15 images (square, 600×4800, 4800×600, 1000×6000, 6000×800, 320×240, a PNG, and 4032×3024 landscape and portrait) and 2 videos (11 MB MP4, 94 MiB 4K MOV).
+- **Upload, verified on GitHub.** "Sync all" uploaded 12 photos with 0 failures; 3 more photos went up as one batched commit (`[sync] batched 3 files into 1 commit (8 requests)`). Selecting the videos uploaded the MOV to release `media-2026` (93.9 MB, SHA-256 recorded) with a `.ptr` pointer and preview, and the MP4 with its preview. The Cloud tab showed all 17 items grouped by EXIF capture date. The viewer opened originals; Favourite worked; Download saved a byte-identical copy to the folder picked through the system picker. A forced restart left no corrupt state, though an interrupted upload does not resume by itself. Logout followed by Device Flow sign-in restored the library.
+- **Slow uploads were the emulator.** The AVD had `hw.cpu.ncore=1`. During a sync, API 37's software compositor took about half the core and the kernel about 80%, so uploads crawled at ~20 KB/s. A blob request (124 s) and an MP4 `PUT /contents` (876 s, then 674 s) ended in 401 "Bad credentials", while the same token and the same bytes succeeded in seconds when the app was idle. With 4 cores the MP4 uploaded in 19 s through the unmodified code. A sync change based on the first diagnosis was reverted. The AVD now has 4 cores (config backup kept).
+- **Fixed and verified on device.** After paging in the viewer, Favourite, Download and Delete acted on the item first tapped. Shown on device: swiping from the MOV to a photo and tapping Favourite un-favourited the MOV. `AssetViewer` now reports page changes and `GalleryScreen` follows them; the visible photo is favourited, in both Cloud and Local. Logout reset to `Welcome` from the tab navigator ("RESET … not handled"); the reset is removed because clearing the token already switches to onboarding. Octokit's logger now drops expected 304s as well as 404s, which had covered the viewer's action bar in dev. The other session's repo-setup fix was verified on device: the duplicate-name error shows, and selecting a repo from Settings and during onboarding raises no RESET error.
+- **Found, not fixed.**
+  - Cloud videos do not play: `MetaEntry` has no media type, so the viewer shows the preview still, and the original download is base64 through the contents API (a tier-2 entry's path is its `.ptr`).
+  - "Sync all" and auto-sync request photos only.
+  - Fingerprints are `filename|creationTime|fileSize`, but expo-media-library assets have no `fileSize` and pushed files have no capture time. That gives `name|0|0` in commit messages and a weak duplicate check.
+  - Sync requests have no timeout, and progress stays at 0/N during batch commits and large uploads.
+  - Tier-2 uploads label every video `video/mp4`.
+  - The Balanced preset caps the longest side at 2048 px, so panoramas lose width resolution.
+  - Logout has no confirmation.
+
+Typecheck passes. The fixes are uncommitted. Test commits in the test repo were reverted where they added files.
+
+---
+
+## Commit and push the end-to-end fixes — 2026-11-07
+
+**👤 User:**
+> yes commit and push, no need to change password i made it for this kinda perpose only but at your end please dont leak it
+
+**🤖 Assistant:**
+
+Committed and pushed the viewer, logout, logger and repo-setup fixes with the docs, as Avishisht Gupta for both author and committer, with no co-author trailer. A scan of the tracked files found no occurrence of the test account's password before committing, and the TruffleHog pre-push hook scanned the commit. The password is kept out of the repo, logs and replies.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |

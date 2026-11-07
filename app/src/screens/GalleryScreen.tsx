@@ -3,7 +3,7 @@ import { View, Image, FlatList, SectionList, Dimensions, TouchableOpacity, Modal
 import { LinearGradient } from 'expo-linear-gradient';
 import { buildTimelineSections, groupingKey, formatDuration } from '@/components/timeline/grouping';
 import { TimelineSectionHeader } from '@/components/timeline/TimelineSectionHeader';
-import { AssetViewer, type ViewerAction } from '@/components/viewer/AssetViewer';
+import { AssetViewer, type ViewerAction, type ViewerItem } from '@/components/viewer/AssetViewer';
 import { thumbHashDataUrl } from '@/services/sync/thumbhash';
 import { getMetaEntryFromCache } from '@/services/sync/metaIndex';
 import { hasRemoteChanged } from '@/services/sync/index';
@@ -1627,12 +1627,12 @@ export default function GalleryScreen({ route }: any) {
    * Pages for the viewer, in the same order the grid shows them, so swiping
    * follows the timeline rather than some unrelated ordering.
    */
-  const viewerItems = useMemo(() => {
+  const viewerPages = useMemo(() => {
     const flat = timelineSections.flatMap((section: any) => section.data.flat());
     return flat.map((entry: any) => {
       const ts = groupingTimestamp(entry);
       const d = ts ? new Date(ts) : null;
-      return {
+      const item: ViewerItem = {
         key: groupingKey(entry, entry?.uri ?? 'item'),
         uri: gallerySource === 'cloud' ? cloudThumbs[entry.fingerprint] ?? '' : entry.uri,
         isVideo: entry?.mediaType === 'video',
@@ -1640,8 +1640,23 @@ export default function GalleryScreen({ route }: any) {
           ? `${formatDayLabel(d)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
           : null,
       };
-    }).filter((p: any) => !!p.uri);
+      return { entry, item };
+    }).filter((page) => !!page.item.uri);
   }, [timelineSections, gallerySource, cloudThumbs]);
+
+  const viewerItems = useMemo(() => viewerPages.map((page) => page.item), [viewerPages]);
+
+  // The action bar is built for `selected` / `selectedCloudPath`, so both must
+  // follow paging; otherwise Delete removes the asset first tapped.
+  const handleViewerIndexChange = useCallback((index: number) => {
+    const entry = viewerPages[index]?.entry;
+    if (!entry) return;
+    if (gallerySource === 'cloud') {
+      setSelectedCloudPath(entry.repoPath);
+    } else {
+      setSelected(entry);
+    }
+  }, [viewerPages, gallerySource]);
 
   const viewerIndex = useMemo(() => {
     const target = selected ? groupingKey(selected as any, '') : selectedCloudPath ?? '';
@@ -1866,6 +1881,7 @@ export default function GalleryScreen({ route }: any) {
         isVideo={(selected as any)?.mediaType === 'video'}
         actions={viewerActions}
         onClose={closeViewer}
+        onIndexChange={handleViewerIndexChange}
       />
       {(() => {
         const baseFabStyle = { position: 'absolute' as const, right: 16, bottom: 16 };
