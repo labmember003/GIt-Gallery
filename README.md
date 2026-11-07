@@ -235,7 +235,9 @@ cd app/android && ./gradlew assembleRelease
 **Publishing a release:** bump the version in `app/app.json`, `app/android/app/build.gradle` and
 `app/ios/GitGallery/Info.plist`, add `.github/release-notes/vX.Y.Z.md`, then push a `vX.Y.Z` tag.
 [`release.yml`](.github/workflows/release.yml) builds the APK and the unsigned IPA and publishes
-the GitHub Release.
+the GitHub Release. If GitHub Actions is unavailable for the account, build both locally
+(`assembleRelease` above; `xcodebuild … archive` with `CODE_SIGNING_ALLOWED=NO`, then zip
+`Payload/GitGallery.app`) and upload them with `gh release create`.
 
 > ⚠️ Two things about that APK. It is signed with the **debug keystore** (`signingConfig
 > signingConfigs.debug`, the Expo template default) — fine for sideloading, not for distribution.

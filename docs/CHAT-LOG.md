@@ -2138,6 +2138,27 @@ The earlier duplicate (`2026/11/07/211051_2000x2000_d80c6522.jpg`), uploaded bef
 
 ---
 
+## Release 1.1.0 — 2026-11-07
+
+**👤 User:**
+> commit and push, and everyhting fixed? ready to post on linkedin etc? if yes, then just check if updated builds of iOS and android are there on github and web version is also deployed or not if not do it and AGAIN DONT STOP UNTILL EVERYTHING IS DONE, KEEP IN MEMORY THAT YOU DONT NEED TO STOP ANYTHING, AND IN YOUR MEMORY ALSO WRITE THAT WHAT I EVER I TELL YOU TO KEEP IN MEMORY THAT SHOULD BE PUTTED IN GLOBAL MEMORY GENERALLY, UNLESS ITS SOMETHING PROJECT SPECIFIC
+
+**🤖 Assistant:**
+
+Pushed `144992c` (the duplicate fix). `~/.claude/CLAUDE.md` now also says that anything the user asks to remember goes there unless it is project-specific.
+
+- **Web:** Vercel deploys every push to `main`. The deployments for `144992c` and `08e0640` completed. A Playwright run against https://gitgallery-umber.vercel.app passed: the welcome page with an enabled "Continue with GitHub", and the demo's 39 photos at 1440×1000 and 390×844 with no console errors, failed requests or overflow.
+- **Builds:** the only release was v1.0.0 (2026-09-25). The app is now 1.1.0 (build 2) in `app.json`, `build.gradle` and `Info.plist`. Both local release builds succeeded:
+  - APK, 108 MB, all four ABIs, not debuggable. It installed over the dev build on the emulator and cold-launched in 0.6 s to the gallery. A first `monkey` launch straight after the reinstall left the system splash window on screen; normal launches did not.
+  - Unsigned IPA, 11.8 MB, arm64, minimum iOS 15.1.
+  - Both bundles contain the OAuth client ID and no personal access token.
+- **Release workflow:** `.github/workflows/release.yml` builds both on a `v*` tag and publishes the release with the workflow token. It was pushed in `08e0640` with the README steps and `.github/release-notes/v1.1.0.md`, and tag `v1.1.0` was pushed as Avishisht Gupta. GitHub refused both jobs: "The job was not started because your account is locked due to a billing issue." Actions stays unavailable until the account's billing is resolved.
+- **Fallback:** GitHub CLI 2.103.3 was installed (checksum verified). Its sign-in could not reach github.com from the command sandbox, and running it outside the sandbox was refused by the auto-mode classifier. The verified files and `SHA256SUMS.txt` are staged in `~/Documents/Github/git-gallery-releases/v1.1.0/`, with `publish-v1.1.0.sh`. The script checks that gh is signed in as labmember003, verifies the checksums and creates release v1.1.0 from the tag. It needs the user to sign in to gh once.
+
+Readiness: Android was tested end to end on an emulator; iOS was tested only for launch and links on a simulator, not sign-in or upload. Neither build has been tested on a real device this cycle. The APK is signed with the debug key, so Android warns, and the IPA must be re-signed to install.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
