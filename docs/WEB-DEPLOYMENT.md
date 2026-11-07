@@ -92,3 +92,11 @@ Real private GitHub upload/download verification remains. The locally available 
 Publish changes through the connected Git repository after testing and explicit user authorization. Manual deployments are available for verification, but their source changes must also be published so subsequent automatic deployments retain them. Use terminal Git commands and `Avishisht Gupta <avishishtgupta@gmail.com>` as both author and committer. GitHub installation scope, OAuth configuration, token-login policy and dependency versions are unchanged. The existing dependency audit findings are outside this upload feature.
 
 The website and demo links are near the top of `README.md`. Verify the deployment matching each authorized push reaches READY before treating that Git release as live.
+
+## A new feature is missing in an already-open tab
+
+An open tab keeps executing the JavaScript it loaded, even after a successful deployment. Moving between Photos and Albums, or choosing **Refresh library**, only updates the view/media data; it does not load the new website code.
+
+Use the browser’s full reload (**Cmd+Shift+R** in Chrome on macOS). A versioned navigation such as `https://gitgallery-umber.vercel.app/?v=473317f#/photos` also requests a new document; open it in the same Chrome profile to retain that profile’s session and local albums. Clearing site storage is unnecessary and would remove browser-local collections.
+
+On 2026-10-23, the current production alias was verified against Git commit `473317f`. Root, versioned-root and index.html requests all served the upload bundle; a fresh live browser check showed **Upload** beside Select. The root HTML is served with `Cache-Control: no-cache`; the deployed source has no service-worker registration. If a full reload still shows the older interface, inspect the actual loaded document/bundle and deployment alias before attributing the problem to browser caching.

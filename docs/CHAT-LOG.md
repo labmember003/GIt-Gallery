@@ -1932,6 +1932,23 @@ The upload feature was deployed directly to Vercel but had not been committed or
 
 ---
 
+## Verify the deployed Upload button — 2026-10-23
+
+**👤 User:**
+> is changes even deployed? if yes, where the upload button? here's the screenshots [Image #1] [Image #2]
+
+Both screenshots show the earlier empty Photos/album interface, with Refresh library and the mobile-only backup message rather than upload actions.
+
+**🤖 Assistant:**
+
+Verified the current live URL and Vercel deployment instead of assuming the screenshots reflected the latest build. Production deployment `dpl_3MpBK7Wea7GEkAg8DmeKkrFwNhTv` is READY, comes from Git commit `473317fd0fe5b595f8427ca7343169a095b37485`, and owns `gitgallery-umber.vercel.app`. Requests to `/`, `/?v=473317f` and `/index.html` all returned the same current HTML and JavaScript bundle, `index-f8b8f05d59501638254ee89dd7418a5d.js`. That bundle contains the upload UI/protocol and no longer contains the mobile-only message visible in the user's screenshots. The root HTML response has Cache-Control: no-cache. The evidence points to an older interface still loaded in the user's tab; the exact browser-side cause cannot be established from screenshots.
+
+Read the Browser skill and tried to connect to the page. The runtime reported no browser available and discovery returned an empty list, so the user's existing Chrome tab could not be inspected or refreshed. Reran the existing live Chromium gallery test in a fresh isolated session; it passed. Inspected the fresh light/dark gallery and viewer captures and confirmed Upload is visible at the upper right beside Select. The diagnostic used the public demo and did not inspect a private session, token or library.
+
+Explained that the in-app Refresh library action reloads media data, while browser Cmd+Shift+R reloads the website code. Provided a versioned live link (`https://gitgallery-umber.vercel.app/?v=473317f#/photos`) to open the latest document in the same Chrome profile. No application code, deployment, account permissions, commits or pushes were changed. Added this distinction to the deployment troubleshooting guide.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
