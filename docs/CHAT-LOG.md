@@ -2032,6 +2032,23 @@ The iOS changes had not been pushed. They were committed and pushed to `main` as
 
 ---
 
+## iOS link tests through the scene delegate — 2026-11-07
+
+**👤 User:**
+> i gave you all permission then restarted terminal because it asked from, now continue
+
+**🤖 Assistant:**
+
+Accessibility scripting worked from Terminal. Restarting Terminal had stopped the earlier servers, so a native Metro was started on 8081, and the new iOS Simulator launcher booted iPhone 18 Pro and opened Device Hub. Each run reinstalled the app first, which clears the dev launcher's remembered servers. A run then counted as a link test only if the app loaded from the address inside the link.
+
+- **Cold start:** with the app closed, `simctl openurl` raised "Open in GitGallery?". The first prompt was accepted outside the test script (its AppleScript stopped on the reserved word `front` before sending a key), most likely by the user clicking Open. The app started and loaded from the link's Metro URL to the welcome screen. On a second fresh install, iOS opened the link with no prompt. The app process started at the moment of the open, its only remembered server was the link's `127.0.0.1:8081`, Metro served the bundle, and the welcome screen rendered.
+- **Warm:** with the app in front, a link to `localhost:8081` was delivered without a prompt. The app showed "Loading from Metro…", reloaded, and added `localhost:8081` to its remembered servers.
+- **Control:** a fresh install launched without a link showed the dev launcher's server list, requested no bundle and remembered no server. So the loads above came from the forwarded links.
+
+There were no crash reports. Device Hub exposes the simulator's screen as a single element, so the device's controls cannot be targeted through Accessibility; the Mac keyboard reaches the device when Device Hub is in front. The Mac was heavily loaded throughout (load average above 400, about 12 GB of swap). These log updates are not yet pushed.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
