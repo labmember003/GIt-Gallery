@@ -11,7 +11,8 @@ import { makeFingerprint, legacyFingerprint, prepareAsset, temporaryDownloadPath
 import { commitBatchWithRetry } from './gitPlumbing';
 import { JobQueue } from './jobQueue';
 import { getOctokit, getRepoInfo, fetchFileSha, putFile, deleteFile, downloadFile, resetBranchToEmptyCommit, getBranchHead } from './githubClient';
-import { contentTypeForPath, previewPathFor, uploadTier2 } from './tiering';
+import { contentTypeForPath, isStubPath, isVideoRepoPath, originalPathForStub, previewPathFor, uploadTier2 } from './tiering';
+import { ensureOriginalFile } from './cloudCache';
 import { formatBytes } from './compression';
 
 /** Files per batched commit. Keeps each request set modest and bounds retry cost. */
@@ -299,7 +300,66 @@ async function refreshUploadIndexCache(): Promise<void> {
   uploadIndexEmitter.emit();
 }
 
+/**
+ * Copies of library items this app saved to the device, keyed `name:<file>`
+ * (Android writes through the folder picker and only knows the file name) or
+ * `id:<asset>` (iOS gets the asset back), mapped to the repo path they came
+ * from. A downloaded copy is a new file with a new name, so without this the
+ * next sync uploaded it as a second copy of a photo already in the library.
+ */
+const downloadedCopies = new Map<string, string>();
+let downloadedCopiesLoad: Promise<void> | null = null;
+const MAX_DOWNLOADED_COPIES = 2000;
+
+function ensureDownloadedCopiesLoaded(): Promise<void> {
+  if (!downloadedCopiesLoad) {
+    downloadedCopiesLoad = (async () => {
+      try {
+        const raw = await localStore.getKey('sync:downloadedCopies');
+        const saved = raw ? (JSON.parse(raw) as Array<[string, string]>) : [];
+        for (const [key, repoPath] of saved) downloadedCopies.set(key, repoPath);
+        if (downloadedCopies.size > 0) uploadIndexEmitter.emit();
+      } catch (error: any) {
+        console.warn('[sync] could not read downloaded copies', error?.message ?? error);
+      }
+    })();
+  }
+  return downloadedCopiesLoad;
+}
+
+async function rememberDownloadedCopy(keys: string[], repoPath: string): Promise<void> {
+  await ensureDownloadedCopiesLoaded();
+  for (const key of keys) {
+    downloadedCopies.delete(key);
+    downloadedCopies.set(key, repoPath);
+  }
+  // Oldest first, so the cap drops the copies saved longest ago.
+  while (downloadedCopies.size > MAX_DOWNLOADED_COPIES) {
+    const oldest = downloadedCopies.keys().next().value;
+    if (oldest === undefined) break;
+    downloadedCopies.delete(oldest);
+  }
+  try {
+    await localStore.setKey('sync:downloadedCopies', JSON.stringify(Array.from(downloadedCopies.entries())));
+  } catch (error: any) {
+    console.warn('[sync] could not save downloaded copy', error?.message ?? error);
+  }
+  uploadIndexEmitter.emit();
+}
+
+/**
+ * The library entry this device asset was downloaded from. Null when it is not
+ * a downloaded copy, or when that entry has since left the library — the copy
+ * is then the only one and must be backed up.
+ */
+function downloadedCopyEntry(asset: MediaLibrary.Asset): MetaEntry | null {
+  const repoPath =
+    downloadedCopies.get(`id:${asset.id}`) ?? (asset.filename ? downloadedCopies.get(`name:${asset.filename}`) : undefined);
+  return repoPath ? getMetaEntryFromCache(repoPath) ?? null : null;
+}
+
 async function ensureUploadIndexCache(): Promise<void> {
+  await ensureDownloadedCopiesLoaded();
   if (uploadIndexCache.size === 0) {
     await refreshUploadIndexCache();
   }
@@ -785,7 +845,32 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     }
   }
 
-  for (const item of prepared) {
+  // Index entries reach the repo only when meta is flushed. Waiting for the end
+  // of the batch meant an app killed during a long tier-2 upload left files the
+  // batch commit had already written out of the index, and they were sent again
+  // next time. So committed files are booked first, meta is flushed before and
+  // after each tier-2 upload, and an item leaves the resume list only once its
+  // entry is flushed.
+  const ordered = [
+    ...prepared.filter((item) => batchedFingerprints.has(item.fingerprint)),
+    ...prepared.filter((item) => !batchedFingerprints.has(item.fingerprint)),
+  ];
+  const awaitingFlush: string[] = [];
+  const flushMeta = async () => {
+    if (pendingMetaEntries.length === 0) return;
+    const entries = pendingMetaEntries.splice(0);
+    try {
+      await upsertMetaEntries(client, repo, entries);
+      for (const id of awaitingFlush.splice(0)) remaining.delete(id);
+      await savePendingUploads(repo, remaining.values());
+    } catch (error: any) {
+      // Kept for the final attempt; the items stay on the resume list until then.
+      pendingMetaEntries.unshift(...entries);
+      console.warn('[sync] meta flush failed', error?.message ?? error);
+    }
+  };
+
+  for (const item of ordered) {
     if (cancelToken.cancelled) {
       cancelled = true;
       break;
@@ -794,6 +879,7 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     if (!batchedFingerprints.has(item.fingerprint)) {
       setSyncStatus({ currentItem: describeUpload(item) });
     }
+    if (item.tier === 2) await flushMeta();
     try {
       await uploadPreparedAsset(client, repo, item, {
         transferAlreadyDone: batchedFingerprints.has(item.fingerprint),
@@ -802,8 +888,8 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
       if (deleteCandidates && item.asset?.id) {
         deleteCandidates.add(item.asset.id);
       }
-      remaining.delete(item.asset.id);
-      await savePendingUploads(repo, remaining.values());
+      awaitingFlush.push(item.asset.id);
+      if (item.tier === 2) await flushMeta();
       setSyncStatus({
         completedUploads: syncStatus.completedUploads + 1,
         // Batched items were already counted as their blobs landed.
@@ -838,17 +924,11 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     }
   }
 
-  // Flush the whole batch's meta entries in one go.
-  if (pendingMetaEntries.length > 0) {
-    try {
-      await upsertMetaEntries(client, repo, pendingMetaEntries);
-    } catch (error: any) {
-      console.warn('[sync] bulk meta flush failed', error?.message ?? error);
-    }
-  }
+  await flushMeta();
 
-  // Cancelled or finished, nothing should resume next launch.
-  await savePendingUploads(repo, []);
+  // A cancelled batch is not resumed. Otherwise anything left is an item whose
+  // index entry could not be flushed, and the next launch finishes it.
+  await savePendingUploads(repo, cancelled || cancelToken.cancelled ? [] : remaining.values());
 
   if (cancelToken.cancelled) {
     setSyncStatus({
@@ -1014,10 +1094,12 @@ export function isAssetUploadedAsset(asset: MediaLibrary.Asset): boolean {
   const entry = uploadIndexCache.get(asset.id) || fingerprints.map((fp) => uploadIndexCache.get(fp)).find(Boolean);
   if (entry?.uploaded) return true;
   const metaEntry = fingerprints.map((fp) => getMetaEntryFromCache(fp)).find(Boolean) || getMetaEntryFromCache(asset.id);
-  return !!metaEntry;
+  return !!metaEntry || !!downloadedCopyEntry(asset);
 }
 
 export async function hydrateRecentMeta(maxAgeHours = 24, force = false): Promise<void> {
+  // The gallery's upload badges read downloaded copies too.
+  await ensureDownloadedCopiesLoaded();
   const wasReady = metaReady;
   let needsFresh = force || !metaReady;
 
@@ -1107,8 +1189,12 @@ export async function syncVisibleAssets(assets: MediaLibrary.Asset[]): Promise<v
 
 export async function getRepoEntryForAsset(asset: MediaLibrary.Asset): Promise<MetaEntry | null> {
   await ensureMetaLoaded(false);
+  await ensureDownloadedCopiesLoaded();
   const fingerprints = fingerprintsFor(asset);
-  const entry = fingerprints.map((fp) => getMetaEntryFromCache(fp)).find(Boolean) || getMetaEntryFromCache(asset.id);
+  const entry =
+    fingerprints.map((fp) => getMetaEntryFromCache(fp)).find(Boolean) ||
+    getMetaEntryFromCache(asset.id) ||
+    downloadedCopyEntry(asset);
   if (entry) return entry;
   for (const fp of fingerprints) {
     const record = await localStore.getAsset(fp);
@@ -1214,6 +1300,37 @@ export async function deleteAssets(assets: MediaLibrary.Asset[]): Promise<void> 
   }
 }
 
+/**
+ * Save a video or tier-2 original to the device library, returning the asset id.
+ *
+ * The base64 path below fetched only the pointer for a tier-2 file (a 315-byte
+ * `.ptr` was saved in place of a 94 MB video), and for any video it would hold
+ * the whole file in memory. Here the bytes stream to disk and the media library
+ * copies them natively. On Android that means the phone's default media folder
+ * rather than the picked one: the folder picker can only be written from a
+ * single in-memory string.
+ */
+async function downloadLargeOriginal(path: string, repo: RepoInfo): Promise<string | null> {
+  const entry = getMetaEntryFromCache(path);
+  if (!entry) return null;
+  const cached = await ensureOriginalFile(entry, repo);
+  const baseName = originalPathForStub(path).split('/').pop() ?? 'download';
+  const dot = baseName.lastIndexOf('.');
+  const stem = sanitizeFilename(dot > 0 ? baseName.slice(0, dot) : baseName) || 'download';
+  const ext = dot > 0 ? baseName.slice(dot + 1) : 'bin';
+  // The cache copy is named `original.<ext>`; give the saved file its real name.
+  const named = `${FileSystem.cacheDirectory}${stem}-${Date.now()}.${ext}`;
+  await FileSystem.copyAsync({ from: cached, to: named });
+  try {
+    const asset = await MediaLibrary.createAssetAsync(named);
+    if (Platform.OS !== 'android') await placeDownloadedAssetInAlbum(asset);
+    await rememberDownloadedCopy([`id:${asset.id}`, ...(asset.filename ? [`name:${asset.filename}`] : [])], path);
+    return asset.id;
+  } finally {
+    await FileSystem.deleteAsync(named, { idempotent: true }).catch(() => {});
+  }
+}
+
 export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
   const repo = getRepoInfo();
   const downloaded: string[] = [];
@@ -1239,6 +1356,11 @@ export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
 
   for (const path of paths) {
     try {
+      if (isStubPath(path) || isVideoRepoPath(path)) {
+        const assetId = await downloadLargeOriginal(path, repo);
+        if (assetId) downloaded.push(assetId);
+        continue;
+      }
       const file = await downloadFile(path, repo);
       if (!file) {
         continue;
@@ -1252,6 +1374,9 @@ export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
           const safUri = await saf.createFileAsync(androidDirectoryUri, fileName, mimeType);
           await saf.writeAsStringAsync(safUri, file.content, { encoding: FileSystem.EncodingType.Base64 });
           downloaded.push(safUri);
+          // The provider may rename on a clash, so take the name it actually used.
+          const savedName = decodeURIComponent(safUri).split('/').pop() || fileName;
+          await rememberDownloadedCopy([`name:${savedName}`], path);
           continue;
         } catch (_error) {
           // Fall back to app storage if SAF write fails
@@ -1264,6 +1389,7 @@ export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
           const asset = await MediaLibrary.createAssetAsync(localPath);
           await placeDownloadedAssetInAlbum(asset);
           downloaded.push(asset.id);
+          await rememberDownloadedCopy([`id:${asset.id}`, ...(asset.filename ? [`name:${asset.filename}`] : [])], path);
           try {
             await FileSystem.deleteAsync(localPath, { idempotent: true });
           } catch (_cleanupError) {}
@@ -1310,6 +1436,8 @@ export async function clearCache(): Promise<void> {
   await localStore.setKey('legacy:migrationCompleted', '1');
   resetAutoSyncBlocklistCache();
   uploadIndexCache.clear();
+  // resetStore dropped the saved copy, so the in-memory one must not be written back.
+  downloadedCopies.clear();
   uploadIndexEmitter.emit();
   invalidateMetaCache();
   metaReady = false;

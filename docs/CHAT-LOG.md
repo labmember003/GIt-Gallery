@@ -2118,6 +2118,26 @@ Still open: an item whose bytes went up in a batch commit just before a kill is 
 
 ---
 
+## Push, then fix the downloaded-photo duplicate — 2026-11-07
+
+**👤 User:**
+> commit and push this, and fix the downloaded-photo duplicate next
+
+(While this was in progress.)
+> i said keep this claude session complte, dont take breaks, dont stop the answer bro, keep this in your memory also, i need no manual intervention, where did you saved it? i need it globally bro, like in entire laptop anywhere i use claude
+
+**🤖 Assistant:**
+
+Pushed `7d9d162` as Avishisht Gupta; the TruffleHog hook was clean. The "don't pause" preference had been saved only to the memory for sessions started in the home folder. It is now in `~/.claude/CLAUDE.md`, which every Claude Code session on this Mac loads.
+
+- **Downloaded copies.** Download now records each copy the app saves (`name:<file>` from the folder picker on Android, `id:<asset>` on iOS) against the cloud path it came from, persisted in `localStore`. The upload check and `getRepoEntryForAsset` treat such a copy as the library item while that item is still in the library. Verified: a downloaded July 2025 photo and a downloaded MOV both counted as uploaded, and "Sync all" then added no commit.
+- **Tier-2 download.** Download used the base64 contents path, so for a tier-2 video it saved the 315-byte `.ptr` pointer. Videos and tier-2 files now stream through `ensureOriginalFile` and are saved with `MediaLibrary.createAssetAsync`. On Android they go to the default media folder, because the folder picker can only be written from one in-memory string. Verified: a 98,485,249-byte `.mov` was saved to `DCIM/`.
+- **Re-send after a kill (previously open).** Meta was flushed only at the end of a batch, so a kill during a long tier-2 upload left already-committed files out of the index. Committed files are now booked first, meta is flushed before and after each tier-2 upload, and an item leaves the resume list only once its entry is flushed. Verified with a kill during a 94 MiB upload: the photos' meta shard was committed before the MOV started, and after relaunch only the MOV resumed (1 of 1, 0 failed), with no photo re-upload. `clearCache` also clears the in-memory copy map.
+
+The earlier duplicate (`2026/11/07/211051_2000x2000_d80c6522.jpg`), uploaded before the fix, is still in the test library. Typecheck passes. These changes are not committed.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |

@@ -33,7 +33,8 @@ export type LocalStoreKey =
   | 'sync:lastUploadRun'
   | 'sync:lastDownloadRun'
   | 'downloads:directoryUri'
-  | 'sync:pendingUploads';
+  | 'sync:pendingUploads'
+  | 'sync:downloadedCopies';
 
 type AssetRow = {
   fingerprint: string;
