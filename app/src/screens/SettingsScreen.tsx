@@ -144,6 +144,7 @@ export default function SettingsScreen({ navigation }: any) {
   const hasAutoSelectedRef = React.useRef(false);
   const [resetDialogVisible, setResetDialogVisible] = useState(false);
   const [resetDialogStage, setResetDialogStage] = useState<'warning' | 'confirm'>('warning');
+  const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
   const paperTheme = useTheme();
   // See GalleryScreen: the fork base overrode these with MD3 baseline purple
   // in dark mode, throwing away the Immich dark scheme.
@@ -569,7 +570,7 @@ export default function SettingsScreen({ navigation }: any) {
         ) : null}
         <List.Item
           title="Auto sync"
-          description="Automatically sync new photos from selected albums"
+          description="Automatically sync new photos and videos from selected albums"
           right={() => <Switch value={autoSync} onValueChange={setAutoSync} />}
           left={(props) => <List.Icon {...props} icon="sync" />}
         />
@@ -733,7 +734,7 @@ export default function SettingsScreen({ navigation }: any) {
 
       <List.Section>
         <List.Subheader>Account</List.Subheader>
-        <List.Item title="Logout" onPress={logout} left={(props) => <List.Icon {...props} icon="logout" />} />
+        <List.Item title="Logout" onPress={() => setLogoutDialogVisible(true)} left={(props) => <List.Icon {...props} icon="logout" />} />
       </List.Section>
       </ScrollView>
       <Portal>
@@ -838,6 +839,38 @@ export default function SettingsScreen({ navigation }: any) {
               style={{ marginLeft: 8 }}
             >
               {isResetConfirmStage ? 'Reset' : 'Continue'}
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Portal>
+        <Dialog
+          visible={logoutDialogVisible}
+          onDismiss={() => setLogoutDialogVisible(false)}
+          style={{ borderRadius: 24, marginHorizontal: 12 }}
+        >
+          <Dialog.Title>Log out?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              {`Your photos stay in ${repoLabel} and on this device. You will need to approve a new code on GitHub to sign back in.`}
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+            <Button onPress={() => setLogoutDialogVisible(false)} mode="text">
+              Cancel
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => {
+                setLogoutDialogVisible(false);
+                logout();
+              }}
+              buttonColor={primaryContainerColor}
+              textColor={onPrimaryContainerColor}
+              style={{ marginLeft: 8 }}
+            >
+              Log out
             </Button>
           </Dialog.Actions>
         </Dialog>

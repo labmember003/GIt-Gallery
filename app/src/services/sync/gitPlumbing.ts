@@ -76,6 +76,8 @@ export async function commitBatch(params: {
   entries: BatchEntry[];
   message: string;
   repo?: RepoInfo;
+  /** Called as each file's blob lands, so the UI can show progress mid-batch. */
+  onFileWritten?: (path: string) => void;
 }): Promise<BatchResult | null> {
   const { entries, message } = params;
   if (entries.length === 0) return null;
@@ -100,6 +102,7 @@ export async function commitBatch(params: {
       content: entry.contentBase64,
       encoding: 'base64',
     });
+    params.onFileWritten?.(entry.path);
     return blob.data.sha;
   });
 
@@ -154,6 +157,7 @@ export async function commitBatchWithRetry(params: {
   message: string;
   repo?: RepoInfo;
   maxAttempts?: number;
+  onFileWritten?: (path: string) => void;
 }): Promise<BatchResult | null> {
   const maxAttempts = params.maxAttempts ?? 3;
   let lastError: any = null;

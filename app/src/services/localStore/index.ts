@@ -32,7 +32,8 @@ export type LocalStoreKey =
   | 'sync:lastManifestSha'
   | 'sync:lastUploadRun'
   | 'sync:lastDownloadRun'
-  | 'downloads:directoryUri';
+  | 'downloads:directoryUri'
+  | 'sync:pendingUploads';
 
 type AssetRow = {
   fingerprint: string;

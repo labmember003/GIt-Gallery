@@ -11,6 +11,8 @@ export type SyncStatus = {
   lastBatchUploaded: number;
   lastBatchType: 'upload' | 'delete' | 'download' | null;
   lastError?: string | null;
+  /** The file being uploaded now, e.g. "VID_0007.mp4 · 10.5 MB". */
+  currentItem?: string | null;
 };
 
 export type UploadIndexEntry = {

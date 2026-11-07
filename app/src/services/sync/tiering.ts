@@ -63,6 +63,35 @@ export function originalPathForStub(stubPath: string): string {
   return isStubPath(stubPath) ? stubPath.slice(0, -STUB_SUFFIX.length) : stubPath;
 }
 
+const CONTENT_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  dng: 'image/x-adobe-dng',
+  mp4: 'video/mp4',
+  m4v: 'video/x-m4v',
+  mov: 'video/quicktime',
+  '3gp': 'video/3gpp',
+  mkv: 'video/x-matroska',
+  avi: 'video/x-msvideo',
+  webm: 'video/webm',
+};
+
+/** MIME type from the file extension, so a .mov is not labelled video/mp4. */
+export function contentTypeForPath(path: string): string {
+  const ext = originalPathForStub(path).split('.').pop()?.toLowerCase() ?? '';
+  return CONTENT_TYPES[ext] ?? 'application/octet-stream';
+}
+
+/** True for a video's repo path, including a tier-2 pointer to one. */
+export function isVideoRepoPath(path: string | null | undefined): boolean {
+  return !!path && contentTypeForPath(path).startsWith('video/');
+}
+
 export function parseStub(json: string): StubPointer | null {
   try {
     const parsed = JSON.parse(json);

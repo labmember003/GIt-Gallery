@@ -2094,6 +2094,30 @@ Committed and pushed the viewer, logout, logger and repo-setup fixes with the do
 
 ---
 
+## Fix the found-but-not-fixed items — 2026-11-07
+
+**👤 User:**
+> fix all the found, not fixed things bro
+
+> why stopped? continue? first tell why you stopped
+
+**🤖 Assistant:**
+
+The work had not been stopped deliberately. The request was marked interrupted during a long planning step, before any edits, and the work continued. All eight items are fixed and verified on `emulator-5554` with the test account:
+
+1. **Cloud videos play.** `ensureOriginalFile` streams originals to disk: tier-2 entries from their release asset through the pointer, tier-1 videos through the raw contents endpoint (`downloadRepoFileToPath`). Photos keep the base64 path. A cached `original.ptr` is no longer treated as an original. Cloud video tiles show a play badge. The viewer shows the preview with "Loading video…" until the file is ready, then plays it, both on open and after swiping. Verified: the 94 MiB MOV downloaded in 99 s and played (frames changed); the 11 MB MP4 took 15 s and played to 00:08 of 00:08.
+2. **Videos are synced.** Album collection asks for photos and videos, and the dialog and Settings text say so. "Sync all" now included two videos.
+3. **Fingerprints.** A capture time of 0 falls back to the modification time. Upload checks also try the pre-fix fingerprint, so all 17 existing items stayed recognised as uploaded (16 of 18 device files changed fingerprint). Commit messages name the file (`Upload 193618_640x360_e1d98127.mp4`).
+4. **Timeouts and progress.** Every Octokit request has a deadline: 120 s, or 60 s plus 1 s per 32 KiB of body. The error says "timed out", so the retry policy treats it as transient. A localhost server that never answers made a small POST fail with "Request timed out after 60s" at 60 s. Batched blobs advance the count ("1 of 3 sent, committing together"), and the pill names the file being uploaded ("VID_0011_copy.mov · 93.9 MB").
+5. **Resume after a kill.** The batch's asset snapshots are saved in `localStore` under the repo name, dropped as each item finishes and cleared at the end. They are snapshots rather than ids because `getAssetInfoAsync` rejects photos without ACCESS_MEDIA_LOCATION. On launch the gallery resumes what is left. Verified: the app was force-stopped during a 94 MiB MOV upload; after relaunch it logged "resuming 2 upload(s)" and finished 2 of 2 with 0 failures.
+6. **Content types** come from the file extension. The resumed MOV's release asset is `video/quicktime`; the older one is `video/mp4`.
+7. **Panoramas.** Images up to 2:1 keep the longest-edge cap, so 4:3, 3:4, square and 16:9 photos are unchanged. Wider images get the pixel count of a 2:1 photo, with the long edge capped at 4× the preset. A new 600×4800 panorama is stored at 512×4096 (previously 256×2048).
+8. **Logout asks first.** Cancel keeps the session; Log out goes to Welcome with no errors. Sign-in was then approved in Chrome again.
+
+Still open: an item whose bytes went up in a batch commit just before a kill is re-sent on resume, because the batch's meta flush runs at the end (the same path and bytes, so no duplicate file). A photo downloaded into a synced album (Pictures) is uploaded again as a new item. Typecheck passes, and the test account's password appears in no tracked file. Nothing has been committed.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |

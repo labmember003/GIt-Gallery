@@ -13,11 +13,33 @@ import type { PreparedAsset } from './types';
 const DEFAULT_BRANCH = 'main';
 const albumNameCache = new Map<string, string>();
 
+/**
+ * Identity of a device asset for dedup: name, capture time and size.
+ *
+ * MediaStore reports a creationTime of 0, not null, for files with no capture
+ * date (copied, downloaded or pushed files), and expo-media-library assets
+ * carry no file size. With `??` both fell through to `name|0|0`, so two
+ * different files with the same name looked identical. Zero now falls back to
+ * the modification time.
+ */
 export function makeFingerprint(asset: MediaLibrary.Asset): string {
+  const filename = asset.filename || `asset-${asset.id}`;
+  const createdAt = asset.creationTime || asset.modificationTime || 0;
+  const fileSize = (asset as any).fileSize ?? 0;
+  return `${filename}|${createdAt}|${fileSize}`;
+}
+
+/**
+ * The fingerprint as it was computed before the fallback above, or null when
+ * it is the same. Items uploaded earlier are indexed under it, so lookups must
+ * try it too or those items would upload again.
+ */
+export function legacyFingerprint(asset: MediaLibrary.Asset): string | null {
   const filename = asset.filename || `asset-${asset.id}`;
   const createdAt = asset.creationTime ?? asset.modificationTime ?? 0;
   const fileSize = (asset as any).fileSize ?? 0;
-  return `${filename}|${createdAt}|${fileSize}`;
+  const legacy = `${filename}|${createdAt}|${fileSize}`;
+  return legacy === makeFingerprint(asset) ? null : legacy;
 }
 
 /** How much of the file to read when hunting for the EXIF header. */

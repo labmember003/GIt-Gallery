@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Image, Modal, StatusBar, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Modal, StatusBar, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
@@ -33,6 +33,8 @@ export type ViewerItem = {
   key: string;
   uri: string;
   isVideo?: boolean;
+  /** The still shown is a stand-in while the real file downloads. */
+  loading?: boolean;
   subtitle?: string | null;
 };
 
@@ -140,6 +142,15 @@ function AssetViewerImpl({ visible, items, initialIndex = 0, uri, width, height,
                   ) : (
                     <Image source={{ uri: item.uri }} style={imageStyle} resizeMode="contain" />
                   )}
+                  {item.loading ? (
+                    <View
+                      style={{ position: 'absolute', alignItems: 'center', padding: 16, borderRadius: 12, backgroundColor: CHROME_BG }}
+                      pointerEvents="none"
+                    >
+                      <ActivityIndicator color="#fff" />
+                      <Text style={{ color: '#fff', marginTop: 8 }}>Loading video…</Text>
+                    </View>
+                  ) : null}
                 </View>
               </TouchableWithoutFeedback>
             )}

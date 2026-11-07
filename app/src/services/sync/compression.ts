@@ -73,6 +73,36 @@ export type CompressionResult = {
   originalSize: number;
 };
 
+/** Long-to-short ratio above which an image is treated as a panorama. */
+const PANORAMA_RATIO = 2;
+/** A panorama's long edge may reach this multiple of the preset's edge. */
+const PANORAMA_EDGE_FACTOR = 4;
+
+/**
+ * Output size for one image, or null to keep it as is.
+ *
+ * Photos up to 2:1 keep the preset's longest-edge cap. Capping a panorama the
+ * same way threw most of it away (a 600×4800 shot came out 256×2048), so
+ * anything wider gets the pixel count of a 2:1 photo at the preset's edge
+ * instead, with its long edge capped at PANORAMA_EDGE_FACTOR × that edge.
+ */
+export function resizeTarget(
+  width: number | null | undefined,
+  height: number | null | undefined,
+  maxEdge: number,
+): { width: number; height: number } | null {
+  const w = width ?? 0;
+  const h = height ?? 0;
+  if (w <= 0 || h <= 0) return null;
+  const long = Math.max(w, h);
+  const short = Math.min(w, h);
+  const scale = long / short <= PANORAMA_RATIO
+    ? maxEdge / long
+    : Math.min(Math.sqrt((maxEdge * maxEdge) / PANORAMA_RATIO / (w * h)), (maxEdge * PANORAMA_EDGE_FACTOR) / long);
+  if (scale >= 1) return null;
+  return { width: Math.round(w * scale), height: Math.round(h * scale) };
+}
+
 /** Video is passed through — re-encoding it is out of scope (it goes to tier 2). */
 function isCompressibleImage(filename: string | null | undefined, mediaType?: string | null): boolean {
   if (mediaType === 'video') return false;
@@ -120,13 +150,12 @@ export async function compressForUpload(params: {
 
   // Only resize when the image actually exceeds the target; upscaling a small
   // photo would add bytes for nothing.
-  const longest = Math.max(params.width ?? 0, params.height ?? 0);
-  const needsResize = longest > config.maxEdge;
-  const actions = needsResize
+  const target = resizeTarget(params.width, params.height, config.maxEdge);
+  const actions = target
     ? [
         (params.width ?? 0) >= (params.height ?? 0)
-          ? { resize: { width: config.maxEdge } }
-          : { resize: { height: config.maxEdge } },
+          ? { resize: { width: target.width } }
+          : { resize: { height: target.height } },
       ]
     : [];
 

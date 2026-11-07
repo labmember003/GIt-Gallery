@@ -7,16 +7,17 @@ import { AssetViewer, type ViewerAction, type ViewerItem } from '@/components/vi
 import { thumbHashDataUrl } from '@/services/sync/thumbhash';
 import { getMetaEntryFromCache } from '@/services/sync/metaIndex';
 import { hasRemoteChanged } from '@/services/sync/index';
-import { makeFingerprint } from '@/services/sync/utils';
+import { makeFingerprint, legacyFingerprint } from '@/services/sync/utils';
 import { parseCanonicalPath } from '@/services/sync/pathScheme';
 import { formatDayLabel, groupingTimestamp } from '@/components/timeline/grouping';
 import { Button, Text, FAB, ProgressBar, ActivityIndicator, useTheme, SegmentedButtons, Snackbar, Portal, Dialog, TextInput } from 'react-native-paper';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/appState';
-import { getUploadIndex, subscribeUploadIndex, getSyncStatus, subscribeSyncStatus, isAssetUploadedAsset, hydrateRecentMeta, runSyncOnce, runSyncForAssets, getRepoEntryForAsset, deleteRepoFile, deleteRepoFilesBulk, deleteAssets, getCloudEntriesEnsured, downloadRepoFiles, subscribeCompletion, getLastCompletion, verifyAndCleanUploadIndex, subscribeCacheInvalidated, cancelActiveSync } from '@/services/sync/index';
+import { getUploadIndex, subscribeUploadIndex, getSyncStatus, subscribeSyncStatus, isAssetUploadedAsset, hydrateRecentMeta, runSyncOnce, runSyncForAssets, getRepoEntryForAsset, deleteRepoFile, deleteRepoFilesBulk, deleteAssets, getCloudEntriesEnsured, downloadRepoFiles, subscribeCompletion, getLastCompletion, verifyAndCleanUploadIndex, subscribeCacheInvalidated, cancelActiveSync, resumeInterruptedUploads } from '@/services/sync/index';
 import type { MetaEntry, RepoInfo } from '@/services/sync/types';
-import { ensurePreviewUri, ensureOriginalUri, warmRepoCache } from '@/services/sync/cloudCache';
+import { ensurePreviewUri, ensureOriginalUri, ensureOriginalFile, warmRepoCache } from '@/services/sync/cloudCache';
+import { isVideoRepoPath } from '@/services/sync/tiering';
 import { ensureMediaLibraryPermissions, mediaPermissionOptions } from '@/services/mediaPermissions';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -102,6 +103,12 @@ export default function GalleryScreen({ route }: any) {
   const [selected, setSelected] = useState<MediaLibrary.Asset | null>(null);
   const [selectedCloudUri, setSelectedCloudUri] = useState<string | null>(null);
   const [selectedCloudPath, setSelectedCloudPath] = useState<string | null>(null);
+  // Local copies of cloud videos, by repo path. A video page shows its preview
+  // still until its file is here, then the player.
+  const [cloudVideoFiles, setCloudVideoFiles] = useState<Record<string, string>>({});
+  const cloudVideoLoadsRef = React.useRef<Map<string, Promise<string | null>>>(new Map());
+  const selectedCloudPathRef = React.useRef<string | null>(null);
+  selectedCloudPathRef.current = selectedCloudPath;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [indexVersion, setIndexVersion] = useState(0);
   const [syncVersion, setSyncVersion] = useState(0);
@@ -261,6 +268,16 @@ export default function GalleryScreen({ route }: any) {
     setToastText(message);
     setToastVisible(true);
   }, []);
+
+  // Pick up an upload the app was killed in the middle of.
+  useEffect(() => {
+    if (!repoInfo) return;
+    resumeInterruptedUploads()
+      .then((count) => {
+        if (count > 0) showToast(`Resuming ${count} upload${count === 1 ? '' : 's'} from last time`);
+      })
+      .catch((error: any) => console.warn('[gallery] resume check failed', error?.message ?? error));
+  }, [repoInfo, showToast]);
 
   const closeDialog = useCallback(() => {
     setDialogState((prev) => (prev.visible ? { ...prev, visible: false } : prev));
@@ -917,8 +934,8 @@ export default function GalleryScreen({ route }: any) {
       return;
     }
     showDialog({
-      title: 'Sync all photos?',
-      message: 'No photos selected. Sync all recent photos from selected albums?',
+      title: 'Sync all photos and videos?',
+      message: 'Nothing selected. Sync all recent photos and videos from selected albums?',
       tone: 'primary',
       icon: 'cloud-upload',
       actions: [
@@ -1157,7 +1174,39 @@ export default function GalleryScreen({ route }: any) {
     });
   }, []);
 
+  const prepareCloudVideo = useCallback((item: MetaEntry): Promise<string | null> => {
+    const key = item.repoPath;
+    if (cloudVideoFiles[key]) return Promise.resolve(cloudVideoFiles[key]);
+    const inFlight = cloudVideoLoadsRef.current.get(key);
+    if (inFlight) return inFlight;
+    if (!repoInfo) return Promise.resolve(null);
+    const load = ensureOriginalFile(item, repoInfo)
+      .then((file) => {
+        setCloudVideoFiles((prev) => ({ ...prev, [key]: file }));
+        return file;
+      })
+      .catch((error: any) => {
+        console.warn('[gallery] cloud video download failed', error?.message ?? error);
+        showToast('Could not load this video. Check your connection and try again.');
+        return null;
+      })
+      .finally(() => {
+        cloudVideoLoadsRef.current.delete(key);
+      });
+    cloudVideoLoadsRef.current.set(key, load);
+    return load;
+  }, [cloudVideoFiles, repoInfo, showToast]);
+
   const handleCloudItemPress = useCallback(async (item: MetaEntry) => {
+    if (isVideoRepoPath(item.repoPath) && !selectionMode) {
+      // A video plays from a local copy of the original; the image path below
+      // would hand the player a JPEG preview.
+      setSelectedCloudUri(cloudThumbs[item.fingerprint] ?? null);
+      setSelectedCloudPath(item.repoPath);
+      const file = await prepareCloudVideo(item);
+      if (file && selectedCloudPathRef.current === item.repoPath) setSelectedCloudUri(file);
+      return;
+    }
     if (selectionMode) {
       setSelectedIds(prev => {
         const next = new Set(prev);
@@ -1200,7 +1249,7 @@ export default function GalleryScreen({ route }: any) {
         }
       }
     }
-  }, [selectionMode, cloudThumbs, repoInfo]);
+  }, [selectionMode, cloudThumbs, repoInfo, prepareCloudVideo]);
 
   const handleCloudItemLongPress = useCallback((item: MetaEntry) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -1382,6 +1431,12 @@ export default function GalleryScreen({ route }: any) {
               </Animated.View>
             </View>
           )}
+          {isVideoRepoPath(item.repoPath) && (
+            // The index has no duration, so a play mark alone tells it apart.
+            <View style={videoBadgeStyle} pointerEvents="none">
+              <MaterialCommunityIcons name="play" size={12} color="#fff" />
+            </View>
+          )}
           {isSelected && (
             <View style={checkIconStyleWithColor} pointerEvents="none">
               <MaterialCommunityIcons name="check" size={16} color={onPrimaryColor} />
@@ -1390,7 +1445,7 @@ export default function GalleryScreen({ route }: any) {
         </View>
       </TouchableOpacity>
     );
-  }, [cloudItemContainerStyle, imageStyle, checkIconStyleWithColor, cloudThumbs, failedThumbKeys, selectedIds, handleCloudItemPress, handleCloudItemLongPress, placeholderContainerStyle, shimmerAnimatedStyle, placeholderHighlightColors, shimmerGradientStyle, size]);
+  }, [cloudItemContainerStyle, imageStyle, checkIconStyleWithColor, videoBadgeStyle, cloudThumbs, failedThumbKeys, selectedIds, handleCloudItemPress, handleCloudItemLongPress, placeholderContainerStyle, shimmerAnimatedStyle, placeholderHighlightColors, shimmerGradientStyle, size]);
 
   // Memoized FlatList callbacks
   const keyExtractor = useCallback((i: any, index: number) => {
@@ -1445,7 +1500,8 @@ export default function GalleryScreen({ route }: any) {
     // 2019 photo with today's date.
     let ts: number | null = null;
     if (selected) {
-      const entry = getMetaEntryFromCache(makeFingerprint(selected as any));
+      const entry = getMetaEntryFromCache(makeFingerprint(selected as any))
+        ?? (legacyFingerprint(selected as any) ? getMetaEntryFromCache(legacyFingerprint(selected as any) as string) : null);
       ts = entry?.createdAt ?? groupingTimestamp(selected as any);
     } else if (selectedCloudPath) {
       const entry = getMetaEntryFromCache(selectedCloudPath);
@@ -1632,17 +1688,21 @@ export default function GalleryScreen({ route }: any) {
     return flat.map((entry: any) => {
       const ts = groupingTimestamp(entry);
       const d = ts ? new Date(ts) : null;
+      const isCloud = gallerySource === 'cloud';
+      const cloudVideo = isCloud && isVideoRepoPath(entry?.repoPath);
+      const videoFile = cloudVideo ? cloudVideoFiles[entry.repoPath] : undefined;
       const item: ViewerItem = {
         key: groupingKey(entry, entry?.uri ?? 'item'),
-        uri: gallerySource === 'cloud' ? cloudThumbs[entry.fingerprint] ?? '' : entry.uri,
-        isVideo: entry?.mediaType === 'video',
+        uri: isCloud ? videoFile ?? cloudThumbs[entry.fingerprint] ?? '' : entry.uri,
+        isVideo: isCloud ? !!videoFile : entry?.mediaType === 'video',
+        loading: cloudVideo && !videoFile,
         subtitle: d
           ? `${formatDayLabel(d)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
           : null,
       };
       return { entry, item };
     }).filter((page) => !!page.item.uri);
-  }, [timelineSections, gallerySource, cloudThumbs]);
+  }, [timelineSections, gallerySource, cloudThumbs, cloudVideoFiles]);
 
   const viewerItems = useMemo(() => viewerPages.map((page) => page.item), [viewerPages]);
 
@@ -1653,10 +1713,11 @@ export default function GalleryScreen({ route }: any) {
     if (!entry) return;
     if (gallerySource === 'cloud') {
       setSelectedCloudPath(entry.repoPath);
+      if (isVideoRepoPath(entry.repoPath)) void prepareCloudVideo(entry);
     } else {
       setSelected(entry);
     }
-  }, [viewerPages, gallerySource]);
+  }, [viewerPages, gallerySource, prepareCloudVideo]);
 
   const viewerIndex = useMemo(() => {
     const target = selected ? groupingKey(selected as any, '') : selectedCloudPath ?? '';
@@ -1747,6 +1808,11 @@ export default function GalleryScreen({ route }: any) {
                 {progressLabel} {syncStatus.lastBatchUploaded}/{syncStatus.lastBatchTotal}
               </Text>
             </View>
+            {syncStatus.currentItem && !syncStatus.isDeleting ? (
+              <Text numberOfLines={1} style={{ color: '#fff', opacity: 0.8, fontSize: 12, marginBottom: 6 }}>
+                {syncStatus.currentItem}
+              </Text>
+            ) : null}
             <ProgressBar progress={progress} color={primaryColor} style={{ height: 6, borderRadius: 4 }} />
           </View>
         </View>
@@ -1878,7 +1944,11 @@ export default function GalleryScreen({ route }: any) {
         items={viewerItems}
         initialIndex={viewerIndex}
         subtitle={viewerSubtitle}
-        isVideo={(selected as any)?.mediaType === 'video'}
+        isVideo={
+          selected
+            ? (selected as any).mediaType === 'video'
+            : !!selectedCloudPath && !!selectedCloudUri && selectedCloudUri === cloudVideoFiles[selectedCloudPath]
+        }
         actions={viewerActions}
         onClose={closeViewer}
         onIndexChange={handleViewerIndexChange}

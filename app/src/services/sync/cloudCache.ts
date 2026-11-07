@@ -3,8 +3,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { MetaEntry, RepoInfo } from './types';
 import { resolveBranch } from './utils';
-import { downloadFile } from './githubClient';
-import { fetchTier2ToFile, isStubPath, parseStub, stubPathFor } from './tiering';
+import { downloadFile, downloadRepoFileToPath } from './githubClient';
+import { fetchTier2ToFile, isStubPath, isVideoRepoPath, originalPathForStub, parseStub, stubPathFor } from './tiering';
 
 const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
 if (!baseDir) {
@@ -50,25 +50,49 @@ export async function ensurePreviewUri(entry: MetaEntry, repo: RepoInfo): Promis
 }
 
 export async function ensureOriginalUri(entry: MetaEntry, repo: RepoInfo): Promise<string> {
+  return toImageUri(await ensureOriginalFile(entry, repo));
+}
+
+/**
+ * Local path of the original bytes, downloading them on first use.
+ *
+ * Tier-2 entries and videos are streamed to disk. Tier-2 bytes are a release
+ * asset; the tree entry is only a pointer, which this used to cache as
+ * `original.ptr` and hand to the viewer. A video passed through base64 would
+ * mean a string tens of MB long in JS.
+ */
+export async function ensureOriginalFile(entry: MetaEntry, repo: RepoInfo): Promise<string> {
   return withEntry(entry, repo, async (ctx) => {
     const { manifest } = ctx;
     const original = manifest.original?.file;
-    if (original && await ctx.hasFile(original)) {
+    if (original && !isStubPath(original) && await ctx.hasFile(original)) {
       const now = Date.now();
       if (!manifest.lastViewed || now - manifest.lastViewed > VIEW_TOUCH_INTERVAL) {
         ctx.touchView(now);
       }
-      return await toImageUri(ctx.filePath(original));
+      return ctx.filePath(original);
     }
 
-    const downloaded = await fetchBase64(entry.repoPath ? [entry.repoPath] : [], repo, []);
-    const ext = guessExtension(downloaded.usedPath) ?? 'bin';
-    const fileName = `original.${ext}`;
-    const path = ctx.filePath(fileName);
+    const originalPath = originalPathForStub(entry.repoPath ?? '');
+    let fileName = `original.${guessExtension(originalPath) ?? 'bin'}`;
+    let path = ctx.filePath(fileName);
     await FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
-    await writeBase64(path, downloaded.content);
+
+    if (entry.repoPath && isStubPath(entry.repoPath)) {
+      const pointer = await readStubPointer(entry.repoPath, repo);
+      if (!pointer) throw new Error('Unreadable tier-2 pointer');
+      await fetchTier2ToFile(pointer, path, repo);
+    } else if (isVideoRepoPath(entry.repoPath)) {
+      await downloadRepoFileToPath(entry.repoPath, path, repo);
+    } else {
+      const downloaded = await fetchBase64(entry.repoPath ? [entry.repoPath] : [], repo, []);
+      fileName = `original.${guessExtension(downloaded.usedPath) ?? 'bin'}`;
+      path = ctx.filePath(fileName);
+      await FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
+      await writeBase64(path, downloaded.content);
+    }
     ctx.setOriginal({ file: fileName, updatedAt: Date.now() });
-    return await toImageUri(path);
+    return path;
   });
 }
 
@@ -387,8 +411,7 @@ async function buildPreview(dir: string, entry: MetaEntry, repo: RepoInfo): Prom
  * Returns null when there is no stub, so callers can treat "not tier 2" as a
  * normal miss rather than an error.
  */
-async function fetchTier2ViaStub(originalPath: string, repo: RepoInfo): Promise<Base64Result | null> {
-  const stubPath = isStubPath(originalPath) ? originalPath : stubPathFor(originalPath);
+async function readStubPointer(stubPath: string, repo: RepoInfo) {
   let stubRaw: { content: string } | null = null;
   try {
     stubRaw = (await downloadFile(stubPath, repo)) as any;
@@ -396,9 +419,13 @@ async function fetchTier2ViaStub(originalPath: string, repo: RepoInfo): Promise<
     return null;
   }
   if (!stubRaw?.content) return null;
-
   const { Buffer } = require('buffer');
-  const pointer = parseStub(Buffer.from(stubRaw.content, 'base64').toString('utf8'));
+  return parseStub(Buffer.from(stubRaw.content, 'base64').toString('utf8'));
+}
+
+async function fetchTier2ViaStub(originalPath: string, repo: RepoInfo): Promise<Base64Result | null> {
+  const stubPath = isStubPath(originalPath) ? originalPath : stubPathFor(originalPath);
+  const pointer = await readStubPointer(stubPath, repo);
   if (!pointer) return null;
 
   // Prefer the committed preview. Pulling the release asset to paint a grid

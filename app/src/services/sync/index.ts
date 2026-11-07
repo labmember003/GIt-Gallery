@@ -3,15 +3,16 @@ import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
 import { AppState, Platform } from 'react-native';
 import { useAppStore } from '@/store/appState';
-import type { SyncStatus, UploadIndex, UploadIndexEntry, MetaEntry, PreparedAsset, CompletionEvent } from './types';
+import type { SyncStatus, UploadIndex, UploadIndexEntry, MetaEntry, PreparedAsset, CompletionEvent, RepoInfo } from './types';
 import { SimpleEmitter, EventEmitter } from './events';
 import * as localStore from '../localStore';
 import type { AssetRecord } from '../localStore';
-import { makeFingerprint, prepareAsset, temporaryDownloadPath, resolveBranch, sanitizeFilename, chunk } from './utils';
+import { makeFingerprint, legacyFingerprint, prepareAsset, temporaryDownloadPath, resolveBranch, sanitizeFilename, chunk } from './utils';
 import { commitBatchWithRetry } from './gitPlumbing';
 import { JobQueue } from './jobQueue';
 import { getOctokit, getRepoInfo, fetchFileSha, putFile, deleteFile, downloadFile, resetBranchToEmptyCommit, getBranchHead } from './githubClient';
-import { previewPathFor, uploadTier2 } from './tiering';
+import { contentTypeForPath, previewPathFor, uploadTier2 } from './tiering';
+import { formatBytes } from './compression';
 
 /** Files per batched commit. Keeps each request set modest and bounds retry cost. */
 const UPLOAD_BATCH_SIZE = 40;
@@ -105,6 +106,18 @@ AppState.addEventListener('change', (state) => {
 });
 
 const uploadIndexCache = new Map<string, UploadIndexEntry>();
+
+/** "VID_0007.mp4 · 10.5 MB": shown while one file uploads, since its count cannot move. */
+function describeUpload(item: PreparedAsset): string {
+  const name = item.asset?.filename || item.repoPath.split('/').pop() || 'file';
+  return item.fileSize ? `${name} · ${formatBytes(item.fileSize)}` : name;
+}
+
+/** Current fingerprint first, then the pre-fix one items may still be indexed under. */
+function fingerprintsFor(asset: MediaLibrary.Asset): string[] {
+  const legacy = legacyFingerprint(asset);
+  return legacy ? [makeFingerprint(asset), legacy] : [makeFingerprint(asset)];
+}
 let syncStatus: SyncStatus = {
   running: false,
   pendingUploads: 0,
@@ -365,6 +378,74 @@ async function ensureMetaLoaded(force = false): Promise<void> {
   metaReady = true;
 }
 
+/**
+ * Asset ids of the upload in progress, persisted so a batch cut short by the
+ * app being killed resumes on the next launch instead of silently stopping.
+ * Scoped to the repo it was meant for.
+ */
+type PendingUploads = { repo: string; assets: MediaLibrary.Asset[] };
+
+/**
+ * The asset fields an upload needs. Stored whole rather than as ids because
+ * re-reading a photo by id (`getAssetInfoAsync`) fails on Android without
+ * ACCESS_MEDIA_LOCATION, while `prepareAsset` works from these fields alone.
+ */
+function assetSnapshot(asset: MediaLibrary.Asset): MediaLibrary.Asset {
+  const { id, filename, uri, mediaType, mediaSubtypes, width, height, creationTime, modificationTime, duration, albumId } = asset;
+  return { id, filename, uri, mediaType, mediaSubtypes, width, height, creationTime, modificationTime, duration, albumId } as MediaLibrary.Asset;
+}
+
+async function savePendingUploads(repo: RepoInfo, assets: Iterable<MediaLibrary.Asset>): Promise<void> {
+  const list = Array.from(assets, assetSnapshot);
+  try {
+    if (list.length === 0) {
+      await localStore.deleteKey('sync:pendingUploads');
+    } else {
+      const value: PendingUploads = { repo: `${repo.owner}/${repo.name}`, assets: list };
+      await localStore.setKey('sync:pendingUploads', JSON.stringify(value));
+    }
+  } catch (error: any) {
+    console.warn('[sync] could not save pending uploads', error?.message ?? error);
+  }
+}
+
+let resumeChecked = false;
+
+/**
+ * Upload whatever an interrupted batch left behind. Runs once per app launch;
+ * returns how many items it queued.
+ */
+export async function resumeInterruptedUploads(): Promise<number> {
+  if (resumeChecked) return 0;
+  resumeChecked = true;
+  let pending: PendingUploads | null = null;
+  try {
+    const raw = await localStore.getKey('sync:pendingUploads');
+    pending = raw ? (JSON.parse(raw) as PendingUploads) : null;
+  } catch {
+    pending = null;
+  }
+  if (!pending || !Array.isArray(pending.assets) || pending.assets.length === 0) return 0;
+  const repo = getRepoInfo();
+  if (pending.repo !== `${repo.owner}/${repo.name}`) {
+    await savePendingUploads(repo, []);
+    return 0;
+  }
+  const perm = await ensureMediaLibraryPermissions();
+  if (!perm.granted) return 0;
+  await ensureUploadIndexCache();
+  await ensureMetaLoaded(false);
+  // An asset deleted from the device since simply fails to prepare and is skipped.
+  const assets = pending.assets.filter((asset) => !!asset?.id && !isAssetUploadedAsset(asset));
+  if (assets.length === 0) {
+    await savePendingUploads(repo, []);
+    return 0;
+  }
+  console.log(`[sync] resuming ${assets.length} upload(s) interrupted last time`);
+  void runSyncForAssets(assets, { allowBlocked: true, source: 'resume' });
+  return assets.length;
+}
+
 type UploadBatchOptions = {
   allowBlocked?: boolean;
   source?: 'auto' | 'visible' | 'manual' | 'retry' | string;
@@ -403,12 +484,13 @@ async function prepareAssetsForUpload(assets: MediaLibrary.Asset[], options?: Up
     }
     let fingerprint: string | null = null;
     if (skipBlocked) {
-      fingerprint = makeFingerprint(asset);
-      if (isAutoSyncBlockedFingerprint(fingerprint)) {
+      const fingerprints = fingerprintsFor(asset);
+      fingerprint = fingerprints[0];
+      if (fingerprints.some(isAutoSyncBlockedFingerprint)) {
         skipped.push({ id: asset.id, reason: 'blocked' });
         continue;
       }
-      const cached = uploadIndexCache.get(asset.id) || uploadIndexCache.get(fingerprint);
+      const cached = uploadIndexCache.get(asset.id) || fingerprints.map((fp) => uploadIndexCache.get(fp)).find(Boolean);
       if (cached?.uploaded) {
         skipped.push({ id: asset.id, reason: 'already uploaded' });
         continue;
@@ -512,7 +594,7 @@ async function uploadPreparedAsset(
       fileSize: fileSize ?? 0,
       contentHash: contentHash ?? null,
       captureDate: creationTime ? new Date(creationTime) : null,
-      contentType: (prepared.asset as any)?.mediaType === 'video' ? 'video/mp4' : undefined,
+      contentType: contentTypeForPath(repoPath),
       repo,
     });
     indexedRepoPath = tier2.stubPath;
@@ -524,7 +606,7 @@ async function uploadPreparedAsset(
     const sha = await fetchFileSha(repoPath, repo);
     await putFile({
       path: repoPath,
-      message: `Upload ${fingerprint}`,
+      message: `Upload ${repoPath.split('/').pop()}`,
       contentBase64,
       sha,
       repo,
@@ -532,7 +614,7 @@ async function uploadPreparedAsset(
     if (prepared.previewBase64) {
       await putFile({
         path: previewPathFor(repoPath),
-        message: `Preview for ${fingerprint}`,
+        message: `Preview for ${repoPath.split('/').pop()}`,
         contentBase64: prepared.previewBase64,
         repo,
       });
@@ -598,6 +680,7 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     lastBatchUploaded: 0,
     lastError: null,
     pendingUploads: assets.length,
+    currentItem: 'Preparing…',
   });
 
   const prepared = await prepareAssetsForUpload(assets, batchOptions);
@@ -618,6 +701,9 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     setSyncStatus({ running: false, lastBatchTotal: 0, lastBatchUploaded: 0, lastBatchType: null, pendingUploads: 0 });
     return;
   }
+
+  const remaining = new Map(prepared.map((item) => [item.asset.id, item.asset]));
+  await savePendingUploads(repo, remaining.values());
 
   const shouldAutoDelete = useAppStore.getState().autoDeleteAfterSync;
   const deleteCandidates = shouldAutoDelete ? new Set<string>() : null;
@@ -655,10 +741,22 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
   const tier1Items = prepared.filter((item) => item.tier === 1 && !!item.contentBase64);
 
   if (tier1Items.length > 1) {
+    // Counts files whose bytes have landed, so the pill moves during a batch
+    // instead of sitting at 0/N until the whole commit is done.
+    const writtenPaths = new Set<string>();
     for (const group of chunk(tier1Items, UPLOAD_BATCH_SIZE)) {
       if (cancelToken.cancelled) break;
+      const groupPaths = new Set(group.map((item) => item.repoPath));
       try {
         const result = await commitBatchWithRetry({
+          onFileWritten: (path) => {
+            if (!groupPaths.has(path) || writtenPaths.has(path)) return;
+            writtenPaths.add(path);
+            setSyncStatus({
+              lastBatchUploaded: writtenPaths.size,
+              currentItem: `${writtenPaths.size} of ${tier1Items.length} sent, committing together`,
+            });
+          },
           // A tier-1 video needs its companion preview JPEG in the SAME commit,
           // otherwise the grid has a video blob it cannot draw.
           entries: group.flatMap((item) => {
@@ -680,6 +778,9 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
         }
       } catch (error: any) {
         console.warn('[sync] batch commit failed, falling back to per-file upload', error?.message ?? error);
+        // Those files go one by one below, so their count starts over.
+        for (const item of group) writtenPaths.delete(item.repoPath);
+        setSyncStatus({ lastBatchUploaded: writtenPaths.size });
       }
     }
   }
@@ -690,6 +791,9 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
       break;
     }
     processed += 1;
+    if (!batchedFingerprints.has(item.fingerprint)) {
+      setSyncStatus({ currentItem: describeUpload(item) });
+    }
     try {
       await uploadPreparedAsset(client, repo, item, {
         transferAlreadyDone: batchedFingerprints.has(item.fingerprint),
@@ -698,9 +802,12 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
       if (deleteCandidates && item.asset?.id) {
         deleteCandidates.add(item.asset.id);
       }
+      remaining.delete(item.asset.id);
+      await savePendingUploads(repo, remaining.values());
       setSyncStatus({
         completedUploads: syncStatus.completedUploads + 1,
-        lastBatchUploaded: processed,
+        // Batched items were already counted as their blobs landed.
+        lastBatchUploaded: Math.max(processed, syncStatus.lastBatchUploaded),
         pendingUploads: Math.max(0, syncStatus.pendingUploads - 1),
       });
     } catch (error: any) {
@@ -708,10 +815,13 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
       failedAssets.push(item.asset);
       setSyncStatus({
         lastError: error?.message ?? String(error),
-        lastBatchUploaded: processed,
+        lastBatchUploaded: Math.max(processed, syncStatus.lastBatchUploaded),
         pendingUploads: Math.max(0, syncStatus.pendingUploads - 1),
       });
       await localStore.recordFailure(item.fingerprint, error?.message ?? 'Upload failed');
+      // A failure goes to the retry policy, not to the next launch.
+      remaining.delete(item.asset.id);
+      await savePendingUploads(repo, remaining.values());
       updateIndexCacheForRecord({
         fingerprint: item.fingerprint,
         assetId: item.asset.id,
@@ -737,6 +847,9 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
     }
   }
 
+  // Cancelled or finished, nothing should resume next launch.
+  await savePendingUploads(repo, []);
+
   if (cancelToken.cancelled) {
     setSyncStatus({
       running: false,
@@ -745,9 +858,10 @@ async function processUploadBatch(assets: MediaLibrary.Asset[], options?: Upload
       lastBatchType: null,
       pendingUploads: 0,
       lastError: 'Sync cancelled by user',
+      currentItem: null,
     });
   } else {
-    setSyncStatus({ running: false, lastBatchTotal: 0, lastBatchUploaded: 0, lastBatchType: null, pendingUploads: 0 });
+    setSyncStatus({ running: false, lastBatchTotal: 0, lastBatchUploaded: 0, lastBatchType: null, pendingUploads: 0, currentItem: null });
     if (failed > 0) scheduleRetry(failedAssets, syncStatus.lastError);
     else cancelScheduledRetry();
     recordCompletion({ type: 'upload', total: prepared.length, failed, timestamp: Date.now() });
@@ -839,9 +953,11 @@ async function collectAssetsFromSelectedAlbums(maxTotal?: number, options?: { in
     return [];
   }
 
+  // Videos are backed up too; the gallery shows them, and leaving them out meant
+  // they were only ever uploaded when picked by hand.
   if (!selectedIds || selectedIds.length === 0) {
     await ingest({
-      mediaType: ['photo'],
+      mediaType: ['photo', 'video'],
       sortBy: [[MediaLibrary.SortBy.creationTime, false]],
     });
   } else {
@@ -850,7 +966,7 @@ async function collectAssetsFromSelectedAlbums(maxTotal?: number, options?: { in
       const album = albumMap.get(albumId);
       if (!album) continue;
       await ingest({
-        mediaType: ['photo'],
+        mediaType: ['photo', 'video'],
         album,
         sortBy: [[MediaLibrary.SortBy.creationTime, false]],
       });
@@ -891,13 +1007,13 @@ export function subscribeCacheInvalidated(listener: () => void): () => void {
 }
 
 export function isAssetUploadedAsset(asset: MediaLibrary.Asset): boolean {
-  const fingerprint = makeFingerprint(asset);
-  if (isAutoSyncBlockedFingerprint(fingerprint)) {
+  const fingerprints = fingerprintsFor(asset);
+  if (fingerprints.some(isAutoSyncBlockedFingerprint)) {
     return false;
   }
-  const entry = uploadIndexCache.get(asset.id) || uploadIndexCache.get(fingerprint);
+  const entry = uploadIndexCache.get(asset.id) || fingerprints.map((fp) => uploadIndexCache.get(fp)).find(Boolean);
   if (entry?.uploaded) return true;
-  const metaEntry = getMetaEntryFromCache(fingerprint) || getMetaEntryFromCache(asset.id);
+  const metaEntry = fingerprints.map((fp) => getMetaEntryFromCache(fp)).find(Boolean) || getMetaEntryFromCache(asset.id);
   return !!metaEntry;
 }
 
@@ -991,12 +1107,14 @@ export async function syncVisibleAssets(assets: MediaLibrary.Asset[]): Promise<v
 
 export async function getRepoEntryForAsset(asset: MediaLibrary.Asset): Promise<MetaEntry | null> {
   await ensureMetaLoaded(false);
-  const fingerprint = makeFingerprint(asset);
-  const entry = getMetaEntryFromCache(fingerprint) || getMetaEntryFromCache(asset.id);
+  const fingerprints = fingerprintsFor(asset);
+  const entry = fingerprints.map((fp) => getMetaEntryFromCache(fp)).find(Boolean) || getMetaEntryFromCache(asset.id);
   if (entry) return entry;
-  const record = await localStore.getAsset(fingerprint);
-  if (record?.repoPath) {
-    return getMetaEntryFromCache(record.repoPath);
+  for (const fp of fingerprints) {
+    const record = await localStore.getAsset(fp);
+    if (record?.repoPath) {
+      return getMetaEntryFromCache(record.repoPath);
+    }
   }
   return null;
 }

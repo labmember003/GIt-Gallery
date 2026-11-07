@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { Buffer } from 'buffer';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useAppStore } from '@/store/appState';
 import { RepoInfo } from './types';
 import { resolveBranch } from './utils';
@@ -9,6 +10,47 @@ let cachedClient: { token: string | null; client: Octokit | null } = {
   token: null,
   client: null,
 };
+
+/**
+ * Every API call gets a deadline. Without one, a stalled request held a sync at
+ * "0/N" indefinitely; on device one blob upload ran 124 s before GitHub
+ * answered at all. Requests with a body get extra time in proportion to its
+ * size, so a large upload that is still moving is not cut off.
+ */
+const REQUEST_TIMEOUT_MS = 120_000;
+const UPLOAD_BASE_TIMEOUT_MS = 60_000;
+const MIN_UPLOAD_BYTES_PER_SEC = 32 * 1024;
+
+export function requestTimeoutMs(body: unknown): number {
+  if (typeof body !== 'string' || body.length === 0) return REQUEST_TIMEOUT_MS;
+  return UPLOAD_BASE_TIMEOUT_MS + Math.ceil((body.length / MIN_UPLOAD_BYTES_PER_SEC) * 1000);
+}
+
+/**
+ * `fetch` with a deadline. The error says "timed out" so the sync's retry
+ * policy treats it as transient.
+ */
+export async function fetchWithTimeout(input: any, init: any = {}): Promise<Response> {
+  const timeoutMs = requestTimeoutMs(init.body);
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const upstream: AbortSignal | undefined = init.signal;
+  const forwardAbort = () => controller.abort();
+  upstream?.addEventListener?.('abort', forwardAbort);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (timedOut) throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    upstream?.removeEventListener?.('abort', forwardAbort);
+  }
+}
 
 export function getRepoInfo(): RepoInfo {
   const repo = useAppStore.getState().currentRepo;
@@ -32,6 +74,7 @@ export function getOctokit(): Octokit {
   }
   const client = new Octokit({
     auth: token,
+    request: { fetch: fetchWithTimeout },
     /**
      * Octokit logs every non-2xx as console.error. A large share of ours are
      * *expected*: 404s from "does this file exist yet?" probes before a create,
@@ -155,6 +198,29 @@ export async function resetBranchToEmptyCommit(message = 'Reset repository'): Pr
       sha: commitResponse.data.sha,
     });
   }
+}
+
+/**
+ * Stream a repo file straight to disk through the raw media type. Videos must
+ * not round-trip through a base64 string in JS: an 11 MB clip is a 15 MB string.
+ */
+export async function downloadRepoFileToPath(path: string, destUri: string, repo?: RepoInfo): Promise<string> {
+  const repoInfo = repo ?? getRepoInfo();
+  const token = useAppStore.getState().authToken;
+  if (!token) {
+    throw new Error('Not authenticated with GitHub.');
+  }
+  const branch = resolveBranch(repoInfo.branch);
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.name}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`;
+  const result = await FileSystem.downloadAsync(url, destUri, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw' },
+  });
+  if (result.status !== 200) {
+    await FileSystem.deleteAsync(destUri, { idempotent: true }).catch(() => {});
+    throw new Error(`Download failed (HTTP ${result.status})`);
+  }
+  return result.uri;
 }
 
 export async function downloadFile(path: string, repo?: RepoInfo): Promise<{ content: string; encoding: 'base64'; size: number } | null> {
