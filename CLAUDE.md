@@ -8,8 +8,8 @@
 
 ```bash
 ADB=~/Library/Android/sdk/platform-tools/adb
-$ADB devices -l                                   # emulator-5554 (Pixel 6 Pro) is usually already up
-~/Library/Android/sdk/emulator/emulator -list-avds # Pixel_6_Pro, Pixel_6_Pro_Charles
+$ADB devices -l                                   # emulator-5554 once booted
+~/Library/Android/sdk/emulator/emulator -list-avds # Medium_Phone_API_37.0 (Android 17)
 
 $ADB -s emulator-5554 shell input tap X Y
 $ADB -s emulator-5554 shell input swipe X1 Y1 X2 Y2 300
@@ -19,7 +19,9 @@ $ADB -s emulator-5554 logcat -d                          # crashes, stack traces
 $ADB -s emulator-5554 shell am force-stop <pkg>
 ```
 
-iOS: `xcrun simctl list devices available` (sims up to iOS 26.5), `xcrun simctl boot`, `io <udid> screenshot out.png`.
+iOS: Xcode 27.2, simulators on iOS 27.2 (iPhone 18 Pro is the default). `xcrun simctl list devices available`, `xcrun simctl boot`, `io <udid> screenshot out.png`. Device Hub replaced Simulator.app. `simctl` cannot tap, and `simctl openurl` raises a system prompt, so open the dev client straight onto Metro with `xcrun simctl launch <udid> com.gitgallery.app --initialUrl http://127.0.0.1:8081`.
+
+Native Metro: `cd app && npx expo start --dev-client --port 8081` (loads `app/.env`); on Android also `adb reverse tcp:8081 tcp:8081`. `/Applications/Android Emulator.app` and `/Applications/iOS Simulator.app` boot the devices for the user.
 
 **Always look at the screenshots you take.** Read the PNG back — a screencap you never opened has verified nothing.
 

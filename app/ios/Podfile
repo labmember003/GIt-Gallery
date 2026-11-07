@@ -56,5 +56,17 @@ target 'GitGallery' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # Xcode 27 rejects iOS deployment targets below 15.0. React Native raises pod
+    # targets to the app's minimum but skips resource bundles, and SDWebImage's
+    # bundle still declares 9.0, so raise any target below the app's minimum.
+    minimum = podfile_properties['ios.deploymentTarget'] || '15.1'
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        current = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        next unless current && Gem::Version.new(current) < Gem::Version.new(minimum)
+        build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = minimum
+      end
+    end
   end
 end

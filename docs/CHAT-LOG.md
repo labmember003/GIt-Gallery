@@ -1949,6 +1949,89 @@ Explained that the in-app Refresh library action reloads media data, while brows
 
 ---
 
+## Local setup on a new Mac — 2026-11-07
+
+**👤 User:**
+> Help me continue my GitGallery project on this Mac. Set up the project and verify it runs.
+>
+> Repository: https://github.com/labmember003/GIt-Gallery.git
+> Branch: main
+> Latest saved commit: 2cb7fd55ce9d0c141452121a8904e090dd28c2cc
+>
+> 1. Clone into ~/Documents/Github/git-gallery if absent. If it already exists, inspect its state and preserve any local changes before updating.
+> 2. Set this repository’s Git author and committer identity to:
+>    Name: Avishisht Gupta
+>    Email: avishishtgupta@gmail.com
+> 3. Read applicable AGENTS.md instructions, root README.md, docs/CHAT-LOG.md, docs/WEB-PLAN.md, and docs/WEB-DEPLOYMENT.md to understand the project and recorded progress.
+> 4. Check Git, Node.js, and npm. Use Node 22, matching the documented deployment setup. Install dependencies inside app/ using npm ci --include=dev.
+> 5. Inspect app/.env.web.example and the setup documentation. Configure local development using available settings; tell me which missing values I must supply privately. Keep credentials out of Git and chat output.
+> 6. Run npm run typecheck and npm run build:web. Start npm run web and verify the local demo loads.
+> 7. Report the local URL, any setup blockers, and remaining project work. Check availability of Xcode and Android tooling for future native development.
+>
+> Keep this task focused on local setup. Preserve dependency versions and existing work; do not push or deploy.
+
+**🤖 Assistant:**
+
+The directory was absent, so cloned `main` at `2cb7fd5` over HTTPS and set the repository-local identity to `Avishisht Gupta <avishishtgupta@gmail.com>`. This Mac has no global Git identity, no `github-personal` SSH alias and no global pre-push hook, so `origin` stays HTTPS until the personal SSH setup is recreated. The repository has no AGENTS.md; CLAUDE.md supplies the working rules.
+
+Node and Homebrew were absent. Installed the official Node v22.23.4 arm64 tarball under `~/.local/opt` after verifying its SHA-256 against nodejs.org, and linked `node`/`npm`/`npx` into the existing `~/.local/bin` PATH entry (npm 10.9.9). `npm ci --include=dev` installed 757 packages without changing the lockfile; its 42 existing audit findings were not addressed. Created gitignored `app/.env.web` (mode 600) from the example with the existing registration's client ID recorded earlier in this log. `check:web` reports approval-code sign-in and local memory sessions; the client secret and Redis settings are not needed locally.
+
+`npm run typecheck` and `npm run build:web` passed; the export's main bundle hash matches the production bundle recorded for `473317f`, and the export contains no client ID or server secrets. `npm run web` serves `http://127.0.0.1:8082` (Metro on 8083). Installed Playwright's Chromium and checked fresh contexts: the welcome page shows an enabled Continue with GitHub, and the demo renders all 39 items with decoded images at 1440×1000 and 390×844, with no console errors, failed requests or horizontal overflow. Screenshots were inspected. A GitHub approval code was not requested, so live Device Flow acceptance of the client ID on this machine remains unverified.
+
+Native tooling is incomplete: only Command Line Tools are installed (no Xcode, simulators or CocoaPods), and no Java runtime is present. Android Studio and an SDK exist, but `adb` is not on PATH, `ANDROID_HOME` is unset and `app/android/local.properties` is missing. No source code, dependency versions, commits, pushes or deployments were changed.
+
+---
+
+## Native toolchain and push setup on the new Mac — 2026-11-07
+
+**👤 User:**
+> - Android: blocked. Android Studio and an SDK are present, but there's no Java runtime, adb isn't on PATH, ANDROID_HOME is unset, and app/android/local.properties is missing. The tooling list in CLAUDE.md describes your previous machine, not this one.
+>
+> fix them, also install iOS simulaator, also do Pushing later: CLAUDE.md expects pushes through a github-personal SSH alias, with a TruffleHog pre-push hook. Neither is set up on this Mac, and origin is HTTPS.
+
+**🤖 Assistant:**
+
+Android: Android Studio's bundled JDK is 25, which Gradle 8.14.3 cannot run on, so installed Temurin JDK 17.0.21 (SHA-256 verified) in `~/Library/Java/JavaVirtualMachines`. Installed the arm64 command-line tools (SHA-1 verified against Google's repository manifest), then platform 36, NDK 27.1.12297006 and CMake 3.22.1 under the already-accepted SDK license. Added `JAVA_HOME`, `ANDROID_HOME` and the platform-tools/emulator/cmdline-tools paths to `~/.zprofile` (backup kept) and wrote gitignored `app/android/local.properties`. `./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a` succeeded in 9m 19s. On this Mac the AVD is `Medium_Phone_API_37.0` (Android 17), not the Pixel 6 Pro AVDs named in CLAUDE.md. It cold-booted as `emulator-5554`; the debug APK installed and launched to the Expo development launcher with no crash buffer entries, and the screenshot was inspected. The emulator was shut down afterwards. The app's JavaScript was not run against Metro, and native sign-in still needs `app/.env`.
+
+Push setup: the existing `~/.ssh/id_ed25519` key authenticates as `labmember003`, so on this Mac plain `github.com` is the personal account. Added a `github-personal` alias using that key (backup kept), switched `origin` to `git@github-personal:labmember003/GIt-Gallery.git`, and added `upstream` (Sumit189/GitGalleryApp) as fetch-only with push disabled. Fetch and `ls-remote` confirmed `main` at `2cb7fd5`. Installed TruffleHog 3.99.8 (SHA-256 verified) and a repository-local `.git/hooks/pre-push`. It scans only outgoing commits and blocks verified or unverifiable credentials, scanner errors (distinguishing exit 183 from other failures) and a missing scanner. A real scan of the last five commits found no secrets. Stub tests confirmed each blocking path, and `git hook run` confirmed Git discovers the hook. Nothing was pushed.
+
+iOS: CocoaPods could not install on the macOS system Ruby 2.6 because current dependencies require Ruby ≥ 3.3. Installed Homebrew's self-contained Ruby 3.4.5 (SHA-256 verified) under `~/.local/opt` with CocoaPods 1.17.0, matching `Podfile.lock`, and a `pod` wrapper in `~/.local/bin`. Expo's `pod install` generates `ios/.xcode.env.local` with the Node path. Opened Xcode's App Store page; Xcode needs the user's Apple ID and has not been installed yet. The user's `sudo` license/first-launch step, the iOS simulator runtime, `pod install` and a simulator build remain. No source code, dependency versions, commits, pushes or deployments were changed.
+
+---
+
+## iOS simulator, Xcode 27 launch fix and device launchers — 2026-11-07
+
+**👤 User:**
+> installed xcode, install ios simulator and also complete rest of the steps
+
+(While this was in progress.)
+> evyerhting setup etc complete?
+
+> also can you add those both emulator androdi and ios, launchable from applications of my macbook
+
+**🤖 Assistant:**
+
+The user had already selected Xcode 27.2 and accepted its license. `xcodebuild -downloadPlatform iOS` installed the iOS 27.2 simulator runtime, and Xcode provides iPhone 18 Pro and other devices. `pod install` installed 100 pods without changing dependency versions.
+
+The first simulator build failed because Xcode 27 rejects deployment targets below iOS 15. React Native raises pod targets to the app minimum but skips resource bundles, and SDWebImage's bundle declares 9.0. A Podfile `post_install` step now raises any lower target to the app minimum; the only `Podfile.lock` change is its Podfile checksum. The build then succeeded, but the app crashed at launch. iOS logged "UIScene life cycle is required for apps built with this SDK", so every Xcode 27 build of the app would fail to launch. Added a `SceneDelegate` plus a scene manifest in `Info.plist`. AppDelegate still creates the window and starts React Native, because Expo's dev launcher looks for that window during launch. The scene delegate attaches the window to the scene and forwards URL and universal-link openings to the AppDelegate. None of the installed Expo subscribers use app-level lifecycle callbacks, and React Native's AppState listens for notifications that UIKit still posts. After the fix the app launched with no crash reports, Metro served the iOS bundle, and the welcome screen rendered (screenshot inspected). `simctl openurl` raises a system confirmation that cannot be tapped from the CLI. The dev client's `--initialUrl` launch argument opens Metro directly. Forwarded cold-start links were not exercised for the same reason.
+
+Created gitignored `app/.env` with `EXPO_PUBLIC_GITHUB_CLIENT_ID`, using the same Device Flow registration as the web app. GitHub issued a device code for it. On Android, the app's JavaScript ran against a native Metro on port 8081: welcome screen, then the sign-in screen, then an approval code from GitHub. The code was left unapproved; the only JavaScript warning was an existing require cycle. The web server's `EXPO_NO_DOTENV` setting keeps `app/.env` out of web builds, and `check:web` was unchanged.
+
+Added `/Applications/Android Emulator.app` and `/Applications/iOS Simulator.app`: ad-hoc-signed AppleScript launchers registered with LaunchServices and found by Spotlight. The iOS one boots iPhone 18 Pro unless an iPhone is already running, then opens Device Hub, which replaced Simulator.app in Xcode 27. It was verified from a cold state and by launching it by name again without starting duplicates. The Android one boots the first AVD unless it is already running. The first version's emulator died when the launcher quit, so the emulator now starts in its own session; it then survived and was seen by adb. A full Android boot from the launcher did not complete during testing. A 20 GB Ollama model loaded at about 13:50, leaving the 24 GB Mac with 18 GB of swap in use, and Android's watchdog restarted `system_server` under the CPU starvation. The same AVD had booted normally at 12:38. The emulator and simulator were shut down afterwards, with no half-booted snapshot saved. CLAUDE.md's tooling section now describes this machine. Nothing was committed or pushed.
+
+---
+
+## Push the Xcode 27 fix; drive the iOS link prompt — 2026-11-07
+
+**👤 User:**
+> I couldn't test opening the app from a link, because iOS asks for a confirmation tap that can't be done from the terminal, can you take full control of my mac to do this? if yes, take and do it and the code changes you did for ios, did you pushed it? if no, push it with strictly my name, avishishtgupta@gmail.com
+
+**🤖 Assistant:**
+
+The iOS changes had not been pushed. They were committed and pushed to `main` as Avishisht Gupta <avishishtgupta@gmail.com> for both author and committer, with no co-author trailer, together with this log and the CLAUDE.md tooling update, following the repository's commit convention. Computer-use (screen control) tools are not available in this session. `simctl` has no tap command. The remaining route to tapping "Open" is macOS UI scripting of Device Hub, which needs the user to grant Terminal the Accessibility permission. That grant was left to the user, and the cold-start and warm link tests wait on it.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -1971,4 +2054,5 @@ Explained that the in-app Refresh library action reloads media data, while brows
 | Web companion | ✅ **Web gallery with server-backed sign-in and browser uploads.** Automatic private library creation/reuse, custom-library discovery, restored sessions and browser-local collections; demo is opt-in. Uploads use 3 MiB chunks, progress/retry/stop, original preservation and mobile-compatible storage up to 500 MiB per file. Real sign-in and an empty library are confirmed by the user; real private upload/download verification and shared collections remain. Optional redirect OAuth supports larger deployments. See `WEB-PLAN.md`. |
 | Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Git integration connects `labmember003/GIt-Gallery`, production branch `main`, root `app`; keep GitHub App access limited to that repository. Real private upload/download verification remains; the user has confirmed real sign-in and an empty library. |
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
+| iOS builds on Xcode 27 | ✅ **UIScene life cycle via a forwarding `SceneDelegate`.** iOS 27 SDK builds refuse to launch without it. AppDelegate still creates the window and starts React Native (Expo's dev launcher needs that window); the scene delegate attaches it and forwards links. The Podfile raises pod targets below the app minimum (SDWebImage's resource bundle declares 9.0), which Xcode 27 rejects. |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |
