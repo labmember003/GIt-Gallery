@@ -187,6 +187,8 @@ Android and iOS, both shipped and both tested on real hardware. A **web companio
 
 Users sign in with GitHub; GitGallery reuses `gitgallery-photos`, discovers custom libraries, or creates a private repository for a first-time user. Multiple custom libraries offer a choice. No token or developer setup is required from visitors. Authentication uses a server session with an HttpOnly cookie. Credentials stay on the server. Public repositories can also be opened without signing in. Upload photos and videos from your browser with the **Upload** button or drag and drop (up to 500 MB per file). Progress, retry and stop controls are included; originals use the same library format as mobile backups. Web albums/favourites remain local to this browser. See **[the web scope and development guide](docs/WEB-PLAN.md)**. A native desktop application remains out of scope.
 
+**Get it:** the web gallery is live at **https://gitgallery-umber.vercel.app**. The Android APK and an unsigned iOS IPA are on the **[Releases page](https://github.com/labmember003/GIt-Gallery/releases)**. The IPA must be re-signed with your own Apple ID (Sideloadly, AltStore) to install.
+
 ---
 
 ## Running it
@@ -229,6 +231,11 @@ echo "sdk.dir=$HOME/Library/Android/sdk" > app/android/local.properties
 cd app/android && ./gradlew assembleRelease
 # -> app/build/outputs/apk/release/app-release.apk
 ```
+
+**Publishing a release:** bump the version in `app/app.json`, `app/android/app/build.gradle` and
+`app/ios/GitGallery/Info.plist`, add `.github/release-notes/vX.Y.Z.md`, then push a `vX.Y.Z` tag.
+[`release.yml`](.github/workflows/release.yml) builds the APK and the unsigned IPA and publishes
+the GitHub Release.
 
 > ⚠️ Two things about that APK. It is signed with the **debug keystore** (`signingConfig
 > signingConfigs.debug`, the Expo template default) — fine for sideloading, not for distribution.

@@ -1,0 +1,124 @@
+name: Release
+
+# Builds the Android APK and an unsigned iOS IPA for a version tag and publishes
+# both as a GitHub Release. Pushing a tag such as v1.1.0 is the whole release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build and release (must already exist)
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # GitHub OAuth App client ID for Device Flow sign-in. A public identifier,
+  # not a secret: it is compiled into every build. A repository variable of
+  # the same name overrides it.
+  EXPO_PUBLIC_GITHUB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GITHUB_CLIENT_ID || 'Ov23liaKKd0mRq4lTJqi' }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Android SDK packages this project builds against
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" "cmake;3.22.1" > /dev/null
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci --include=dev
+      - name: Build release APK
+        working-directory: app
+        run: |
+          printf 'EXPO_PUBLIC_GITHUB_CLIENT_ID=%s\n' "$EXPO_PUBLIC_GITHUB_CLIENT_ID" > .env
+          cd android && ./gradlew assembleRelease --no-daemon
+      - name: Name the APK
+        run: |
+          version="${TAG#v}"
+          mkdir -p dist
+          cp app/android/app/build/outputs/apk/release/app-release.apk "dist/GitGallery-${version}-release.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*.apk
+          if-no-files-found: error
+
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci --include=dev
+      - name: Install pods
+        working-directory: app/ios
+        run: pod install
+      - name: Archive without signing
+        working-directory: app
+        run: |
+          printf 'EXPO_PUBLIC_GITHUB_CLIENT_ID=%s\n' "$EXPO_PUBLIC_GITHUB_CLIENT_ID" > .env
+          cd ios
+          xcodebuild -workspace GitGallery.xcworkspace -scheme GitGallery -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -archivePath build/GitGallery.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+      # An unsigned IPA: recipients re-sign it with their own Apple ID
+      # (Sideloadly, AltStore). Installable builds need the paid Apple programme.
+      - name: Package the IPA
+        run: |
+          version="${TAG#v}"
+          mkdir -p dist payload/Payload
+          cp -R app/ios/build/GitGallery.xcarchive/Products/Applications/GitGallery.app payload/Payload/
+          (cd payload && zip -qry "../dist/GitGallery-${version}-unsigned.ipa" Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: dist/*.ipa
+          if-no-files-found: error
+
+  release:
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${TAG#v}"
+          notes=".github/release-notes/${TAG}.md"
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --title "GitGallery ${version}" "$@"
+          fi
