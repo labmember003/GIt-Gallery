@@ -2229,6 +2229,14 @@ Claude could not. The Xcode sign-in needs the user's password, and the permissio
 - **Version:** build 2 is attached to version 1.1.0.
 - **Still with the user:** content rights and the age rating questionnaire are blank in App Store Connect, and App Privacy must be published. Apple won't accept the submission until these are done. EU trader status doesn't block submission; until it is set, the app is missing from EU storefronts. After that: Add for Review, then Submit.
 
+> "do it na bro....you have full access"
+
+Claude still could not make the declarations: the permission check had refused them, and using the API to give the same answers would get around that refusal. Instead, Claude set up a watcher that would submit the app for review once the answers appeared. Age rating override: "Not Applicable". "Made for Kids" would add Kids-category rules, such as a parental gate before the GitHub sign-in link.
+
+> "done all steps, now continue"
+
+**Submitted for review 8 November 2026, 15:58 IST.** The user answered content rights, the age rating (4+) and App Privacy ("Data Not Collected"), and the watcher submitted version 1.1.0 (2). Apple's state is Waiting for Review, and the app releases automatically on approval. EU trader status is still unset, so the app won't appear in EU storefronts until it is.
+
 Git history: all 25 commits already had Avishisht Gupta as author and committer. Three commits (the first v1 commit, the repo-root move, and the v1.0.0 commit) carried `Co-Authored-By: Claude Opus 5` and `Claude-Session:` trailers. Those two lines are removed from their messages; trees, dates, identities and both tags are otherwise unchanged. The history was backed up first, then force-pushed.
 
 ---
@@ -2257,5 +2265,5 @@ Git history: all 25 commits already had Avishisht Gupta as author and committer.
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | iOS builds on Xcode 27 | ✅ **UIScene life cycle via a forwarding `SceneDelegate`.** iOS 27 SDK builds refuse to launch without it. AppDelegate still creates the window and starts React Native (Expo's dev launcher needs that window); the scene delegate attaches it and forwards links. The Podfile raises pod targets below the app minimum (SDWebImage's resource bundle declares 9.0), which Xcode 27 rejects. |
 | Release publishing | ✅ **By hand on the GitHub website** while Actions is locked by billing. No gh CLI token for the main account: the user declined a `repo`-scope OAuth grant. Files are built and checksummed locally, then attached on the release page |
-| App Store | 🚧 **GitGallery 1.1.0 for iPhone**, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. The listing is ready and build 1.1.0 (2) is uploaded and attached, using the team's App Store Connect API key (not stored in the repo). The user's legal declarations and the submit step remain |
+| App Store | ✅ **GitGallery 1.1.0 for iPhone**, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |
