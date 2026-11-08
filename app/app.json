@@ -14,19 +14,22 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to sync photos to GitHub.",
         "NSPhotoLibraryAddUsageDescription": "This app needs access to save photos to your library.",
         "PHPhotoLibraryPreventAutomaticLimitedAccessAlert": true
       },
-      "bundleIdentifier": "com.gitgallery.app"
+      "bundleIdentifier": "com.gitgallery.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.gitgallery.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1B1C1F"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,

@@ -27,6 +27,9 @@ export default function WelcomeScreen({ navigation }: Props) {
           <Button mode="contained" onPress={() => navigation.navigate('SignIn')}>
             Get Started
           </Button>
+          <Button mode="text" icon="image-search-outline" style={{ marginTop: 8 }} onPress={() => navigation.navigate('Demo')}>
+            Try the demo, no sign-in
+          </Button>
         </View>
       </Card>
     </View>

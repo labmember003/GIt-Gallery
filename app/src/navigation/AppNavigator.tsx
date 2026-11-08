@@ -12,12 +12,14 @@ import RepoSetupScreen from '@/screens/RepoSetupScreen';
 import GalleryScreen from '@/screens/GalleryScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import AlbumsScreen from '@/screens/AlbumsScreen';
+import DemoGalleryScreen from '@/screens/DemoGalleryScreen';
 import { useAppStore } from '@/store/appState';
 
 type RootStackParamList = {
-  Onboarding: undefined;
+  Onboarding: { screen?: string; initial?: boolean } | undefined;
   Main: undefined;
   RepoSetup: undefined;
+  Demo: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -117,6 +119,7 @@ export default function AppNavigator() {
   const hasRepo = useAppStore((s) => !!s.currentRepo);
 
   const isReady = hasAuth && hasRepo;
+  const headerOptions = useImmichHeaderOptions();
 
   // Rendering before hydration would show onboarding to a signed-in user for a
   // frame or two, then swap — a visible flash on every cold start.
@@ -134,6 +137,7 @@ export default function AppNavigator() {
         component={RepoSetupScreen}
         options={{ headerShown: true, title: 'Repository Setup' }}
       />
+      <Stack.Screen name="Demo" component={DemoGalleryScreen} options={{ ...headerOptions, headerShown: true, title: 'Demo library', headerBackTitle: 'Back' }} />
     </Stack.Navigator>
   );
 }
