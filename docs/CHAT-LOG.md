@@ -2157,6 +2157,39 @@ Pushed `144992c` (the duplicate fix). `~/.claude/CLAUDE.md` now also says that a
 
 Readiness: Android was tested end to end on an emulator; iOS was tested only for launch and links on a simulator, not sign-in or upload. Neither build has been tested on a real device this cycle. The APK is signed with the debug key, so Android warns, and the IPA must be re-signed to install.
 
+## Publish release 1.1.0 from the website — 2026-11-08
+
+**👤 User:**
+> ryn the command ill approve
+
+**🤖 Assistant:**
+
+Started `gh auth login --web --scopes repo` outside the sandbox, chained to `publish-v1.1.0.sh`. gh printed a one-time device code and waited for approval at https://github.com/login/device.
+
+**👤 User:**
+> i dont want to authorize my main account this much,tell me what to do, i;ll do it
+
+**🤖 Assistant:**
+
+Cancelled the gh sign-in before it was approved. `gh auth status` confirms that no token was stored, so the device code is void. The user publishes the release on the website instead:
+
+1. Open https://github.com/labmember003/GIt-Gallery/releases/new?tag=v1.1.0 while signed in as labmember003.
+2. Title `GitGallery 1.1.0`; paste `.github/release-notes/v1.1.0.md` as the description (copied to the clipboard).
+3. Attach `GitGallery-1.1.0-release.apk`, `GitGallery-1.1.0-unsigned.ipa` and `SHA256SUMS.txt` from `~/Documents/Github/git-gallery-releases/v1.1.0/`.
+4. Publish as the latest release.
+
+The first publish (2026-11-08 05:58 UTC) went out with the title and notes but no files attached, and the notes had lost their Markdown headings and bold. The user then edited the release and attached the three files.
+
+Verified from GitHub (a fresh download of each file, compared with the local builds):
+
+- **Release:** https://github.com/labmember003/GIt-Gallery/releases/tag/v1.1.0 is published, not a draft, and `/releases/latest` points to it.
+- **APK:** `GitGallery-1.1.0-release.apk`, 108,191,842 bytes, SHA-256 OK.
+- **IPA:** `GitGallery-1.1.0-unsigned.ipa`, 11,764,791 bytes, SHA-256 OK.
+- **Checksums:** `SHA256SUMS.txt` is byte-identical to the local copy.
+- **Notes:** the text is complete, but it is still the plain-text paste, so "New", "Fixed" and "Install" show as plain lines rather than headings, and the bold is lost. Re-pasting `.github/release-notes/v1.1.0.md` on the edit page fixes it.
+
+Polling the public API hit the unauthenticated limit of 60 requests an hour, so the checks used the releases page and the download links instead.
+
 ---
 
 ## Decisions reached
@@ -2182,4 +2215,5 @@ Readiness: Android was tested end to end on an emulator; iOS was tested only for
 | Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Git integration connects `labmember003/GIt-Gallery`, production branch `main`, root `app`; keep GitHub App access limited to that repository. Real private upload/download verification remains; the user has confirmed real sign-in and an empty library. |
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | iOS builds on Xcode 27 | ✅ **UIScene life cycle via a forwarding `SceneDelegate`.** iOS 27 SDK builds refuse to launch without it. AppDelegate still creates the window and starts React Native (Expo's dev launcher needs that window); the scene delegate attaches it and forwards links. The Podfile raises pod targets below the app minimum (SDWebImage's resource bundle declares 9.0), which Xcode 27 rejects. |
+| Release publishing | ✅ **By hand on the GitHub website** while Actions is locked by billing. No gh CLI token for the main account: the user declined a `repo`-scope OAuth grant. Files are built and checksummed locally, then attached on the release page |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |
