@@ -2190,6 +2190,38 @@ Verified from GitHub (a fresh download of each file, compared with the local bui
 
 Polling the public API hit the unauthenticated limit of 60 requests an hour, so the checks used the releases page and the download links instead.
 
+## Publish on the App Store — 2026-11-08
+
+**👤 User:**
+> in my chrome profile [second Chrome profile], i have logged in my apple developer account, use that to publish this app on app store also, maybe use claude chrome extension, take full access to my mac, you're allowed everything, just publish app, full end to end, dont ask me anything much
+
+**👤 User:**
+> after this work also rewrite the commit history with my name, replacing all commits with claude name to my name "avishishtgupta@gmail.com" and then force push them
+
+**🤖 Assistant:**
+
+The developer account is a paid Apple Developer Program membership, enrolled as an organization (team `PZ6PXVCSDN`), and the Program License Agreement is accepted.
+
+Done:
+
+- **Bundle ID:** registered `com.gitgallery.app`.
+- **App record:** created GitGallery in App Store Connect (Apple ID 6832190075). The name was available.
+- **Listing:** version 1.1.0, with subtitle, promotional text, description, keywords, support and marketing URLs, and copyright. Categories are Photo & Video and Utilities.
+- **Screenshots:** seven iPhone screenshots at 1179 × 2556. App Store Connect now uses the 6.1-inch and 6.3-inch iPhone size as the base, so the existing captures fit unscaled.
+- **App Review details:** contact details and notes are filled in; "Sign-in required" is off.
+- **Pricing and availability:** free, in all regions except China mainland, which requires an ICP filing number.
+- **Demo mode:** GitHub asks an unrecognised device for an emailed or two-factor code, so App Review could not get past sign-in with any demo account. The welcome screen now has "Try the demo, no sign-in", which opens a read-only sample library: the web demo's 36 photos and 3 videos, loaded from the web app. Tested on the iPhone 18 Pro simulator: the grid, the Favourites and album filters, opening a photo, playing a video, favouriting, and "Sign in with GitHub" (Welcome stays underneath, so Back works).
+- **Original icon:** the app icon and splash were a cat silhouette that resembles GitHub's logo, which Apple rejects (guideline 5.2) and GitHub's logo rules forbid. Both are now a photo frame with mountain, sun and sync arrows, in the same charcoal and off-white style. The new icon is used on iOS, Android (mipmaps, adaptive icon and splash) and the web favicon.
+- **iOS project:** iPhone only (`TARGETED_DEVICE_FAMILY = 1`), `ITSAppUsesNonExemptEncryption = NO`, and automatic signing with the team.
+- **Web pages:** `public/privacy.html` and `public/support.html` are live on the web app.
+
+Blocked on the user:
+
+- **Xcode sign-in:** signing and upload need the Apple account signed in to Xcode, and passwords are entered only by the user.
+- **Legal declarations:** the permission check refused to let Claude answer them for the user. They are content rights, the age rating questionnaire, App Privacy ("Data Not Collected") and EU trader status (Digital Services Act).
+
+Git history: all 25 commits already had Avishisht Gupta as author and committer. Three commits (the first v1 commit, the repo-root move, and the v1.0.0 commit) carried `Co-Authored-By: Claude Opus 5` and `Claude-Session:` trailers. Those two lines are removed from their messages; trees, dates, identities and both tags are otherwise unchanged. The history was backed up first, then force-pushed.
+
 ---
 
 ## Decisions reached
@@ -2216,4 +2248,5 @@ Polling the public API hit the unauthenticated limit of 60 requests an hour, so 
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | iOS builds on Xcode 27 | ✅ **UIScene life cycle via a forwarding `SceneDelegate`.** iOS 27 SDK builds refuse to launch without it. AppDelegate still creates the window and starts React Native (Expo's dev launcher needs that window); the scene delegate attaches it and forwards links. The Podfile raises pod targets below the app minimum (SDWebImage's resource bundle declares 9.0), which Xcode 27 rejects. |
 | Release publishing | ✅ **By hand on the GitHub website** while Actions is locked by billing. No gh CLI token for the main account: the user declined a `repo`-scope OAuth grant. Files are built and checksummed locally, then attached on the release page |
+| App Store | 🚧 **GitGallery 1.1.0 for iPhone**, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. The listing is ready; the build and the user's legal declarations remain |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |
