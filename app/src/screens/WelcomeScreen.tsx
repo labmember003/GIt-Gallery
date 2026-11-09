@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Image } from 'react-native';
+import { View, Image, Linking } from 'react-native';
 import { Button, Text, useTheme, Card, Divider, Chip } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { PRIVACY_POLICY_URL } from '@/services/links';
 
 type Props = NativeStackScreenProps<any>;
 
@@ -32,6 +33,9 @@ export default function WelcomeScreen({ navigation }: Props) {
           </Button>
         </View>
       </Card>
+      <Button mode="text" compact style={{ marginTop: 12 }} labelStyle={{ fontSize: 13 }} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
+        Privacy policy
+      </Button>
     </View>
   );
 }

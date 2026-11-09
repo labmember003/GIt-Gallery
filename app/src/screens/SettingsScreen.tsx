@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Platform } from 'react-native';
+import { View, ScrollView, Platform, Linking } from 'react-native';
+import { PRIVACY_POLICY_URL, SUPPORT_URL, SOURCE_CODE_URL } from '@/services/links';
 import { Button, List, Switch, Divider, ActivityIndicator, Checkbox, RadioButton, Portal, Dialog, Text, useTheme } from 'react-native-paper';
 import { useAppStore } from '@/store/appState';
 import { previewSquash, squashHistory, type SquashPreview } from '@/services/sync/squash';
@@ -735,6 +736,13 @@ export default function SettingsScreen({ navigation }: any) {
       <List.Section>
         <List.Subheader>Account</List.Subheader>
         <List.Item title="Logout" onPress={() => setLogoutDialogVisible(true)} left={(props) => <List.Icon {...props} icon="logout" />} />
+      </List.Section>
+
+      <List.Section>
+        <List.Subheader>About</List.Subheader>
+        <List.Item title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} left={(props) => <List.Icon {...props} icon="shield-account-outline" />} right={(props) => <List.Icon {...props} icon="open-in-new" />} />
+        <List.Item title="Help & support" onPress={() => Linking.openURL(SUPPORT_URL)} left={(props) => <List.Icon {...props} icon="help-circle-outline" />} right={(props) => <List.Icon {...props} icon="open-in-new" />} />
+        <List.Item title="Source code" onPress={() => Linking.openURL(SOURCE_CODE_URL)} left={(props) => <List.Icon {...props} icon="github" />} right={(props) => <List.Icon {...props} icon="open-in-new" />} />
       </List.Section>
       </ScrollView>
       <Portal>

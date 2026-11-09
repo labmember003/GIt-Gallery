@@ -14,3 +14,9 @@ local.properties
 
 # Bundle artifacts
 *.jsbundle
+
+# Release signing (keys live outside the repo)
+keystore.properties
+*.jks
+*.keystore
+!app/debug.keystore
