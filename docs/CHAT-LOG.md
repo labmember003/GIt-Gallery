@@ -2383,6 +2383,16 @@ To show a neutral name instead, move the OAuth app into a GitHub organization (f
 
 ---
 
+> "and commit and push everything, and then ship it also on app stoe, and play store" / "do this also" (the OAuth app move to an organization)
+
+- **Pushed** `3747b83` (albums, sign-in, cloud grid, web albums) as Avishisht Gupta; TruffleHog found no verified secrets. Vercel deploys from that push.
+- **OAuth app:** created the organization `gitgallery-app` (Free, owned by labmember003, contact email avishishtgupta@gmail.com) and moved the GitGallery OAuth app into it after the user's GitHub Mobile confirmation. The client ID is unchanged, and the 3 existing users carry over. The authorization page now reads "GitGallery by gitgallery-app" with an "Authorize gitgallery-app" button, verified by signing in with the 1.2.0 release build on the emulator.
+- **Version 1.2.0 (build 3)** in `app.json`, `build.gradle` and `Info.plist`.
+- **App Store:** archived, signed and uploaded with the team API key, then version 1.2.0 was created with release notes, build 3 attached, and the version submitted. Status: **Waiting for Review**; it releases automatically on approval.
+- **Google Play:** the signed `app-release.aab` (1.2.0, code 3, 71 MB) is built at `app/android/app/build/outputs/bundle/release/`. 1.1.0 is live in production. The 1.2.0 upload was not done: the session's usage limit was reached first, and the browser bridge caps uploads at 10 MB.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
