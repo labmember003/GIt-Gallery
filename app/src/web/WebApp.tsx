@@ -5,7 +5,7 @@ import { GitHubSource } from './github';
 import { Icon, type IconName } from './Icon';
 import { assetMatches, formatBytes } from './library';
 import { Modal } from './Modal';
-import { loadCollection, persistCollection } from './storage';
+import { loadCollection, persistCollection, withRepoAlbums } from './storage';
 import type { Collection, Library, MediaSource, WebAsset } from './types';
 import { Viewer } from './Viewer';
 import { UploadDialog } from './UploadDialog';
@@ -59,7 +59,8 @@ export default function WebApp({ initialLibrary, initialSource, account, csrf, o
   const [library, setLibrary] = useState<Library>(initialLibrary);
   const [source] = useState<MediaSource>(initialSource);
   const sourceRef = useRef(source);
-  const [collection, setCollection] = useState<Collection>(() => loadCollection(initialLibrary.id, initialLibrary.initialCollection));
+  const [collection, setCollection] = useState<Collection>(() =>
+    withRepoAlbums(loadCollection(initialLibrary.id, initialLibrary.initialCollection), initialLibrary.initialCollection));
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<'all' | 'photo' | 'video'>('all');

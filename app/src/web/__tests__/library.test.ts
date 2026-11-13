@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { assetsFromTree, isLibraryPath, parseRepository } from '../library';
-import { parseCollection, collectionKey } from '../storage';
+import { parseCollection, collectionKey, withRepoAlbums } from '../storage';
 import { parseCanonicalPath } from '../../services/sync/pathMetadata';
 import type { MetaEntry } from '../../services/sync/types';
 
@@ -51,4 +51,13 @@ test('collections recover from corrupt storage and validate stored objects', () 
     favorites: ['a'], albums: [{ id: '1', name: 'Trips', assetIds: ['a'] }],
   });
   assert.notEqual(collectionKey('alice:owner/repo@main'), collectionKey('bob:owner/repo@main'));
+});
+
+test('repository albums join a browser collection without overwriting local ones', () => {
+  const local = { favorites: ['x'], albums: [{ id: 'a1', name: 'Renamed here', assetIds: [] }, { id: 'web', name: 'Web only', assetIds: ['p'] }] };
+  const repo = { favorites: [], albums: [{ id: 'a1', name: 'Goa', assetIds: ['q'] }, { id: 'a2', name: 'Beach', assetIds: ['r'] }] };
+  const merged = withRepoAlbums(local, repo);
+  assert.deepEqual(merged.albums.map((a) => a.name), ['Renamed here', 'Web only', 'Beach']);
+  assert.deepEqual(merged.favorites, ['x']);
+  assert.equal(withRepoAlbums(local, { favorites: [], albums: [] }), local);
 });

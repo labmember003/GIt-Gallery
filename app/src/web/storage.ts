@@ -27,3 +27,13 @@ export function persistCollection(namespace: string, value: Collection): boolean
   try { localStorage.setItem(collectionKey(namespace), JSON.stringify(value)); return true; }
   catch { return false; }
 }
+
+/**
+ * Add albums from the repository (made in the phone app) that this browser
+ * does not have yet. Albums already here, and browser-only ones, are kept.
+ */
+export function withRepoAlbums(local: Collection, repo: Collection): Collection {
+  const known = new Set(local.albums.map((album) => album.id));
+  const extra = repo.albums.filter((album) => !known.has(album.id));
+  return extra.length > 0 ? { ...local, albums: [...local.albums, ...extra] } : local;
+}

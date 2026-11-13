@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View } from 'react-native';
@@ -13,13 +13,18 @@ import GalleryScreen from '@/screens/GalleryScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import AlbumsScreen from '@/screens/AlbumsScreen';
 import DemoGalleryScreen from '@/screens/DemoGalleryScreen';
+import AlbumScreen from '@/screens/AlbumScreen';
+import AlbumPickerScreen from '@/screens/AlbumPickerScreen';
 import { useAppStore } from '@/store/appState';
+import { loadAlbumsForRepo, startAlbumLifecycle } from '@/services/albums';
 
 type RootStackParamList = {
   Onboarding: { screen?: string; initial?: boolean } | undefined;
   Main: undefined;
   RepoSetup: undefined;
   Demo: undefined;
+  Album: { albumId: string; justCreated?: boolean };
+  AlbumPicker: { albumId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -97,7 +102,7 @@ function OnboardingStack() {
   return (
     <Onboarding.Navigator screenOptions={headerOptions}>
       <Onboarding.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
-      <Onboarding.Screen name="SignIn" component={SignInScreen} options={{ title: 'Sign in with GitHub' }} />
+      <Onboarding.Screen name="SignIn" component={SignInScreen} options={{ title: '', headerBackTitle: 'Back' }} />
       <Onboarding.Screen name="RepoSetup" component={RepoSetupScreen} options={{ title: 'Repository Setup' }} />
     </Onboarding.Navigator>
   );
@@ -120,6 +125,15 @@ export default function AppNavigator() {
 
   const isReady = hasAuth && hasRepo;
   const headerOptions = useImmichHeaderOptions();
+  const currentRepo = useAppStore((s) => s.currentRepo);
+
+  // Albums are stored in the selected repo; follow sign-in and repo changes.
+  useEffect(() => {
+    if (!hydrated) return;
+    startAlbumLifecycle();
+    void loadAlbumsForRepo(isReady ? currentRepo : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, isReady, currentRepo?.owner, currentRepo?.name, currentRepo?.branch]);
 
   // Rendering before hydration would show onboarding to a signed-in user for a
   // frame or two, then swap — a visible flash on every cold start.
@@ -128,7 +142,19 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isReady ? (
-        <Stack.Screen name="Main" component={MainTabs} />
+        <>
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen
+            name="Album"
+            component={AlbumScreen}
+            options={{ ...headerOptions, headerShown: true, title: '', headerBackButtonDisplayMode: 'minimal' }}
+          />
+          <Stack.Screen
+            name="AlbumPicker"
+            component={AlbumPickerScreen}
+            options={{ ...headerOptions, headerShown: true, title: 'Add photos', presentation: 'modal' }}
+          />
+        </>
       ) : (
         <Stack.Screen name="Onboarding" component={OnboardingStack} />
       )}

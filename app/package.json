@@ -14,7 +14,8 @@
     "test:web": "npm run typecheck && npm run test:web:unit && npm run test:web:server && npm run build:web && playwright test",
     "screenshots:web": "node scripts/capture-web.mjs",
     "test:web:server": "node --test server/*.test.mjs",
-    "check:web": "node scripts/check-web.mjs"
+    "check:web": "node scripts/check-web.mjs",
+    "test:unit": "tsx --tsconfig tsconfig.json --test src/services/__tests__/*.test.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

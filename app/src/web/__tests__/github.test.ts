@@ -40,6 +40,19 @@ test('private media uses GETs to the fixed API origin, coalesces loads and clear
   await assert.rejects(() => source.connect());
 });
 
+test('albums kept by the phone app in gitgallery/albums.json become browser albums', async () => {
+  const albumsJson = JSON.stringify({ version: 1, albums: [{ id: 'a1', name: 'Goa', items: [path, `${path}.ptr`] }] });
+  const { fetcher } = fixture(
+    [{ path, sha: 'photo', type: 'blob', size: 11 }, { path: 'gitgallery/albums.json', sha: 'albums', type: 'blob', size: albumsJson.length }],
+    { '/repos/owner/repo/git/blobs/albums': () => new Response(albumsJson) },
+  );
+  const source = new GitHubSource('owner/repo', 'fake-test-token', '', fetcher);
+  const library = await source.connect();
+  assert.deepEqual(library.initialCollection.albums, [{ id: 'a1', name: 'Goa', assetIds: [path] }]);
+  assert.equal(library.assets[0].id, path, 'album items use the same id as web assets');
+  source.dispose();
+});
+
 test('public repositories need no token; repositories without commits have an empty library', async () => {
   const { fetcher, calls } = fixture([], { '/repos/owner/repo/git/trees/main?recursive=1': () => json({}, 409) });
   const source = new GitHubSource('owner/repo', '', '', fetcher);

@@ -42,7 +42,9 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
         return (
           <Pressable
             key={route.key}
-            accessibilityRole="button"
+            accessibilityRole="tab"
+            accessibilityLabel={label}
+            accessibilityState={{ selected: isFocused }}
             onPress={onPress}
             android_ripple={{ color: 'transparent' }}
             style={styles.itemWrapper}

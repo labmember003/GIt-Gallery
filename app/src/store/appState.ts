@@ -45,14 +45,9 @@ type AppState = {
    */
   favorites: string[];
   /**
-   * User-created albums: name -> asset keys.
-   *
-   * Distinct from `selectedAlbumIds`, which refers to *device* albums (Camera,
-   * Pictures) used to decide what to sync. These are collections the user
-   * curates inside the app.
-   *
-   * Local, like favourites — instant and offline, at the cost of not following
-   * you to another device.
+   * Albums from before they were stored in the repo (name -> device asset ids
+   * or repo paths). Read once by services/albums, which moves them into
+   * `gitgallery/albums.json` and clears this.
    */
   userAlbums: Record<string, string[]>;
   setAuthToken: (token: string | null) => void;
@@ -68,10 +63,6 @@ type AppState = {
   setCompressionPreset: (preset: CompressionPreset) => void;
   toggleFavorite: (key: string) => void;
   isFavorite: (key: string) => boolean;
-  createAlbum: (name: string) => void;
-  deleteAlbum: (name: string) => void;
-  addToAlbum: (name: string, keys: string[]) => void;
-  removeFromAlbum: (name: string, key: string) => void;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -149,63 +140,40 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
   isFavorite: (key) => get().favorites.includes(key),
-  createAlbum: (name) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    set((state) => {
-      if (state.userAlbums[trimmed]) return state;
-      const next = { ...state.userAlbums, [trimmed]: [] };
-      SecureStore.setItemAsync('userAlbums', JSON.stringify(next)).catch(() => {});
-      return { userAlbums: next };
-    });
-  },
-  deleteAlbum: (name) => {
-    set((state) => {
-      if (!(name in state.userAlbums)) return state;
-      const next = { ...state.userAlbums };
-      delete next[name];
-      SecureStore.setItemAsync('userAlbums', JSON.stringify(next)).catch(() => {});
-      return { userAlbums: next };
-    });
-  },
-  addToAlbum: (name, keys) => {
-    set((state) => {
-      const existing = state.userAlbums[name] ?? [];
-      // Set-union so adding the same photo twice is a no-op.
-      const merged = Array.from(new Set([...existing, ...keys]));
-      const next = { ...state.userAlbums, [name]: merged };
-      SecureStore.setItemAsync('userAlbums', JSON.stringify(next)).catch(() => {});
-      return { userAlbums: next };
-    });
-  },
-  removeFromAlbum: (name, key) => {
-    set((state) => {
-      const existing = state.userAlbums[name];
-      if (!existing) return state;
-      const next = { ...state.userAlbums, [name]: existing.filter((k) => k !== key) };
-      SecureStore.setItemAsync('userAlbums', JSON.stringify(next)).catch(() => {});
-      return { userAlbums: next };
-    });
-  },
 }));
+
+/**
+ * Read one persisted value. Each key fails on its own: a single unreadable or
+ * corrupt entry used to reject the whole hydration, which fell back to the
+ * defaults and showed a signed-in user the welcome screen.
+ */
+async function readStored<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch (error: any) {
+    console.warn(`[appState] could not read "${key}"`, error?.message ?? error);
+    return null;
+  }
+}
 
 (async () => {
   try {
-    const [tRaw, rRaw, aRaw, adRaw, idsRaw, themeRaw, albumNamesRaw, selInitRaw, presetRaw, favRaw, albumsRaw] = await Promise.all([
-      SecureStore.getItemAsync('authToken'),
-      SecureStore.getItemAsync('currentRepo'),
-      SecureStore.getItemAsync('autoSync'),
-      SecureStore.getItemAsync('autoDeleteAfterSync'),
-      SecureStore.getItemAsync('selectedAlbumIds'),
-      SecureStore.getItemAsync('theme'),
-      SecureStore.getItemAsync('albumNameCache'),
-      SecureStore.getItemAsync('selectionInitialized'),
-      SecureStore.getItemAsync('compressionPreset'),
-      SecureStore.getItemAsync('favorites'),
-      SecureStore.getItemAsync('userAlbums'),
+    const [token0, repo0, autoSync0, autoDelete0, ids0, theme0, albumNames0, selInit0, preset0, fav0, albums0] = await Promise.all([
+      readStored<string>('authToken'),
+      readStored<CurrentRepo>('currentRepo'),
+      readStored<boolean>('autoSync'),
+      readStored<boolean>('autoDeleteAfterSync'),
+      readStored<string[]>('selectedAlbumIds'),
+      readStored<ThemePreference>('theme'),
+      readStored<Record<string, string>>('albumNameCache'),
+      readStored<boolean>('selectionInitialized'),
+      readStored<CompressionPreset>('compressionPreset'),
+      readStored<string[]>('favorites'),
+      readStored<Record<string, string[]>>('userAlbums'),
     ]);
-    let token = tRaw ? (JSON.parse(tRaw) as string) : null;
-    let repo = rRaw ? (JSON.parse(rRaw) as CurrentRepo) : null;
+    let token = token0;
+    let repo = repo0;
 
     // Dev-only: fall back to the .env PAT so local builds skip Device Flow.
     // Never overrides a real signed-in token, and compiles out of release
@@ -220,23 +188,24 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
     }
-    const autoSync = aRaw ? (JSON.parse(aRaw) as boolean) : false;
-    const autoDeleteAfterSync = adRaw ? (JSON.parse(adRaw) as boolean) : false;
-    const selectedAlbumIds = idsRaw ? (JSON.parse(idsRaw) as string[]) : [];
-    const theme = themeRaw ? (JSON.parse(themeRaw) as ThemePreference) : 'system';
+    const autoSync = autoSync0 ?? false;
+    const autoDeleteAfterSync = autoDelete0 ?? false;
+    const selectedAlbumIds = Array.isArray(ids0) ? ids0 : [];
+    const theme = theme0 ?? 'system';
     const gallerySource = 'local';
-    const compressionPreset = presetRaw ? (JSON.parse(presetRaw) as CompressionPreset) : DEFAULT_PRESET;
-    const favorites = favRaw ? (JSON.parse(favRaw) as string[]) : [];
-    const userAlbums = albumsRaw ? (JSON.parse(albumsRaw) as Record<string, string[]>) : {};
-    const albumNameCache = albumNamesRaw ? (JSON.parse(albumNamesRaw) as Record<string, string>) : {};
-    let selectionInitialized = selInitRaw ? (JSON.parse(selInitRaw) as boolean) : false;
+    const compressionPreset = preset0 ?? DEFAULT_PRESET;
+    const favorites = Array.isArray(fav0) ? fav0 : [];
+    const userAlbums = albums0 && typeof albums0 === 'object' ? albums0 : {};
+    const albumNameCache = albumNames0 && typeof albumNames0 === 'object' ? albumNames0 : {};
+    let selectionInitialized = selInit0 ?? false;
     if (!selectionInitialized && Array.isArray(selectedAlbumIds) && selectedAlbumIds.length > 0) {
       selectionInitialized = true;
       try { await SecureStore.setItemAsync('selectionInitialized', JSON.stringify(true)); } catch {}
     }
     useAppStore.setState({ hydrated: true, authToken: token, currentRepo: repo, autoSync, autoDeleteAfterSync, selectedAlbumIds, selectionInitialized, theme, gallerySource, albumNameCache, compressionPreset, favorites, userAlbums });
-  } catch {
+  } catch (error: any) {
     // A failed read must still unblock the UI, otherwise the splash never ends.
+    console.warn('[appState] hydration failed', error?.message ?? error);
     useAppStore.setState({ hydrated: true });
   }
 })();

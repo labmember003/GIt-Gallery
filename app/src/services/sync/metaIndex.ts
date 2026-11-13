@@ -729,6 +729,44 @@ export async function ensureAllMetaShardsLoaded(octokit: Octokit, repo: RepoInfo
 	}
 }
 
+/** Load the shards that hold these repo paths (the bucket is in the path). */
+export async function ensureMetaShardsForPaths(octokit: Octokit, repo: RepoInfo, paths: string[]): Promise<void> {
+	const state = await ensureBaseState(octokit, repo);
+	const buckets = new Set<string>();
+	for (const path of paths) {
+		const bucket = bucketFromRepoPath(path);
+		if (bucket !== 'unknown') buckets.add(sanitizeBucket(bucket));
+	}
+	for (const bucket of buckets) {
+		// Only buckets the manifest knows about exist remotely; probing others
+		// would cost a 404 each.
+		if (!state.shards.has(bucket)) continue;
+		await ensureShardLoaded(octokit, repo, bucket);
+	}
+}
+
+/**
+ * Load the next `count` unloaded shards, newest capture date first, so the
+ * cloud grid can page back through the whole library instead of stopping at
+ * the preload target.
+ */
+export async function loadMoreMetaShards(
+	octokit: Octokit,
+	repo: RepoInfo,
+	count: number,
+): Promise<{ loaded: number; remaining: number }> {
+	const state = await ensureBaseState(octokit, repo);
+	const unloaded = [...state.shards.values()]
+		.filter((shard) => !shard.loaded)
+		.map((shard) => shard.bucket)
+		.sort((a, b) => b.localeCompare(a));
+	const batch = unloaded.slice(0, Math.max(1, count));
+	for (const bucket of batch) {
+		await ensureShardLoaded(octokit, repo, bucket);
+	}
+	return { loaded: batch.length, remaining: unloaded.length - batch.length };
+}
+
 export function getCachedMetaEntries(limit?: number): MetaEntry[] {
 	const entries = Array.from(metaByFingerprint.values()).sort(
 		(a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0),

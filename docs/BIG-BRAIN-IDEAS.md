@@ -234,6 +234,8 @@ library/2026/09/17/143022_a1b2c3.jpg   ─┐
 albums/Goa Trip/143022_a1b2c3.jpg      ─┘
 ```
 
+**As built:** albums are a path list in `gitgallery/albums.json` rather than tree entries. Storage cost is the same (zero bytes per photo), but an edit is one small file write instead of a tree rewrite, and two devices' edits merge by replaying operations.
+
 ---
 
 ## A6. Merkle-tree diffing = incremental sync for free ✅

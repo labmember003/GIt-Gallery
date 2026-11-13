@@ -14,12 +14,14 @@ import { Button, Text, FAB, ProgressBar, ActivityIndicator, useTheme, SegmentedB
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/appState';
-import { getUploadIndex, subscribeUploadIndex, getSyncStatus, subscribeSyncStatus, isAssetUploadedAsset, hydrateRecentMeta, runSyncOnce, runSyncForAssets, getRepoEntryForAsset, deleteRepoFile, deleteRepoFilesBulk, deleteAssets, getCloudEntriesEnsured, downloadRepoFiles, subscribeCompletion, getLastCompletion, verifyAndCleanUploadIndex, subscribeCacheInvalidated, cancelActiveSync, resumeInterruptedUploads } from '@/services/sync/index';
+import { getUploadIndex, subscribeUploadIndex, getSyncStatus, subscribeSyncStatus, isAssetUploadedAsset, hydrateRecentMeta, runSyncOnce, runSyncForAssets, getRepoEntryForAsset, deleteRepoFile, deleteRepoFilesBulk, deleteAssets, getCloudEntriesEnsured, downloadRepoFiles, subscribeCompletion, getLastCompletion, verifyAndCleanUploadIndex, subscribeCacheInvalidated, cancelActiveSync, resumeInterruptedUploads, loadMoreCloudEntries } from '@/services/sync/index';
+import { loadPreview, retryFailedPreviews } from '@/services/albums/previews';
 import type { MetaEntry, RepoInfo } from '@/services/sync/types';
 import { ensurePreviewUri, ensureOriginalUri, ensureOriginalFile, warmRepoCache } from '@/services/sync/cloudCache';
 import { isVideoRepoPath } from '@/services/sync/tiering';
 import { ensureMediaLibraryPermissions, mediaPermissionOptions } from '@/services/mediaPermissions';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AddToAlbumDialog, type AlbumTarget } from '@/components/albums/AddToAlbumDialog';
 
 const SPACING = 2;
 
@@ -74,6 +76,15 @@ function normalizeRepoPath(path: string): string {
     }
   }
     return value.replace(/\/+/g, '/');
+}
+
+/** Asks for a cloud tile's preview when the tile mounts. Renders nothing. */
+function ThumbRequest({ item, onRequest }: { item: MetaEntry; onRequest: (item: MetaEntry) => void }) {
+  useEffect(() => {
+    onRequest(item);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.fingerprint]);
+  return null;
 }
 
 export default function GalleryScreen({ route }: any) {
@@ -376,13 +387,14 @@ export default function GalleryScreen({ route }: any) {
     if (force) {
       setFailedThumbKeys(new Set());
       failedThumbIdsRef.current.clear();
+      retryFailedPreviews();
     }
     if (showSpinner) {
       setLoadingGrid(true);
     }
     try {
       await hydrateRecentMeta(30, force);
-      const items = await getCloudEntriesEnsured(300);
+      const items = await getCloudEntriesEnsured(0);
       let effectiveItems = items;
       const pendingDeletes = pendingCloudDeletesRef.current;
       if (pendingDeletes.size > 0) {
@@ -746,50 +758,32 @@ export default function GalleryScreen({ route }: any) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permission, permission?.granted, selectedAlbumIdsKey, gallerySource, currentRepo]);
 
-  useEffect(() => {
-    if (gallerySource !== 'cloud' || !repoInfo) return undefined;
-    const toFetch = cloudItems
-      .filter((item) => !cloudThumbs[item.fingerprint] && !failedThumbIdsRef.current.has(item.fingerprint))
-      .slice(0, 60);
-    if (toFetch.length === 0) {
-      return undefined;
-    }
-    let cancelled = false;
-    (async () => {
-      for (const item of toFetch) {
-        if (cancelled) break;
-        try {
-          const uri = await ensurePreviewUri(item, repoInfo);
-          if (cancelled) break;
-          setCloudThumbs((prev) => {
-            if (prev[item.fingerprint] === uri) return prev;
-            return { ...prev, [item.fingerprint]: uri };
-          });
-          failedThumbIdsRef.current.delete(item.fingerprint);
-          setFailedThumbKeys((prev) => {
-            if (!prev.has(item.fingerprint)) return prev;
-            const next = new Set(prev);
-            next.delete(item.fingerprint);
-            return next;
-          });
-        } catch {
-          failedThumbIdsRef.current.add(item.fingerprint);
-          if (!cancelled) {
-            setFailedThumbKeys((prev) => {
-              if (prev.has(item.fingerprint)) return prev;
-              const next = new Set(prev);
-              next.add(item.fingerprint);
-              return next;
-            });
-          }
-        }
-        await new Promise((resolve) => setTimeout(resolve, 40));
+  // Cloud previews load per tile as rows mount, four at a time (see
+  // services/albums/previews.ts). The grid used to fetch the first 60 items of
+  // the upload-ordered list once, so anything further down never got more
+  // than its blurred placeholder.
+  const requestedThumbsRef = React.useRef<Set<string>>(new Set());
+  const requestCloudThumb = useCallback((item: MetaEntry) => {
+    const key = item.fingerprint;
+    if (!repoInfo || requestedThumbsRef.current.has(key)) return;
+    requestedThumbsRef.current.add(key);
+    loadPreview(item.repoPath, item).then((uri) => {
+      requestedThumbsRef.current.delete(key);
+      if (uri) {
+        failedThumbIdsRef.current.delete(key);
+        setCloudThumbs((prev) => (prev[key] === uri ? prev : { ...prev, [key]: uri }));
+        setFailedThumbKeys((prev) => {
+          if (!prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      } else {
+        failedThumbIdsRef.current.add(key);
+        setFailedThumbKeys((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [gallerySource, cloudItems, repoInfo]);
+    });
+  }, [repoInfo]);
 
   // Subscribe to upload index and sync status to force re-render for overlays/progress
   useEffect(() => {
@@ -1269,20 +1263,8 @@ export default function GalleryScreen({ route }: any) {
 
   // Memoized render functions
   const favorites = useAppStore((st) => st.favorites);
-  const userAlbums = useAppStore((st) => st.userAlbums);
-  const addToAlbum = useAppStore((st) => st.addToAlbum);
-  const createAlbum = useAppStore((st) => st.createAlbum);
-  const [albumPicker, setAlbumPicker] = useState<{ visible: boolean; keys: string[] }>({ visible: false, keys: [] });
-  const [newAlbumName, setNewAlbumName] = useState('');
-  /** When set, the timeline shows only this album. */
-  const [albumFilter, setAlbumFilter] = useState<string | null>(null);
-
-  // The Albums tab navigates here with a filter; picking the same album twice
-  // should re-apply it, so this keys off the param rather than mount.
-  const routeAlbumFilter = route?.params?.albumFilter ?? null;
-  useEffect(() => {
-    if (routeAlbumFilter) setAlbumFilter(routeAlbumFilter);
-  }, [routeAlbumFilter]);
+  /** What "Add to album" will add: device assets (uploaded first if needed) or repo paths. */
+  const [albumTarget, setAlbumTarget] = useState<AlbumTarget | null>(null);
   const toggleFavorite = useAppStore((st) => st.toggleFavorite);
   const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
   /** Stable key for favouriting, matching whichever source is active. */
@@ -1397,6 +1379,7 @@ export default function GalleryScreen({ route }: any) {
               resizeMode="cover"
             />
           ) : null}
+          {!uri && !isFailed ? <ThumbRequest item={item} onRequest={requestCloudThumb} /> : null}
           {uri ? (
             <View style={{ width: '100%', height: '100%' }} pointerEvents="none">
             <Image
@@ -1445,7 +1428,7 @@ export default function GalleryScreen({ route }: any) {
         </View>
       </TouchableOpacity>
     );
-  }, [cloudItemContainerStyle, imageStyle, checkIconStyleWithColor, videoBadgeStyle, cloudThumbs, failedThumbKeys, selectedIds, handleCloudItemPress, handleCloudItemLongPress, placeholderContainerStyle, shimmerAnimatedStyle, placeholderHighlightColors, shimmerGradientStyle, size]);
+  }, [cloudItemContainerStyle, imageStyle, checkIconStyleWithColor, videoBadgeStyle, cloudThumbs, failedThumbKeys, selectedIds, handleCloudItemPress, handleCloudItemLongPress, placeholderContainerStyle, shimmerAnimatedStyle, placeholderHighlightColors, shimmerGradientStyle, size, requestCloudThumb]);
 
   // Memoized FlatList callbacks
   const keyExtractor = useCallback((i: any, index: number) => {
@@ -1456,7 +1439,23 @@ export default function GalleryScreen({ route }: any) {
     }
     return i.id;
   }, [gallerySource]);
+  const cloudHasMoreRef = React.useRef(true);
   const handleEndReached = useCallback(() => {
+    if (gallerySource === 'cloud') {
+      // Only the newest shards are preloaded; page older ones in on demand.
+      if (loadingMoreRef.current || !cloudHasMoreRef.current || !repoInfo) return;
+      loadingMoreRef.current = true;
+      loadMoreCloudEntries(6)
+        .then(async (more) => {
+          cloudHasMoreRef.current = more;
+          await refreshCloudItems({ force: false, showSpinner: false });
+        })
+        .catch((error: any) => console.warn('[gallery] loading older cloud items failed', error?.message ?? error))
+        .finally(() => {
+          loadingMoreRef.current = false;
+        });
+      return;
+    }
     if (gallerySource !== 'local') return;
     if (loadingMoreRef.current) return;
     if (!hasNext) return;
@@ -1468,7 +1467,7 @@ export default function GalleryScreen({ route }: any) {
         loadingMoreRef.current = false;
       }, 100);
     });
-  }, [hasNext, loadPage, loadingGrid, gallerySource]);
+  }, [hasNext, loadPage, loadingGrid, gallerySource, repoInfo, refreshCloudItems]);
   const emptyListMessage = useMemo(() => {
     if (gallerySource === 'local') {
       // Under limited access no folder filter is applied, so naming one would
@@ -1534,8 +1533,9 @@ export default function GalleryScreen({ route }: any) {
         // The viewer is a Modal and Paper's Portal renders behind it, so a
         // dialog opened on top of the viewer is invisible. Close first.
         onPress: () => {
+          const target: AlbumTarget = selected ? { device: [selected] } : { paths: [favTarget] };
           closeViewer();
-          setAlbumPicker({ visible: true, keys: [favTarget] });
+          setAlbumTarget(target);
         },
       });
     }
@@ -1671,13 +1671,9 @@ export default function GalleryScreen({ route }: any) {
   const activeItems = gallerySource === 'cloud' ? (cloudItems as any[]) : (assets as any[]);
   const timelineSections = useMemo(() => {
     const source = activeItems ?? [];
-    let filtered = favoritesOnly ? source.filter((e: any) => favoriteSet.has(favKeyFor(e))) : source;
-    if (albumFilter) {
-      const members = new Set(userAlbums[albumFilter] ?? []);
-      filtered = filtered.filter((e: any) => members.has(favKeyFor(e)));
-    }
+    const filtered = favoritesOnly ? source.filter((e: any) => favoriteSet.has(favKeyFor(e))) : source;
     return buildTimelineSections(filtered, numColumns);
-  }, [activeItems, numColumns, favoritesOnly, favoriteSet, favKeyFor, albumFilter, userAlbums]);
+  }, [activeItems, numColumns, favoritesOnly, favoriteSet, favKeyFor]);
 
   /**
    * Pages for the viewer, in the same order the grid shows them, so swiping
@@ -1849,92 +1845,12 @@ export default function GalleryScreen({ route }: any) {
           <ActivityIndicator size={32} />
         </View>
       ) : null}
-      {/* Image detail modal */}
-      {albumFilter ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 64,
-            left: 12,
-            right: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 999,
-            backgroundColor: theme.colors.primaryContainer,
-            zIndex: 20,
-          }}
-        >
-          <MaterialCommunityIcons name="image-album" size={16} color={theme.colors.onPrimaryContainer} />
-          <Text style={{ flex: 1, marginLeft: 8, color: theme.colors.onPrimaryContainer }} numberOfLines={1}>
-            {albumFilter}
-          </Text>
-          <TouchableOpacity onPress={() => setAlbumFilter(null)} accessibilityLabel="Clear album filter">
-            <MaterialCommunityIcons name="close" size={18} color={theme.colors.onPrimaryContainer} />
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      <Portal>
-        <Dialog
-          visible={albumPicker.visible}
-          onDismiss={() => setAlbumPicker({ visible: false, keys: [] })}
-        >
-          <Dialog.Title>Add to album</Dialog.Title>
-          <Dialog.Content>
-            {Object.keys(userAlbums).length === 0 ? (
-              <Text style={{ marginBottom: 12 }}>No albums yet — name one below to create it.</Text>
-            ) : (
-              Object.keys(userAlbums)
-                .sort((a, b) => a.localeCompare(b))
-                .map((name) => (
-                  <Button
-                    key={name}
-                    mode="text"
-                    contentStyle={{ justifyContent: 'flex-start' }}
-                    onPress={() => {
-                      addToAlbum(name, albumPicker.keys);
-                      setAlbumPicker({ visible: false, keys: [] });
-                      showToast(`Added to "${name}"`);
-                    }}
-                  >
-                    {name}
-                  </Button>
-                ))
-            )}
-            <TextInput
-              mode="outlined"
-              label="New album"
-              value={newAlbumName}
-              onChangeText={setNewAlbumName}
-              style={{ marginTop: 8 }}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            {[
-              <Button key="cancel" onPress={() => setAlbumPicker({ visible: false, keys: [] })}>
-                Cancel
-              </Button>,
-              <Button
-                key="create"
-                mode="contained"
-                disabled={!newAlbumName.trim()}
-                onPress={() => {
-                  const name = newAlbumName.trim();
-                  createAlbum(name);
-                  addToAlbum(name, albumPicker.keys);
-                  setNewAlbumName('');
-                  setAlbumPicker({ visible: false, keys: [] });
-                  showToast(`Added to "${name}"`);
-                }}
-              >
-                Create & add
-              </Button>,
-            ]}
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <AddToAlbumDialog
+        visible={!!albumTarget}
+        target={albumTarget}
+        onDismiss={() => setAlbumTarget(null)}
+        onDone={showToast}
+      />
 
       <AssetViewer
         visible={!!selected || !!selectedCloudUri}
@@ -2040,6 +1956,22 @@ export default function GalleryScreen({ route }: any) {
               style={selectionPrimaryIconStyle}
             />
             <Text variant="labelLarge" style={selectionPrimaryTextStyle}>Select All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => {
+              const target: AlbumTarget = gallerySource === 'cloud'
+                ? { paths: Array.from(selectedIds) }
+                : { device: assets.filter((a) => selectedIds.has(a.id)) };
+              cancelSelection();
+              setAlbumTarget(target);
+            }}
+            style={[selectionSecondaryStyle, { borderTopRightRadius: 18, borderBottomRightRadius: 18 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Add to album"
+            accessibilityHint="Adds the selected items to an album"
+          >
+            <MaterialCommunityIcons name="image-album" size={20} color={selectionAccentContentColor} />
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.85}

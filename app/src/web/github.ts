@@ -1,6 +1,7 @@
 import type { MetaEntry, RepoInfo } from '../services/sync/types';
 import { assetsFromTree, parseRepository } from './library';
-import type { Library, MediaSource, TreeEntry, WebAsset } from './types';
+import { ALBUMS_PATH, parseAlbumsDoc } from '../services/albums/model';
+import type { Album, Library, MediaSource, TreeEntry, WebAsset } from './types';
 
 type Tree = { sha: string; tree: TreeEntry[]; truncated?: boolean };
 type Pointer = { tier: 2; assetId: number; size: number; preview?: string };
@@ -159,10 +160,26 @@ export class GitHubSource implements MediaSource {
     });
     if (metadataFailed) warnings.push('Some metadata could not be loaded. Photos are still listed; a few capture dates or previews may be unavailable.');
     const assets = assetsFromTree(entries, metadata.flat());
+    const albums = await this.repoAlbums();
     for (const entry of this.cache.values()) if (entry.url) URL.revokeObjectURL(entry.url);
     this.cache.clear();
     return { id: `${account}:${this.repo.owner}/${this.repo.name}@${this.repo.branch}`, name: repo.full_name,
-      source: 'github', repo: { ...this.repo }, assets, warnings, writable: !!repo.permissions?.push && !repo.archived && !repo.disabled, initialCollection: { favorites: [], albums: [] } };
+      source: 'github', repo: { ...this.repo }, assets, warnings, writable: !!repo.permissions?.push && !repo.archived && !repo.disabled, initialCollection: { favorites: [], albums } };
+  }
+
+  /**
+   * Albums the phone app keeps in `gitgallery/albums.json`. Item paths there
+   * drop the tier-2 `.ptr` suffix, which is exactly a web asset's id.
+   */
+  private async repoAlbums(): Promise<Album[]> {
+    if (!this.entries.has(ALBUMS_PATH)) return [];
+    try {
+      const doc = parseAlbumsDoc(await (await this.file(ALBUMS_PATH, 4 * 1024 * 1024)).text());
+      return doc.albums.map((album) => ({ id: album.id, name: album.name, assetIds: album.items }));
+    } catch (error) {
+      if (this.controller.signal.aborted) throw error;
+      return [];
+    }
   }
 
   private async acquire(): Promise<void> {

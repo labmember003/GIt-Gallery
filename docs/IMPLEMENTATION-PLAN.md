@@ -495,17 +495,15 @@ Heart action in the viewer, heart badge on tiles, and a filter toggle in the hea
 
 ### Albums
 
-New **Albums** tab (third alongside Gallery and Settings), create/delete with confirmation, "Add to album" from the viewer, and a dismissible filter banner in the gallery. Verified: created "Goa Trip" from the viewer, Albums tab showed *"Goa Trip · 1 item"*, tapping it filtered the timeline to that one asset.
+**Albums** tab with Immich-style cover cards (radius 16, 1 px border, cover over two thirds of a 0.7 card). Tapping a card opens the album: title, date range and count, **Add photos** and **Select**, the photos grouped by day, and the viewer with Favourite, Set cover, Download and Remove. **Add photos** opens a picker with *On this phone* and *On GitHub*; phone photos that are not backed up are uploaded first and join the album when the upload lands, including after a restart. Long-press a card to rename or delete; names are unique ignoring case. Gallery multi-select and the viewer both have **Add to album**.
 
-### Storage decision — local, not synced
+### Storage decision — albums in the repo, favourites on the device
 
-Both are stored device-locally in SecureStore rather than written to the repo.
-
-**Why:** a heart tap should be instant and work offline. Syncing would mean a git commit per tap, which is absurd for a toggle. **The cost is real and worth stating plainly: favourites and albums do not follow you to another device.** If multi-device becomes a goal, the fix is to fold them into the meta index and flush them with the existing batch — the same trick that took meta writes from 2 commits per photo to 2 per batch.
+Albums are stored in `gitgallery/albums.json` (see PROJECT-DOC D13), so they follow the user to every device and the web. Edits are written locally first and synced with a short debounce, retrying with backoff while offline. Favourites stay device-local: a heart tap should be instant, and a commit per tap is not worth it.
 
 ### Naming trap avoided
 
-`selectedAlbumIds` already existed and means *device* albums (Camera, Pictures) used to decide what to sync. User-created albums are a different concept, so they live in `userAlbums` and the UI never says just "albums" where the two could be confused.
+`selectedAlbumIds` already existed and means *device* albums (Camera, Pictures) used to decide what to sync. User-created albums are a different concept, so they live in `services/albums` and the UI never says just "albums" where the two could be confused. Albums from older builds (`userAlbums` in SecureStore) are moved into the repo once, on first launch.
 
 ### 🔴 A bug testing caught
 
@@ -624,7 +622,7 @@ Timeline grouping and headers · viewer (opaque black, true aspect ratio, swipe 
 | # | Task |
 |---|---|
 | 5.1 | **iOS validation** (if deferred from Phase 0) — build, sign, test on device |
-| 5.2 | Albums as folders (`library/albums/<name>/`) with Immich album UI |
+| 5.2 | ✅ Synced albums with Immich album UI (`gitgallery/albums.json`, 2026-11-13) |
 | 5.3 | Date-range filter / "On this day" (cheap — we already have dates in paths) |
 | 5.4 | Background sync reliability pass |
 | 5.5 | Multi-repo sharding UI (surfacing the Phase 1C model) |

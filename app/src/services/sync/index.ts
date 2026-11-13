@@ -17,7 +17,7 @@ import { formatBytes } from './compression';
 
 /** Files per batched commit. Keeps each request set modest and bounds retry cost. */
 const UPLOAD_BATCH_SIZE = 40;
-import { loadMetaIndex, upsertMetaEntry, upsertMetaEntries, getCachedMetaEntries, getMetaEntryFromCache, invalidateMetaCache, removeMetaEntries } from './metaIndex';
+import { loadMetaIndex, upsertMetaEntry, upsertMetaEntries, getCachedMetaEntries, getMetaEntryFromCache, invalidateMetaCache, removeMetaEntries, ensureMetaShardsForPaths, loadMoreMetaShards } from './metaIndex';
 import type { Octokit } from '@octokit/rest';
 import { ensureMediaLibraryPermissions } from '../mediaPermissions';
 import { ensureAndroidDownloadsDirectory } from './androidDownloads';
@@ -1203,6 +1203,64 @@ export async function getRepoEntryForAsset(asset: MediaLibrary.Asset): Promise<M
     }
   }
   return null;
+}
+
+/**
+ * Repo path of a device asset that has been uploaded, or null.
+ *
+ * The upload index is keyed by the MediaLibrary id as well as the
+ * fingerprint, and the id is the one key that survives a relaunch unchanged
+ * (`getAssetInfoAsync` can report a different file size than `getAssetsAsync`,
+ * which changes the fingerprint).
+ */
+export async function resolveRepoPathForAsset(asset: MediaLibrary.Asset): Promise<string | null> {
+  await ensureUploadIndexCache();
+  const byId = uploadIndexCache.get(asset.id);
+  if (byId?.uploaded && byId.repoPath?.startsWith('gitgallery/')) return byId.repoPath;
+  for (const fp of fingerprintsFor(asset)) {
+    const hit = uploadIndexCache.get(fp);
+    if (hit?.uploaded && hit.repoPath?.startsWith('gitgallery/')) return hit.repoPath;
+  }
+  const entry = await getRepoEntryForAsset(asset);
+  return entry?.repoPath ?? null;
+}
+
+/**
+ * Index entries for specific repo paths, loading the date shard each one
+ * lives in. The cloud grid only preloads the most recent shards, so an album
+ * holding an older photo would otherwise find no entry for it.
+ */
+export async function getMetaEntriesForPaths(paths: string[]): Promise<Record<string, MetaEntry>> {
+  await ensureMetaLoaded(false);
+  const out: Record<string, MetaEntry> = {};
+  const missing: string[] = [];
+  for (const path of paths) {
+    const hit = getMetaEntryFromCache(path) ?? getMetaEntryFromCache(`${path}.ptr`);
+    if (hit) out[path] = hit;
+    else missing.push(path);
+  }
+  if (missing.length > 0) {
+    try {
+      await ensureMetaShardsForPaths(getOctokit(), getRepoInfo(), missing);
+    } catch (error: any) {
+      console.warn('[sync] loading shards for album items failed', error?.message ?? error);
+    }
+    for (const path of missing) {
+      const hit = getMetaEntryFromCache(path) ?? getMetaEntryFromCache(`${path}.ptr`);
+      if (hit) out[path] = hit;
+    }
+  }
+  return out;
+}
+
+/**
+ * Load more of the index for the cloud grid, oldest shards last. Returns
+ * false once every shard is in memory.
+ */
+export async function loadMoreCloudEntries(shardCount = 6): Promise<boolean> {
+  const more = await loadMoreMetaShards(getOctokit(), getRepoInfo(), shardCount);
+  if (more.loaded > 0) mergeMetaEntriesIntoUploadIndex();
+  return more.remaining > 0;
 }
 
 export async function deleteRepoFile(path: string, options?: { skipStatus?: boolean; skipInvalidation?: boolean }): Promise<void> {

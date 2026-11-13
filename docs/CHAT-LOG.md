@@ -2330,6 +2330,59 @@ Pushed `6c0207e` to `origin/main` through `github-personal`, and confirmed it on
 
 ---
 
+## Albums that open, iPhone sign-in, and the "Authorize labmember003" button — 2026-11-13
+
+> "[Image #1] Why clicking on album just redirects me to gallery tab, like wtf? Why it doesnt opens up and have a upload button, Wtf have codex implemented bro, can you please see the entire app, check everything, see functionalities, think of best UX, features and design and implement it, try to keep changes like minimum...test everything....make it like crazyyyyy project.... codex have made this completely shit i think, [Image #2] On iphone login gives this error, [Image #3] In my freinds phone i installed the app from app store, completely independent, so how labmember003 came here, wtf? We were saving photos vids in user's own github bro"
+
+(Image 1: the Albums tab with "Goa · 0 items" and a Delete button. Image 2: iPhone sign-in showing "Could not start GitHub Device Flow…" under a valid code. Image 3: GitHub's page "GitGallery by Avishisht Gupta wants to access your kapoorkhushi03 account" with a green "Authorize labmember003" button.)
+
+**Albums.** Tapping an album only filtered the Gallery tab, and albums were stored on the phone alone. Now:
+- Albums are saved in the user's repo as `gitgallery/albums.json`, so they follow the user to other phones and to the web. Every change is a readable commit ("Create album …", "Add 2 items to …", "Rename …", "Delete an album").
+- The Albums tab shows Immich-style cover cards. Long-press a card to rename or delete it; names are unique ignoring case.
+- Tapping an album opens it: title, date range, item count, **Add photos** and **Select**, photos grouped by day, and a viewer with Favourite, Set cover, Download and Remove.
+- **Add photos** opens a picker with *On this phone* and *On GitHub*. Phone photos that aren't backed up are uploaded first ("Upload & add") and join the album as each upload lands, even after a restart.
+- Gallery multi-select and the viewer both have **Add to album**.
+- Edits work offline and sync on their own when the connection returns. Two phones editing at once merge instead of overwriting each other.
+- Albums from older builds are moved into the repo on first launch.
+
+**iPhone sign-in.** The code was valid; the polling broke. Opening GitHub suspends the app, the in-flight poll died with a network error, and the screen reported every failure as "Could not start GitHub Device Flow". So the user approved a code the app had already given up on. Fixes:
+- Network errors are retried until the code expires, and each request is capped at 20 s.
+- Coming back to the app polls GitHub at once.
+- Only GitHub's own answers (expired, denied, disabled) end sign-in, each with its own message.
+- The screen has a **Copy code & open GitHub** button, an expiry countdown, and three steps that say the Authorize button shows the developer's name.
+
+**"Authorize labmember003".** GitHub labels that button with the owner of the OAuth app, which is labmember003. The same page says the app "wants to access your kapoorkhushi03 account", and the token only reaches that account's repositories, so the photos went to the friend's own GitHub. To show a neutral name, transfer the OAuth app to a GitHub organization; the steps are left with the user.
+
+**Also fixed:**
+- The Cloud tab only ever listed the newest 300 items and fetched previews for the first 60. Previews now load per tile as they scroll in, and older months page in at the bottom.
+- App start read 11 saved settings in one batch, so a single failed read showed a signed-in user the welcome screen. Each setting is now read and logged on its own.
+- The bottom tabs had no accessibility labels.
+- The album photo picker now has a close button on iPhone, where it opens as a sheet.
+- The web gallery now shows albums made in the phone app.
+
+**Tested:**
+- Android emulator: sign-in with the app backgrounded and foregrounded; create, add (including two new photos uploaded through the album), cover, select and remove, rename (duplicate name rejected), and delete while offline, which synced 32 s after the connection returned. A fresh install restored albums from GitHub; dark mode and the Cloud tab were checked. GitHub history of `albums.json` in `applicationsplit/gitgallery-e2e-nov7` shows each change.
+- iPhone 18 Pro simulator (driven with Maestro): the exact failure — GitHub approved while the app was suspended in Safari — signed in about 7 s after returning, with no error. Albums from Android appeared there, and two simulator photos were uploaded into an album.
+- 13 native and 14 web unit tests pass, and typecheck and the web build pass.
+- The simulator's old Nov 7 build had no keychain entitlements (error −34018), so it never kept a sign-in. It was rebuilt with local signing, and the sign-in survived a full restart. Store builds are signed with the team profile and are unaffected.
+
+**Machine:** the Mac had 37 GB of 40 GB swap in use, which crashed the emulator twice. Most of it was the "Siri AI" app at an 84 GB footprint. With the user's approval it was quit, and swap fell to 19 GB.
+
+Nothing was committed or pushed. The fixes reach App Store and Play users only in a new release.
+
+---
+
+> "\"photos went to your friend's own GitHub, not yours.\" yes exactly so why labmember003 came up bro? in khushi's phone?"
+
+GitHub's authorization page always names whoever registered the OAuth app, and GitGallery's OAuth app is registered under labmember003. It identifies the app's maker, not where data goes, the way "Sign in with Google" screens name the developer:
+- The same page says "wants to access your kapoorkhushi03 account".
+- The token goes only to the app on that phone; labmember003 never receives it and cannot see the friend's repositories. An app owner only sees a user count.
+- The applicationsplit test account got the same "Authorize labmember003" button.
+
+To show a neutral name instead, move the OAuth app into a GitHub organization (for example "GitGallery"). The button then names the organization.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -2356,4 +2409,6 @@ Pushed `6c0207e` to `origin/main` through `github-personal`, and confirmed it on
 | Release publishing | ✅ **By hand on the GitHub website** while Actions is locked by billing. No gh CLI token for the main account: the user declined a `repo`-scope OAuth grant. Files are built and checksummed locally, then attached on the release page |
 | App Store | ✅ **GitGallery 1.1.0 for iPhone**, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
 | Google Play | ✅ **Submitted 10 Nov 2026 (in review).** **GitGallery: Photo Backup (`com.falcon.gitgallery`; `com.gitgallery.app` is taken on Play) on the Falcon Tech Lab account.** It uses a new upload key (Play App Signing holds the app key), with the same alias, names and passwords as Droply's, at `~/Downloads/GitGallery`. Gradle reads it from the gitignored `android/keystore.properties`. The store listing is from the App Store copy. Policy declarations are the user's |
+| Albums | ✅ **Stored in the repo as `gitgallery/albums.json`** (library paths without `.ptr`; local operation log replayed on the latest file, so devices merge). Albums open to their own screen with Add photos; phone photos are uploaded first and then join. Favourites stay on the device. The web shows phone albums; its own album edits stay in the browser |
+| Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (labmember003); moving the app to an organization changes that and is the user's step |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |
