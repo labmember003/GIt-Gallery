@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View, useWindowDimensions } from 'react-native';
-import { ActivityIndicator, Button, IconButton, SegmentedButtons, Text, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Button, IconButton, SegmentedButtons, Snackbar, Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import { addDeviceAssetsToAlbum, addPathsToAlbum, normalizeAlbumPath, useAlbumStore } from '@/services/albums';
-import { getCloudEntriesEnsured, isAssetUploadedAsset, loadMoreCloudEntries, subscribeUploadIndex } from '@/services/sync/index';
+import { getCloudEntriesEnsured, getUploadIndex, isAssetUploadedAsset, loadMoreCloudEntries, subscribeUploadIndex, uploadedRepoPathSync } from '@/services/sync/index';
 import { ensureMediaLibraryPermissions } from '@/services/mediaPermissions';
 import type { MetaEntry } from '@/services/sync/types';
 import { AlbumTile } from '@/components/albums/AlbumTile';
@@ -29,6 +29,11 @@ export default function AlbumPickerScreen({ navigation, route }: any) {
   const pending = useAlbumStore((s) => s.pending);
   const { width } = useWindowDimensions();
   const tile = Math.floor((width - SPACING * 2 * COLUMNS) / COLUMNS);
+  const [notice, setNotice] = useState<string | null>(null);
+  const alreadyNotice = useCallback(() => {
+    Haptics.selectionAsync().catch(() => {});
+    setNotice('Already in this album');
+  }, []);
 
   const [source, setSource] = useState<Source>('device');
   const [selectedDevice, setSelectedDevice] = useState<Map<string, MediaLibrary.Asset>>(new Map());
@@ -55,6 +60,10 @@ export default function AlbumPickerScreen({ navigation, route }: any) {
   const pendingIds = useMemo(() => new Set(pending.filter((p) => p.albumId === albumId).map((p) => p.assetId)), [pending, albumId]);
 
   useEffect(() => subscribeUploadIndex(() => setIndexTick((t) => t + 1)), []);
+  // Load the upload index so phone photos already in the album can be marked.
+  useEffect(() => {
+    getUploadIndex().then(() => setIndexTick((t) => t + 1)).catch(() => {});
+  }, []);
 
   const loadDevice = useCallback(async (reset = false) => {
     if (loadingRef.current) return;
@@ -212,7 +221,9 @@ export default function AlbumPickerScreen({ navigation, route }: any) {
             initialNumToRender={24}
             windowSize={7}
             renderItem={({ item }) => {
-              const waiting = pendingIds.has(item.id);
+              // Already in the album: uploaded and listed, or waiting to upload into it.
+              const path = uploadedRepoPathSync(item);
+              const already = pendingIds.has(item.id) || (!!path && inAlbum.has(normalizeAlbumPath(path)));
               return (
                 <AlbumTile
                   size={tile}
@@ -220,8 +231,9 @@ export default function AlbumPickerScreen({ navigation, route }: any) {
                   source={{ kind: 'device', uri: item.uri, isVideo: item.mediaType === 'video', duration: item.duration }}
                   selectionMode
                   selected={selectedDevice.has(item.id)}
-                  disabled={waiting}
-                  badge={waiting ? 'in-album' : isAssetUploadedAsset(item) ? 'backed-up' : null}
+                  disabled={already}
+                  onDisabledPress={alreadyNotice}
+                  badge={already ? 'in-album' : path || isAssetUploadedAsset(item) ? 'backed-up' : null}
                   onPress={() => toggleDevice(item)}
                   onLongPress={() => toggleDevice(item)}
                   accessibilityLabel={item.mediaType === 'video' ? 'Video' : 'Photo'}
@@ -254,6 +266,7 @@ export default function AlbumPickerScreen({ navigation, route }: any) {
                 selectionMode
                 selected={selectedCloud.has(path)}
                 disabled={already}
+                onDisabledPress={alreadyNotice}
                 badge={already ? 'in-album' : null}
                 onPress={() => toggleCloud(path)}
                 onLongPress={() => toggleCloud(path)}
@@ -317,6 +330,14 @@ export default function AlbumPickerScreen({ navigation, route }: any) {
           </Button>
         </View>
       ) : null}
+      <Snackbar
+        visible={!!notice}
+        onDismiss={() => setNotice(null)}
+        duration={1800}
+        style={{ marginHorizontal: 16, marginBottom: total > 0 ? 96 : 16, borderRadius: 16 }}
+      >
+        {notice ?? ''}
+      </Snackbar>
     </View>
   );
 }

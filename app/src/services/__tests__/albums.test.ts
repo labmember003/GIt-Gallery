@@ -58,3 +58,20 @@ test('names are unique ignoring case; cover falls back to the newest item', () =
   assert.equal(isAlbumNameTaken(doc.albums, 'goa', 'a1'), false);
   assert.equal(coverPathFor(doc.albums[0]), normalizeAlbumPath(P2));
 });
+
+test('share links and joined albums replay and survive a round-trip', () => {
+  const share = { id: 'abc123def456ghij', key: 'k'.repeat(43), owner: 'me', createdAt: 5 };
+  let doc = applyOps(emptyDoc(), [
+    { type: 'create', id: 'a1', name: 'Goa', at: 1 },
+    { type: 'share', id: 'a1', share, at: 2 },
+    { type: 'join', share: { owner: 'friend', id: 'zzzzzzzzzzzzzzzz', key: 'q'.repeat(43), title: 'Trip', joinedAt: 3 }, at: 3 },
+  ]);
+  assert.deepEqual(doc.albums[0].share, share);
+  assert.equal(doc.joined?.length, 1);
+  doc = parseAlbumsDoc(serializeAlbumsDoc(doc));
+  assert.deepEqual(doc.albums[0].share, share);
+  assert.equal(doc.joined?.[0].title, 'Trip');
+  doc = applyOps(doc, [{ type: 'unshare', id: 'a1', at: 4 }, { type: 'leave', owner: 'friend', shareId: 'zzzzzzzzzzzzzzzz', at: 5 }]);
+  assert.equal(doc.albums[0].share, null);
+  assert.equal(doc.joined?.length, 0);
+});

@@ -15,7 +15,7 @@ export function createSiteServer(config, { root, devPort, fetcher } = {}) {
     response.setHeader('Referrer-Policy', 'no-referrer');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('X-Frame-Options', 'DENY');
-    if (!devPort) response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://api.github.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+    if (!devPort) response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
     try {
       const expected = new URL(config.origin);
       if (request.headers.host !== expected.host) {
@@ -36,10 +36,11 @@ export function createSiteServer(config, { root, devPort, fetcher } = {}) {
       let pathname;
       try { pathname = decodeURIComponent(new URL(request.url, config.origin).pathname); }
       catch { response.writeHead(400).end(); return; }
-      const file = resolve(root, `.${pathname === '/' ? '/index.html' : pathname}`);
+      // Shared-album links are client-side routes; the key stays in the fragment.
+      const file = resolve(root, `.${pathname === '/' || pathname.startsWith('/s/') ? '/index.html' : pathname}`);
       if (!file.startsWith(root + sep) || !existsSync(file) || !statSync(file).isFile()) { response.writeHead(404).end('Not found'); return; }
       const size = statSync(file).size;
-      const headers = { 'Content-Type': types[extname(file)] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes' };
+      const headers = { 'Content-Type': pathname.startsWith('/.well-known/') ? 'application/json' : types[extname(file)] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes' };
       let start = 0; let end = size - 1;
       if (request.headers.range) {
         const match = /^bytes=(\d*)-(\d*)$/.exec(request.headers.range);

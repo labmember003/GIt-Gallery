@@ -6,7 +6,8 @@
   "outputDirectory": "dist-web",
   "regions": ["bom1"],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index?__gg_path=:path*" }
+    { "source": "/api/:path*", "destination": "/api/index?__gg_path=:path*" },
+    { "source": "/s/:path*", "destination": "/index.html" }
   ],
   "functions": {
     "api/**/*.mjs": { "maxDuration": 300 }
@@ -18,10 +19,12 @@
         { "key": "Referrer-Policy", "value": "no-referrer" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://api.github.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }
       ]
     },
     { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] },
-    { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+    { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/s/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/.well-known/(.*)", "headers": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cache-Control", "value": "public, max-age=3600" }] }
   ]
 }

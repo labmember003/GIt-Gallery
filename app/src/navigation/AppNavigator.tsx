@@ -15,6 +15,9 @@ import AlbumsScreen from '@/screens/AlbumsScreen';
 import DemoGalleryScreen from '@/screens/DemoGalleryScreen';
 import AlbumScreen from '@/screens/AlbumScreen';
 import AlbumPickerScreen from '@/screens/AlbumPickerScreen';
+import SharedAlbumScreen from '@/screens/SharedAlbumScreen';
+import { markNavigationReady } from '@/navigation/shareLinks';
+import { startShareLifecycle } from '@/services/share';
 import { useAppStore } from '@/store/appState';
 import { loadAlbumsForRepo, startAlbumLifecycle } from '@/services/albums';
 
@@ -25,6 +28,7 @@ type RootStackParamList = {
   Demo: undefined;
   Album: { albumId: string; justCreated?: boolean };
   AlbumPicker: { albumId: string };
+  SharedAlbum: { owner: string; id: string; key: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -103,7 +107,7 @@ function OnboardingStack() {
     <Onboarding.Navigator screenOptions={headerOptions}>
       <Onboarding.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
       <Onboarding.Screen name="SignIn" component={SignInScreen} options={{ title: '', headerBackTitle: 'Back' }} />
-      <Onboarding.Screen name="RepoSetup" component={RepoSetupScreen} options={{ title: 'Repository Setup' }} />
+      <Onboarding.Screen name="RepoSetup" component={RepoSetupScreen} options={{ title: 'Choose library' }} />
     </Onboarding.Navigator>
   );
 }
@@ -131,12 +135,20 @@ export default function AppNavigator() {
   useEffect(() => {
     if (!hydrated) return;
     startAlbumLifecycle();
+    startShareLifecycle();
     void loadAlbumsForRepo(isReady ? currentRepo : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, isReady, currentRepo?.owner, currentRepo?.name, currentRepo?.branch]);
 
   // Rendering before hydration would show onboarding to a signed-in user for a
   // frame or two, then swap — a visible flash on every cold start.
+  // A share link that launched the app waits until the right stack is mounted.
+  useEffect(() => {
+    if (!hydrated) return;
+    const t = setTimeout(markNavigationReady, 0);
+    return () => clearTimeout(t);
+  }, [hydrated]);
+
   if (!hydrated) return <SplashScreen />;
 
   return (
@@ -161,7 +173,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="RepoSetup"
         component={RepoSetupScreen}
-        options={{ headerShown: true, title: 'Repository Setup' }}
+        options={{ ...headerOptions, headerShown: true, title: 'Choose library', headerBackButtonDisplayMode: 'minimal' }}
+      />
+      <Stack.Screen
+        name="SharedAlbum"
+        component={SharedAlbumScreen}
+        options={{ ...headerOptions, headerShown: true, title: '', headerBackButtonDisplayMode: 'minimal' }}
       />
       <Stack.Screen name="Demo" component={DemoGalleryScreen} options={{ ...headerOptions, headerShown: true, title: 'Demo library', headerBackTitle: 'Back' }} />
     </Stack.Navigator>

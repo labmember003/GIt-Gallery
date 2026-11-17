@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["PZ6PXVCSDN.com.gitgallery.app"],
+        "components": [{ "/": "/s/*", "comment": "Shared albums" }]
+      }
+    ]
+  }
+}

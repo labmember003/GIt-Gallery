@@ -17,6 +17,7 @@
  * Verification then re-reads the ref and compares tree SHA and file count.
  */
 import { getOctokit, getRepoInfo } from './githubClient';
+import { NO_CACHE } from './githubClient';
 import { resolveBranch } from './utils';
 import { invalidateRemoteHead } from './index';
 import { RepoInfo } from './types';
@@ -59,7 +60,7 @@ async function countCommits(repo: RepoInfo, branch: string): Promise<number> {
 async function readTree(repo: RepoInfo, branch: string): Promise<{ treeSha: string; fileCount: number; truncated: boolean }> {
   const octokit = getOctokit();
 
-  const ref = await octokit.rest.git.getRef({ owner: repo.owner, repo: repo.name, ref: `heads/${branch}` });
+  const ref = await octokit.rest.git.getRef({ owner: repo.owner, repo: repo.name, ref: `heads/${branch}`, headers: NO_CACHE });
   const commit = await octokit.rest.git.getCommit({
     owner: repo.owner,
     repo: repo.name,
@@ -86,7 +87,7 @@ export async function previewSquash(repo?: RepoInfo): Promise<SquashPreview> {
   const branch = resolveBranch(repoInfo.branch);
   const octokit = getOctokit();
 
-  const ref = await octokit.rest.git.getRef({ owner: repoInfo.owner, repo: repoInfo.name, ref: `heads/${branch}` });
+  const ref = await octokit.rest.git.getRef({ owner: repoInfo.owner, repo: repoInfo.name, ref: `heads/${branch}`, headers: NO_CACHE });
   const headSha = ref.data.object.sha;
   const [commitCount, tree] = await Promise.all([countCommits(repoInfo, branch), readTree(repoInfo, branch)]);
 
@@ -141,7 +142,7 @@ export async function squashHistory(options?: { repo?: RepoInfo; message?: strin
 
   // Re-check the head immediately before the destructive step: if it moved,
   // another writer has commits we would silently discard.
-  const recheck = await octokit.rest.git.getRef({ owner: repoInfo.owner, repo: repoInfo.name, ref: `heads/${branch}` });
+  const recheck = await octokit.rest.git.getRef({ owner: repoInfo.owner, repo: repoInfo.name, ref: `heads/${branch}`, headers: NO_CACHE });
   if (recheck.data.object.sha !== before.headSha) {
     throw new Error('Branch moved while squashing; aborted rather than discarding the other writer\'s commits.');
   }

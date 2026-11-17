@@ -16,6 +16,7 @@
  * Tier-2 assets do **not** count: release assets live outside git.
  */
 import { getOctokit, getRepoInfo } from './githubClient';
+import { NO_CACHE } from './githubClient';
 import { RepoInfo } from './types';
 
 /** GitHub's "ideally under" figure. */
@@ -44,7 +45,7 @@ export async function getRepoSizeStatus(repo?: RepoInfo): Promise<RepoSizeStatus
   const octokit = getOctokit();
   const branch = repoInfo.branch || 'main';
 
-  const ref = await octokit.rest.git.getRef({ owner: repoInfo.owner, repo: repoInfo.name, ref: `heads/${branch}` });
+  const ref = await octokit.rest.git.getRef({ owner: repoInfo.owner, repo: repoInfo.name, ref: `heads/${branch}`, headers: NO_CACHE });
   const commit = await octokit.rest.git.getCommit({
     owner: repoInfo.owner,
     repo: repoInfo.name,

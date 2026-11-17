@@ -4,9 +4,11 @@ import { Modal } from './Modal';
 import { formatBytes } from './library';
 import type { MediaSource, WebAsset } from './types';
 
-export function Viewer({ asset, source, favorite, position, total, onPrevious, onNext, onClose, onFavorite, onAlbum }: {
-  asset: WebAsset; source: MediaSource; favorite: boolean; position: number; total: number;
-  onPrevious(): void; onNext(): void; onClose(): void; onFavorite(): void; onAlbum(): void;
+export function Viewer({ asset, source, favorite = false, position, total, onPrevious, onNext, onClose, onFavorite, onAlbum }: {
+  asset: WebAsset; source: MediaSource; favorite?: boolean; position: number; total: number;
+  onPrevious(): void; onNext(): void; onClose(): void;
+  /** Leave out for a read-only viewer (a shared album). */
+  onFavorite?(): void; onAlbum?(): void;
 }) {
   const [loaded, setLoaded] = useState<{ id: string; url: string } | null>(null);
   const url = loaded?.id === asset.id ? loaded.url : null;
@@ -47,7 +49,7 @@ export function Viewer({ asset, source, favorite, position, total, onPrevious, o
     </div>
     <div className="viewer-toolbar">
       <div className="viewer-navigation"><button className="icon-button" aria-label="Previous photo" disabled={position === 0} onClick={onPrevious}><span className="rotate"><Icon name="arrow" /></span></button><button className="icon-button" aria-label="Next photo" disabled={position === total - 1} onClick={onNext}><Icon name="arrow" /></button><span className="muted small">{asset.width && asset.height ? `${asset.width} × ${asset.height} · ` : ''}{formatBytes(asset.size)}</span></div>
-      <div className="viewer-actions"><button className={`icon-button${favorite ? ' is-favorite' : ''}`} aria-label={favorite ? 'Remove from favourites' : 'Add to favourites'} aria-pressed={favorite} onClick={onFavorite}><Icon name="heart" filled={favorite} /></button><button className="icon-button" aria-label="Add to album" onClick={onAlbum}><Icon name="albums" /></button><button className="icon-button" aria-label="Download original" disabled={!url || downloading} onClick={download}><Icon name="download" /></button>{external && <a className="icon-button" href={external} target="_blank" rel="noreferrer" aria-label="Open on GitHub"><Icon name="external" /></a>}</div>
+      <div className="viewer-actions">{onFavorite && <button className={`icon-button${favorite ? ' is-favorite' : ''}`} aria-label={favorite ? 'Remove from favourites' : 'Add to favourites'} aria-pressed={favorite} onClick={onFavorite}><Icon name="heart" filled={favorite} /></button>}{onAlbum && <button className="icon-button" aria-label="Add to album" onClick={onAlbum}><Icon name="albums" /></button>}<button className="icon-button" aria-label="Download original" disabled={!url || downloading} onClick={download}><Icon name="download" /></button>{external && <a className="icon-button" href={external} target="_blank" rel="noreferrer" aria-label="Open on GitHub"><Icon name="external" /></a>}</div>
     </div>
   </Modal>;
 }

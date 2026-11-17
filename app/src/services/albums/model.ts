@@ -15,6 +15,13 @@
 export const ALBUMS_PATH = 'gitgallery/albums.json';
 export const ALBUMS_VERSION = 1;
 
+/**
+ * A share link for one of the owner's albums. The key lives here, in the
+ * owner's private library, so any of their devices can keep the shared copy
+ * up to date. See services/share.
+ */
+export type AlbumShare = { id: string; key: string; owner: string; createdAt: number };
+
 export type Album = {
   id: string;
   name: string;
@@ -24,12 +31,17 @@ export type Album = {
   cover: string | null;
   /** Repo paths, oldest addition first. */
   items: string[];
+  share?: AlbumShare | null;
 };
+
+/** Someone else's shared album this user opened and kept. */
+export type JoinedShare = { owner: string; id: string; key: string; title: string; joinedAt: number };
 
 export type AlbumsDoc = {
   version: number;
   updatedAt: number;
   albums: Album[];
+  joined?: JoinedShare[];
 };
 
 export type AlbumOp =
@@ -38,10 +50,14 @@ export type AlbumOp =
   | { type: 'delete'; id: string; at: number }
   | { type: 'add'; id: string; paths: string[]; at: number }
   | { type: 'remove'; id: string; paths: string[]; at: number }
-  | { type: 'cover'; id: string; path: string | null; at: number };
+  | { type: 'cover'; id: string; path: string | null; at: number }
+  | { type: 'share'; id: string; share: AlbumShare; at: number }
+  | { type: 'unshare'; id: string; at: number }
+  | { type: 'join'; share: JoinedShare; at: number }
+  | { type: 'leave'; owner: string; shareId: string; at: number };
 
 export function emptyDoc(): AlbumsDoc {
-  return { version: ALBUMS_VERSION, updatedAt: 0, albums: [] };
+  return { version: ALBUMS_VERSION, updatedAt: 0, albums: [], joined: [] };
 }
 
 export function normalizeAlbumPath(path: string): string {
@@ -86,9 +102,17 @@ export function parseAlbumsDoc(raw: unknown): AlbumsDoc {
       updatedAt: finite(album.updatedAt),
       cover: typeof album.cover === 'string' && album.cover ? normalizeAlbumPath(album.cover) : null,
       items,
+      share: parseShare(album.share),
     });
   }
-  return { version: ALBUMS_VERSION, updatedAt: finite(input.updatedAt), albums };
+  const joined: JoinedShare[] = [];
+  for (const candidate of Array.isArray(input.joined) ? input.joined : []) {
+    const j = candidate as Partial<JoinedShare> | null;
+    if (!j || typeof j.owner !== 'string' || typeof j.id !== 'string' || typeof j.key !== 'string') continue;
+    if (joined.some((x) => x.owner === j.owner && x.id === j.id)) continue;
+    joined.push({ owner: j.owner, id: j.id, key: j.key, title: typeof j.title === 'string' ? j.title : 'Shared album', joinedAt: finite(j.joinedAt) });
+  }
+  return { version: ALBUMS_VERSION, updatedAt: finite(input.updatedAt), albums, joined };
 }
 
 export function serializeAlbumsDoc(doc: AlbumsDoc): string {
@@ -99,17 +123,26 @@ export function serializeAlbumsDoc(doc: AlbumsDoc): string {
 export function applyOps(doc: AlbumsDoc, ops: AlbumOp[]): AlbumsDoc {
   const albums = doc.albums.map((album) => ({ ...album, items: [...album.items] }));
   const byId = new Map(albums.map((album) => [album.id, album]));
+  let joined = [...(doc.joined ?? [])];
   let updatedAt = doc.updatedAt;
 
   for (const op of ops) {
     updatedAt = Math.max(updatedAt, op.at);
+    if (op.type === 'join') {
+      joined = [...joined.filter((j) => !(j.owner === op.share.owner && j.id === op.share.id)), op.share];
+      continue;
+    }
+    if (op.type === 'leave') {
+      joined = joined.filter((j) => !(j.owner === op.owner && j.id === op.shareId));
+      continue;
+    }
     const album = byId.get(op.id);
     switch (op.type) {
       case 'create': {
         if (album) break;
         const name = cleanAlbumName(op.name);
         if (!name) break;
-        const created: Album = { id: op.id, name, createdAt: op.at, updatedAt: op.at, cover: null, items: [] };
+        const created: Album = { id: op.id, name, createdAt: op.at, updatedAt: op.at, cover: null, items: [], share: null };
         albums.push(created);
         byId.set(created.id, created);
         break;
@@ -155,10 +188,20 @@ export function applyOps(doc: AlbumsDoc, ops: AlbumOp[]): AlbumsDoc {
         album.updatedAt = op.at;
         break;
       }
+      case 'share': {
+        if (!album) break;
+        album.share = { ...op.share };
+        break;
+      }
+      case 'unshare': {
+        if (!album) break;
+        album.share = null;
+        break;
+      }
     }
   }
 
-  return { version: ALBUMS_VERSION, updatedAt, albums };
+  return { version: ALBUMS_VERSION, updatedAt, albums, joined };
 }
 
 /** Capture time encoded in a canonical library path, for ordering album items. */
@@ -187,6 +230,12 @@ export function coverPathFor(album: Album): string | null {
     }
   }
   return best;
+}
+
+function parseShare(value: unknown): AlbumShare | null {
+  const v = value as Partial<AlbumShare> | null;
+  if (!v || typeof v.id !== 'string' || typeof v.key !== 'string' || typeof v.owner !== 'string') return null;
+  return { id: v.id, key: v.key, owner: v.owner, createdAt: finite(v.createdAt) };
 }
 
 function finite(value: unknown): number {

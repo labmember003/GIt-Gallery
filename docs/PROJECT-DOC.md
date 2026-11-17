@@ -166,6 +166,7 @@ Cloned at `reference/GitGalleryApp` — commit `b27971c`, last activity **2025-1
 - Upload with pre-compression, resumable queue, offline support
 - Immich-style timeline: date-grouped, scrubber, multi-select
 - Albums, stored in the repo as `gitgallery/albums.json` (lists of library paths), so they follow the user across devices and to the web
+- **Album sharing by link (view-only)** — anyone with the link views and saves full-quality photos and videos in the app or a browser, without GitHub. Encrypted copies live in a public `gitgallery-shares` repo in the owner's account; the key is only in the link (D15). Contributions from viewers are a later milestone.
 - Delete / restore
 - Light + dark theme matching Immich
 - Immich-style asset viewer (swipe, zoom, detail sheet)
@@ -174,7 +175,7 @@ Cloned at `reference/GitGalleryApp` — commit `b27971c`, last activity **2025-1
 
 ### ⚠️ Compromised / best-effort
 
-- **Sharing** — GitHub private repos have no granular share model; best we can do is repo collaborator access or generating a public link to a *copy*
+- **Sharing** — private repos can't be shared by link, so a shared album is an encrypted *copy* (D15). It costs the album's size again in the owner's GitHub, and the owner's phone does the encryption.
 - **Multi-user** — effectively single-user per repo
 - **Library size** — needs repo sharding to scale past a few GB
 
@@ -312,4 +313,5 @@ per-repo because the machine's global config is the work email.
 | D11 | **Browser UI in the existing Expo project** | `App.web.tsx` selects React DOM; share pure path/timeline logic and repository formats. Use a read-only media adapter and managed private-library setup behind a Node authentication gateway, with credentials in server-owned storage and HttpOnly browser sessions. Demo is opt-in; browser uploads use a narrow authenticated write API with chunking and mobile-compatible storage. Shared collections remain a separate milestone. |
 | D12 | **One Vercel Hobby project for the web frontend and API** | Use shared Upstash Redis sessions, pending approvals and rate counters so functions can restart or scale. Keep provider resources on free plans with paid auto-upgrades disabled. Git integration connects `labmember003/GIt-Gallery`, with production branch `main` and root `app`; keep GitHub App access limited to that repository. |
 | D13 | **Albums are a JSON manifest in the repo** (`gitgallery/albums.json`) | Membership is by library path without the `.ptr` suffix, which every device and the web already agree on. Edits are an operation log replayed onto the latest file at write time, so concurrent devices merge. One small file write per change; tree-entry albums would rewrite trees and need a commit per album edit for the same result. Device photos added before upload are kept as pending items and join once uploaded. |
+| D15 | **Shared albums are encrypted copies in a public `gitgallery-shares` repo; the key lives only in the link** | Link: `https://gitgallery-umber.vercel.app/s/<owner>/<id>#<key>` (fragment never reaches a server). Files: `shares/<id>/manifest.bin`, `p/<item>.<n>.bin` (preview), `o/<item>.<n>.bin` (original), XChaCha20-Poly1305 per 1 MiB chunk with object/index/last bound as associated data, 8 chunks per Git blob. Viewers read through raw.githubusercontent.com (cache-busted manifest) and decrypt on their device; no sign-in. The owner keeps the key in `albums.json`, so any of their devices republishes changes; each commit is built on a fresh snapshot and redone on a conflict; unreferenced files are deleted. Stop sharing deletes the copies with a root commit (force-push), dropping them from history. Encryption runs in JS (`@noble/ciphers`): on a starved emulator debug build ≈1 MB/s; a native cipher is the next step if real phones are slow. |
 | D14 | **Device Flow polling survives suspension** | iOS suspends the app while GitHub is open in the browser and Android pauses JS timers in the background, so a poll can fail or never fire. Network errors are retried until the code expires, each request has a 20 s cap, and returning to the foreground polls at once. Only GitHub's own answers (expired, denied, disabled) end sign-in. |

@@ -164,6 +164,8 @@ Tier 1 (photos, ~95% of files) lives in git, so it keeps the sorted tree, free d
 
 Albums live next to the library in `gitgallery/albums.json`, as lists of library paths. An album costs no extra storage, follows you to every phone you sign in to, and shows up in the web gallery. Edits are saved on the phone first and replayed on top of the latest file when they sync, so two phones editing at once merge instead of overwriting each other. Favourites stay on the device.
 
+**Share an album by link.** Anyone with the link can view and save its photos and videos in full quality, in the app or a browser, without a GitHub account. GitGallery encrypts copies on your phone and stores them in a public `gitgallery-shares` repository in your own GitHub; the key is only in the link, so the repository holds nothing readable. Photos you add later are shared too, and **Stop sharing** deletes the copies.
+
 ---
 
 ## The core challenge

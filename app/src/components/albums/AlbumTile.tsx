@@ -22,6 +22,8 @@ type Props = {
   selected?: boolean;
   /** Shown but not pickable, e.g. already in the album. */
   disabled?: boolean;
+  /** Feedback for a tap on a disabled tile, so the tap never looks ignored. */
+  onDisabledPress?: () => void;
   badge?: TileBadge;
   onPress?: () => void;
   onLongPress?: () => void;
@@ -48,14 +50,14 @@ function CloudImage({ path, entry, size }: { path: string; entry?: MetaEntry | n
   );
 }
 
-function AlbumTileImpl({ size, spacing, source, selectionMode, selected, disabled, badge, onPress, onLongPress, accessibilityLabel }: Props) {
+function AlbumTileImpl({ size, spacing, source, selectionMode, selected, disabled, onDisabledPress, badge, onPress, onLongPress, accessibilityLabel }: Props) {
   const theme = useTheme();
   const isVideo = source.kind === 'cloud' ? isVideoRepoPath(source.path) : source.isVideo;
   const inset = selected ? Math.round(size * 0.08) : 0;
 
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
+      onPress={disabled ? onDisabledPress : onPress}
       onLongPress={disabled ? undefined : onLongPress}
       delayLongPress={250}
       accessibilityRole="imagebutton"

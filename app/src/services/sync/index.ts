@@ -1097,6 +1097,20 @@ export function isAssetUploadedAsset(asset: MediaLibrary.Asset): boolean {
   return !!metaEntry || !!downloadedCopyEntry(asset);
 }
 
+/**
+ * Repo path of an uploaded device asset from what is already in memory, or
+ * null. Synchronous so a grid can check hundreds of tiles per render; call
+ * `getUploadIndex()` once first so the index is loaded.
+ */
+export function uploadedRepoPathSync(asset: MediaLibrary.Asset): string | null {
+  const fingerprints = fingerprintsFor(asset);
+  const fromIndex = [uploadIndexCache.get(asset.id), ...fingerprints.map((fp) => uploadIndexCache.get(fp))]
+    .find((entry) => entry?.uploaded && entry.repoPath?.startsWith('gitgallery/'));
+  if (fromIndex?.repoPath) return fromIndex.repoPath;
+  const meta = fingerprints.map((fp) => getMetaEntryFromCache(fp)).find(Boolean) || downloadedCopyEntry(asset);
+  return meta?.repoPath ?? null;
+}
+
 export async function hydrateRecentMeta(maxAgeHours = 24, force = false): Promise<void> {
   // The gallery's upload badges read downloaded copies too.
   await ensureDownloadedCopiesLoaded();

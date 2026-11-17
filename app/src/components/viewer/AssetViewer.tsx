@@ -60,6 +60,12 @@ type Props = {
    * remove the photo that was first tapped rather than the one on screen.
    */
   onIndexChange?: (index: number) => void;
+  /**
+   * A short message shown inside the viewer, e.g. "Saved to this device". The
+   * screen's own snackbar sits behind this full-screen modal, so feedback for
+   * viewer actions has to be drawn here or the tap looks ignored.
+   */
+  notice?: string | null;
 };
 
 const CHROME_BG = 'rgba(0,0,0,0.55)';
@@ -79,7 +85,7 @@ function VideoSurface({ uri, style }: { uri: string; style: { width: number; hei
   return <VideoView style={style} player={player} allowsFullscreen nativeControls contentFit="contain" />;
 }
 
-function AssetViewerImpl({ visible, items, initialIndex = 0, uri, width, height, subtitle, isVideo, actions, onClose, onIndexChange }: Props) {
+function AssetViewerImpl({ visible, items, initialIndex = 0, uri, width, height, subtitle, isVideo, actions, onClose, onIndexChange, notice }: Props) {
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
   const [chromeVisible, setChromeVisible] = React.useState(true);
@@ -273,6 +279,17 @@ function AssetViewerImpl({ visible, items, initialIndex = 0, uri, width, height,
               </View>
             ) : null}
           </>
+        ) : null}
+
+        {notice ? (
+          <View
+            pointerEvents="none"
+            style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + (actions.length > 0 && !effectiveIsVideo ? 96 : 32), alignItems: 'center' }}
+          >
+            <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: 'rgba(32,33,36,0.92)' }}>
+              <Text accessibilityLiveRegion="polite" style={{ color: '#fff', fontSize: 14 }}>{notice}</Text>
+            </View>
+          </View>
         ) : null}
       </View>
     </Modal>

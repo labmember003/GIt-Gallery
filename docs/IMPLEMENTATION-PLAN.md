@@ -623,6 +623,7 @@ Timeline grouping and headers · viewer (opaque black, true aspect ratio, swipe 
 |---|---|
 | 5.1 | **iOS validation** (if deferred from Phase 0) — build, sign, test on device |
 | 5.2 | ✅ Synced albums with Immich album UI (`gitgallery/albums.json`, 2026-11-13) |
+| 5.2a | ✅ View-only album sharing by link, app + web viewer (D15, 2026-11-17). Verified on Android, iOS (simulator) and web, with a Playwright regression test (`web-tests/shared-album.spec.ts`). Next: viewer contributions, native cipher if real-phone encryption is slow. |
 | 5.3 | Date-range filter / "On this day" (cheap — we already have dates in paths) |
 | 5.4 | Background sync reliability pass |
 | 5.5 | Multi-repo sharding UI (surfacing the Phase 1C model) |

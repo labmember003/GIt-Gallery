@@ -2402,6 +2402,37 @@ To show a neutral name instead, move the OAuth app into a GitHub organization (f
 
 ---
 
+## Select, already-added photos, Choose library, and album sharing by link — 2026-11-17
+
+> "[Image #5] Why clicking on "select" default selects first image, [Image #6] Why already uploaded images and not selected by default when im adding images? I'm able to select them again, [Image #7] (pasted: In this page there is a option of created repo named "gitgallery-photos" when already one was created by our app only....why..wtf? And why there isn't a search option on this existing repos?)"
+
+> "also Can we implement album sharing (like google photos), like in google photos we share album link, it opens in app (photos are still owned by album owner), first view only for other users, firstly other users cannot add their photos in that album, later on that functionality also (exactly like google photos)"
+
+Answers to the follow-up questions: anyone with the link can view; full quality, downloadable.
+
+**The three fixes** (verified on the Android emulator):
+- **Select** in an album starts with nothing selected ("Select items").
+- **Add photos:** phone photos already in the album are faded with a check and can't be picked again; tapping one says "Already in this album".
+- **Choose library:** existing GitGallery libraries are listed with Open, the one in use is marked, "Create another library" is collapsed and suggests a free name (`gitgallery-photos-2`), other repositories have a search box. Names no longer cut off here or in Settings; the screen uses the app's header from Settings too.
+
+**Album sharing (view-only), D15:**
+- Share → Create link encrypts copies on the phone (XChaCha20-Poly1305) into a public `gitgallery-shares` repo in the owner's GitHub. The key is only in the link `https://gitgallery-umber.vercel.app/s/<owner>/<id>#<key>`.
+- The link opens the app (Android App Links / iOS universal links, or the website's "Open in the app") or the website. Viewers need no account, see the album grouped by day, and can save full-quality photos and videos. Signed-in viewers can "Add to my albums" ("Shared with you" on the Albums tab, long-press to remove).
+- The owner's album shows "Shared by link". Adding or removing photos, renaming or changing the cover republishes automatically, from any of the owner's devices. Stop sharing (or deleting the album) deletes the copies and rewrites that repo's history.
+- Verified: photos and a 98 MB 4K video shared, decrypted byte-identical, and the video plays from the link; add/remove/stop/delete on GitHub; viewer join/remove in a second library; video plays from a link; website viewer at phone width, light and dark, with the production CSP.
+
+**Bugs found and fixed while testing:** GitHub branch-head reads were served from React Native's HTTP cache (a second commit within a minute could fail as "not a fast forward"; affected photo sync too); "Saved" messages from viewer actions were hidden behind the viewer; previews of small images were upscaled; the web repeated the year in month headings; encryption progress only counted whole items (now bytes, with native base64 and pipelined uploads: a 94 MB video went from ~10 min to ~3 min on the overloaded emulator).
+
+**iOS (simulator):** create link (5 photos in about 35 s), iOS share sheet, Copy link, open the link in the app, viewer, Save to phone, Stop sharing. The share dialog's actions were rearranged so they never wrap on narrow iPhones, and the full link is shown.
+
+**Automated:** `web-tests/shared-album.spec.ts` builds an encrypted share with the real format code and checks the website viewer offline (decrypt, viewer, wrong key, stopped share, phone width); it found and fixed a bug where a link differing only after `#` didn't reload the album. All 28 Playwright tests, 19 native unit tests, 14 web unit tests and 49 server tests pass.
+
+`assetlinks.json` lists the Play app-signing key (from Play Console → App integrity), the upload key and the debug key, so Play installs, sideloaded release builds and debug builds all open links in the app. Committed and pushed to `main` at the user's request, which deploys the website.
+
+**For the user:** the App Store encryption answer (`usesNonExemptEncryption`) before the next iOS submission; Play Console shows a "Declare your trader status by February 2027" banner on the Falcon Tech Lab account.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -2430,4 +2461,5 @@ To show a neutral name instead, move the OAuth app into a GitHub organization (f
 | Google Play | ✅ **1.1.0 live; 1.2.0 (3) sent for review 13 Nov 2026, with R8 shrinking and obfuscation on (install 18.5 MB).** 1.1.0 was submitted 10 Nov 2026. **GitGallery: Photo Backup (`com.falcon.gitgallery`; `com.gitgallery.app` is taken on Play) on the Falcon Tech Lab account.** It uses a new upload key (Play App Signing holds the app key), with the same alias, names and passwords as Droply's, at `~/Downloads/GitGallery`. Gradle reads it from the gitignored `android/keystore.properties`. The store listing is from the App Store copy. Policy declarations are the user's |
 | Albums | ✅ **Stored in the repo as `gitgallery/albums.json`** (library paths without `.ptr`; local operation log replayed on the latest file, so devices merge). Albums open to their own screen with Add photos; phone photos are uploaded first and then join. Favourites stay on the device. The web shows phone albums; its own album edits stay in the browser |
 | Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (labmember003); moving the app to an organization changes that and is the user's step |
+| Album sharing | ✅ **View-only links, like Google Photos** (D15): encrypted copies in a public `gitgallery-shares` repo in the owner's GitHub, key only in the link; viewers need no account and can save full quality; opens in the app (App Links / universal links) or the website. Contributions are the next milestone |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

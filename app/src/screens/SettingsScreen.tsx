@@ -545,8 +545,9 @@ export default function SettingsScreen({ navigation }: any) {
       <List.Section>
         <List.Subheader>Repo & Sync</List.Subheader>
         <List.Item
-          title={currentRepo ? `${currentRepo.owner}/${currentRepo.name}` : 'Not selected'}
-          description={`Branch: ${currentRepo?.branch ?? '-'}`}
+          title={currentRepo ? currentRepo.name : 'No library selected'}
+          titleNumberOfLines={2}
+          description={currentRepo ? `${currentRepo.owner} · branch ${currentRepo.branch || 'main'}` : 'Choose where your photos are kept'}
           right={() => <Button onPress={changeRepo}>Change</Button>}
           left={(props) => <List.Icon {...props} icon="source-repository" />}
         />

@@ -5,7 +5,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/appState';
 import {
-  deleteAlbum,
   removeFromAlbum,
   renameAlbum,
   retryPendingUploads,
@@ -25,6 +24,8 @@ import { TimelineSectionHeader } from '@/components/timeline/TimelineSectionHead
 import { AssetViewer, type ViewerAction, type ViewerItem } from '@/components/viewer/AssetViewer';
 import { AlbumTile } from '@/components/albums/AlbumTile';
 import { AlbumNameDialog } from '@/components/albums/AlbumNameDialog';
+import { ShareAlbumDialog } from '@/components/albums/ShareAlbumDialog';
+import { deleteAlbumEverywhere, useShareStore } from '@/services/share';
 
 const COLUMNS = 3;
 const SPACING = 1;
@@ -104,16 +105,22 @@ export default function AlbumScreen({ navigation, route }: any) {
   const [entries, setEntries] = useState<Record<string, MetaEntry>>({});
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** Select was tapped: tiles show checkboxes even before anything is picked. */
+  const [selecting, setSelecting] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [renameVisible, setRenameVisible] = useState(false);
   const [deleteVisible, setDeleteVisible] = useState(false);
+  const [shareVisible, setShareVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const shareStatus = useShareStore((s) => s.status[albumId]);
   const [toast, setToast] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [originals, setOriginals] = useState<Record<string, string>>({});
   const [videoFiles, setVideoFiles] = useState<Record<string, string>>({});
   const [titleInHeader, setTitleInHeader] = useState(false);
   const [syncProgress, setSyncProgress] = useState(() => getSyncStatus());
-  const selectionMode = selected.size > 0;
+  const selectionMode = selecting || selected.size > 0;
 
   useEffect(() => subscribeSyncStatus(() => setSyncProgress({ ...getSyncStatus() })), []);
 
@@ -164,23 +171,26 @@ export default function AlbumScreen({ navigation, route }: any) {
     }
   }, [route?.params?.justCreated, navigation, openPicker]);
 
-  const clearSelection = useCallback(() => setSelected(new Set()), []);
+  const clearSelection = useCallback(() => {
+    setSelected(new Set());
+    setSelecting(false);
+  }, []);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (selected.size > 0) {
+      if (selecting || selected.size > 0) {
         clearSelection();
         return true;
       }
       return false;
     });
     return () => sub.remove();
-  }, [selected.size, clearSelection]);
+  }, [selecting, selected.size, clearSelection]);
 
   useLayoutEffect(() => {
     if (selectionMode) {
       navigation.setOptions({
-        headerTitle: `${selected.size} selected`,
+        headerTitle: selected.size > 0 ? `${selected.size} selected` : 'Select items',
         headerLeft: () => <IconButton icon="close" iconColor={theme.colors.onSurface} accessibilityLabel="Cancel selection" onPress={clearSelection} />,
         headerRight: () => (
           <IconButton
@@ -205,6 +215,7 @@ export default function AlbumScreen({ navigation, route }: any) {
             anchor={<IconButton icon="dots-vertical" iconColor={theme.colors.onSurfaceVariant} accessibilityLabel="Album options" onPress={() => setMenuVisible(true)} />}
             contentStyle={{ borderRadius: 16 }}
           >
+            <Menu.Item leadingIcon="share-variant-outline" title="Share" onPress={() => { setMenuVisible(false); setShareVisible(true); }} />
             <Menu.Item leadingIcon="pencil-outline" title="Rename" onPress={() => { setMenuVisible(false); setRenameVisible(true); }} />
             <Menu.Item leadingIcon="refresh" title="Sync now" onPress={() => { setMenuVisible(false); void syncAlbums(); }} />
             <Menu.Item leadingIcon="delete-outline" title="Delete album" titleStyle={{ color: theme.colors.error }} onPress={() => { setMenuVisible(false); setDeleteVisible(true); }} />
@@ -301,10 +312,11 @@ export default function AlbumScreen({ navigation, route }: any) {
         label: 'Download',
         onPress: async () => {
           try {
+            setToast('Saving…');
             await downloadRepoFiles([current.entry?.repoPath ?? current.path]);
             setToast('Saved to this device');
           } catch (error: any) {
-            setToast(`Download failed: ${error?.message ?? 'unknown error'}`);
+            setToast(/Network request failed|timed out/i.test(String(error?.message)) ? "Couldn't download. Check your connection and try again." : "Couldn't save this to the device. Try again.");
           }
         },
       });
@@ -330,7 +342,7 @@ export default function AlbumScreen({ navigation, route }: any) {
     const paths = selectedItems.filter((i) => i.kind === 'cloud').map((i) => (i as any).path as string);
     const assetIds = selectedItems.filter((i) => i.kind === 'pending').map((i) => (i as any).pending.assetId as string);
     removeFromAlbum(albumId, paths, assetIds);
-    setToast(`Removed ${selectedItems.length} from album`);
+    setToast(`Removed ${selectedItems.length} ${selectedItems.length === 1 ? 'item' : 'items'} from the album. ${selectedItems.length === 1 ? 'It is' : 'They are'} still in your library.`);
     clearSelection();
   }, [selectedItems, albumId, clearSelection]);
   const downloadSelected = useCallback(async () => {
@@ -415,10 +427,19 @@ export default function AlbumScreen({ navigation, route }: any) {
       <Text variant="bodyMedium" style={{ marginTop: 4, color: theme.colors.onSurfaceVariant }}>
         {[rangeLabel, `${count} ${count === 1 ? 'item' : 'items'}`].filter(Boolean).join(' · ')}
       </Text>
+      {album.share ? (
+        <Pressable onPress={() => setShareVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }} accessibilityRole="button" accessibilityLabel="Shared by link. Manage the link.">
+          <MaterialCommunityIcons name="link-variant" size={16} color={theme.colors.primary} />
+          <Text variant="bodySmall" style={{ marginLeft: 6, color: theme.colors.primary }}>
+            {shareStatus?.phase === 'working' ? shareStatus.label : shareStatus?.phase === 'error' ? 'Sharing needs attention' : 'Shared by link'}
+          </Text>
+        </Pressable>
+      ) : null}
       {count > 0 ? (
         <View style={{ flexDirection: 'row', marginTop: 16 }}>
           <ActionChip icon="image-plus" label="Add photos" onPress={openPicker} />
-          <ActionChip icon="checkbox-multiple-marked-outline" label="Select" onPress={() => flat[0] && setSelected(new Set([flat[0].id]))} />
+          <ActionChip icon="checkbox-multiple-marked-outline" label="Select" onPress={() => setSelecting(true)} />
+          <ActionChip icon="share-variant" label="Share" onPress={() => setShareVisible(true)} />
         </View>
       ) : null}
       {uploadLabel ? (
@@ -486,7 +507,7 @@ export default function AlbumScreen({ navigation, route }: any) {
         windowSize={9}
       />
 
-      {selectionMode ? (
+      {selected.size > 0 ? (
         <View
           style={{
             position: 'absolute',
@@ -527,11 +548,14 @@ export default function AlbumScreen({ navigation, route }: any) {
         initialIndex={viewerIndex ?? 0}
         actions={viewerActions}
         onClose={closeViewer}
+        notice={toast}
         onIndexChange={(index) => {
           setViewerIndex(index);
           void loadForViewer(index);
         }}
       />
+
+      <ShareAlbumDialog visible={shareVisible} album={album} onDismiss={() => setShareVisible(false)} onToast={setToast} />
 
       <AlbumNameDialog
         visible={renameVisible}
@@ -553,18 +577,30 @@ export default function AlbumScreen({ navigation, route }: any) {
           <Dialog.Content>
             <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
               Only the album is deleted. Its photos and videos stay in your library and on GitHub.
+              {album.share ? ' Its share link stops working and the shared copies are removed.' : ''}
             </Text>
+            {deleteError ? <Text variant="bodySmall" style={{ marginTop: 12, color: theme.colors.error }}>{deleteError}</Text> : null}
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setDeleteVisible(false)}>Cancel</Button>
+            <Button onPress={() => { setDeleteVisible(false); setDeleteError(null); }}>Cancel</Button>
             <Button
               mode="contained"
               buttonColor={theme.colors.error}
               textColor={theme.colors.onError}
               style={{ marginLeft: 8, paddingHorizontal: 8 }}
-              onPress={() => {
-                setDeleteVisible(false);
-                deleteAlbum(album.id);
+              loading={deleting}
+              disabled={deleting}
+              onPress={async () => {
+                setDeleting(true);
+                setDeleteError(null);
+                try {
+                  await deleteAlbumEverywhere(album.id);
+                  setDeleteVisible(false);
+                } catch {
+                  setDeleteError("Couldn't remove the shared copy, so the album was kept. Check your connection and try again.");
+                } finally {
+                  setDeleting(false);
+                }
               }}
             >
               Delete
@@ -577,7 +613,7 @@ export default function AlbumScreen({ navigation, route }: any) {
         visible={!!toast}
         onDismiss={() => setToast(null)}
         duration={2600}
-        style={{ marginHorizontal: 16, marginBottom: selectionMode ? 104 : 16, borderRadius: 16 }}
+        style={{ marginHorizontal: 16, marginBottom: selected.size > 0 ? 104 : 16, borderRadius: 16 }}
       >
         {toast ?? ''}
       </Snackbar>

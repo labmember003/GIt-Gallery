@@ -4,7 +4,8 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { MetaEntry, RepoInfo } from './types';
 import { resolveBranch } from './utils';
 import { downloadFile, downloadRepoFileToPath } from './githubClient';
-import { fetchTier2ToFile, isStubPath, isVideoRepoPath, originalPathForStub, parseStub, stubPathFor } from './tiering';
+import { fetchTier2ToFile, isStubPath, isVideoRepoPath, originalPathForStub, parseStub, previewResize, stubPathFor } from './tiering';
+import { parseCanonicalPath } from './pathMetadata';
 
 const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
 if (!baseDir) {
@@ -27,6 +28,11 @@ const entryLocks = new Map<string, Promise<void>>();
 const warmedRepos = new Set<string>();
 
 export async function ensurePreviewUri(entry: MetaEntry, repo: RepoInfo): Promise<string> {
+  return toImageUri(await ensurePreviewFile(entry, repo));
+}
+
+/** Like `ensurePreviewUri`, but always a `file://` path (Android's content URIs can't be read back). */
+export async function ensurePreviewFile(entry: MetaEntry, repo: RepoInfo): Promise<string> {
   return withEntry(entry, repo, async (ctx) => {
     const { manifest } = ctx;
     const existing = manifest.preview?.file;
@@ -35,7 +41,7 @@ export async function ensurePreviewUri(entry: MetaEntry, repo: RepoInfo): Promis
       if (!manifest.lastAccessed || now - manifest.lastAccessed > PREVIEW_TOUCH_INTERVAL) {
         ctx.touchAccess(now);
       }
-      return await toImageUri(ctx.filePath(existing));
+      return ctx.filePath(existing);
     }
 
     const preview = await buildPreview(ctx.dir, entry, repo);
@@ -45,7 +51,7 @@ export async function ensurePreviewUri(entry: MetaEntry, repo: RepoInfo): Promis
       ctx.clearOriginal();
     }
 
-    return await toImageUri(ctx.filePath(preview.file));
+    return ctx.filePath(preview.file);
   });
 }
 
@@ -354,13 +360,17 @@ async function buildPreview(dir: string, entry: MetaEntry, repo: RepoInfo): Prom
   let tempOriginalExt: string | null = null;
   let originalFetch: Base64Result | null = null;
   try {
-    if (entry.repoPath) {
+    // A video can't be resized into a still, so don't download the whole file
+    // only to fail: go straight to the poster uploaded with it.
+    const videoWithPoster = !!entry.previewRepoPath && isVideoRepoPath(entry.repoPath);
+    if (entry.repoPath && !videoWithPoster) {
       try {
         originalFetch = await fetchBase64([entry.repoPath], repo, entry.previewRepoPath ? [entry.previewRepoPath] : []);
         tempOriginalExt = guessExtension(originalFetch.usedPath) ?? 'bin';
         tempOriginalPath = joinPath(dir, `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}.${tempOriginalExt}`);
         await writeBase64(tempOriginalPath, originalFetch.content);
-        const manip = await manipulateAsync(tempOriginalPath, [{ resize: { width: PREVIEW_WIDTH } }], { compress: PREVIEW_COMPRESS, format: SaveFormat.JPEG });
+        const knownWidth = entry.repoPath ? parseCanonicalPath(entry.repoPath).width : null;
+        const manip = await manipulateAsync(tempOriginalPath, await previewResize(tempOriginalPath, knownWidth), { compress: PREVIEW_COMPRESS, format: SaveFormat.JPEG });
         const previewFile = 'preview.jpg';
         const previewPath = joinPath(dir, previewFile);
         await FileSystem.deleteAsync(previewPath, { idempotent: true }).catch(() => {});

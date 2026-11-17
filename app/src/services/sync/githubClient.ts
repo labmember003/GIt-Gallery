@@ -52,6 +52,14 @@ export async function fetchWithTimeout(input: any, init: any = {}): Promise<Resp
   }
 }
 
+/**
+ * For reads that must be current, such as a branch head before a commit.
+ * React Native's HTTP stack (OkHttp's cache on Android, NSURLCache on iOS)
+ * honours GitHub's `max-age=60`, so a second commit within a minute would
+ * otherwise build on a stale head and be rejected as "not a fast forward".
+ */
+export const NO_CACHE = { 'cache-control': 'no-cache' } as const;
+
 export function getRepoInfo(): RepoInfo {
   const repo = useAppStore.getState().currentRepo;
   if (!repo) {

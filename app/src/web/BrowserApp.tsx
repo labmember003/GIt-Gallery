@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Gallery from './WebApp';
 import { GitHubSource } from './github';
 import { Icon } from './Icon';
@@ -8,6 +8,8 @@ import { LibrarySetup } from './LibrarySetup';
 import { SignIn } from './SignIn';
 import { sessionFetch, sessionRequest, type WebSession } from './session';
 import type { Library, MediaSource } from './types';
+import { SharedAlbum } from './SharedAlbum';
+import { parseShareUrl } from '../services/share/format';
 import './styles.css';
 import './auth.css';
 
@@ -20,7 +22,26 @@ function setDemoUrl(value: boolean) {
 function savedTheme() { try { return localStorage.getItem('gitgallery.web.theme') === 'dark' ? 'dark' : 'light'; } catch { return 'light'; } }
 function Loading({ label }: { label: string }) { return <div className="auth-loading"><span className="brand-mark"><Icon name="photos" size={28} /></span><h1>GitGallery</h1><p role="status"><span className="spinner" />{label}</p></div>; }
 
+/** `/s/<owner>/<id>#<key>` is a shared album: no sign-in, nothing else loads. */
 export default function BrowserApp() {
+  if (typeof location !== 'undefined' && location.pathname.startsWith('/s/')) return <SharedRoute />;
+  return <LibraryApp />;
+}
+
+/** A pasted link that differs only after `#` doesn't reload the page, so follow the hash. */
+function SharedRoute() {
+  const [href, setHref] = useState(() => location.href);
+  useEffect(() => {
+    const update = () => setHref(location.href);
+    window.addEventListener('hashchange', update);
+    window.addEventListener('popstate', update);
+    return () => { window.removeEventListener('hashchange', update); window.removeEventListener('popstate', update); };
+  }, []);
+  const shareRef = useMemo(() => parseShareUrl(href), [href]);
+  return <SharedAlbum key={href} shareRef={shareRef} />;
+}
+
+function LibraryApp() {
   const [session, setSession] = useState<WebSession | null>(null);
   const [demo, setDemo] = useState(currentDemo);
   const [opened, setOpened] = useState<OpenLibrary | null>(null);

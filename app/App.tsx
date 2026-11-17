@@ -4,12 +4,14 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { useColorScheme } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AppNavigator from './src/navigation/AppNavigator';
+import { navigationRef, useShareLinks } from './src/navigation/shareLinks';
 import { useAppStore } from '@/store/appState';
 import { immichDarkTheme, immichLightTheme } from '@/theme/immichTheme';
 
 export default function App() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  useShareLinks();
 
   const themePref = useAppStore((s) => s.theme);
   const effectiveDark = themePref === 'system' ? isDark : themePref === 'dark';
@@ -32,7 +34,7 @@ export default function App() {
 
   return (
     <PaperProvider theme={paperTheme}>
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
         <StatusBar style={effectiveDark ? 'light' : 'dark'} />
         <AppNavigator />
       </NavigationContainer>

@@ -26,10 +26,12 @@ import {
   serializeAlbumsDoc,
   type Album,
   type AlbumOp,
+  type AlbumShare,
   type AlbumsDoc,
+  type JoinedShare,
 } from './model';
 
-export type { Album } from './model';
+export type { Album, AlbumShare, JoinedShare } from './model';
 export { coverPathFor, captureTimeFromPath, isAlbumNameTaken, normalizeAlbumPath } from './model';
 
 /**
@@ -100,6 +102,8 @@ type AlbumsState = Persisted & {
   repoKey: string | null;
   /** `doc` with unsynced `ops` applied: what every screen renders. */
   albums: Album[];
+  /** Other people's shared albums this user kept. */
+  joined: JoinedShare[];
   loaded: boolean;
   syncing: boolean;
   /** Last sync failure, phrased for people. Cleared by the next success. */
@@ -113,6 +117,7 @@ export const useAlbumStore = create<AlbumsState>(() => ({
   ...initial(),
   repoKey: null,
   albums: [],
+  joined: [],
   loaded: false,
   syncing: false,
   lastError: null,
@@ -122,7 +127,11 @@ export const useAlbumStore = create<AlbumsState>(() => ({
 function update(partial: Partial<AlbumsState>, persistNow = true): void {
   useAlbumStore.setState((state) => {
     const next = { ...state, ...partial };
-    if ('doc' in partial || 'ops' in partial) next.albums = applyOps(next.doc, next.ops).albums;
+    if ('doc' in partial || 'ops' in partial) {
+      const view = applyOps(next.doc, next.ops);
+      next.albums = view.albums;
+      next.joined = view.joined ?? [];
+    }
     return next;
   });
   if (persistNow) void persist();
@@ -246,6 +255,10 @@ function commitMessage(ops: AlbumOp[], albums: Album[]): string {
       case 'add': return `Add ${op.paths.length} item${op.paths.length === 1 ? '' : 's'} to "${nameOf(op.id)}"`;
       case 'remove': return `Remove ${op.paths.length} item${op.paths.length === 1 ? '' : 's'} from "${nameOf(op.id)}"`;
       case 'cover': return `Change the cover of "${nameOf(op.id)}"`;
+      case 'share': return `Share "${nameOf(op.id)}" by link`;
+      case 'unshare': return `Stop sharing "${nameOf(op.id)}"`;
+      case 'join': return `Keep shared album "${op.share.title}"`;
+      case 'leave': return 'Remove a shared album';
     }
   }
   return `Update albums (${ops.length} changes)`;
@@ -378,6 +391,25 @@ export function removeFromAlbum(id: string, paths: string[], pendingAssetIds: st
 
 export function setAlbumCover(id: string, path: string | null): void {
   pushOp({ type: 'cover', id, path, at: Date.now() });
+}
+
+/** Record (or clear) the share link for one of this user's albums. */
+export function setAlbumShare(id: string, share: AlbumShare | null): void {
+  pushOp(share ? { type: 'share', id, share, at: Date.now() } : { type: 'unshare', id, at: Date.now() });
+}
+
+/** Keep someone else's shared album in this user's Albums tab. */
+export function joinSharedAlbum(share: JoinedShare): void {
+  pushOp({ type: 'join', share, at: Date.now() });
+}
+
+export function leaveSharedAlbum(owner: string, shareId: string): void {
+  pushOp({ type: 'leave', owner, shareId, at: Date.now() });
+}
+
+/** Push pending edits now and wait, e.g. before reading a share back. */
+export function flushAlbums(): Promise<void> {
+  return syncAlbums();
 }
 
 /**
@@ -531,7 +563,7 @@ export async function loadAlbumsForRepo(repo: CurrentRepo | null): Promise<void>
   if (key === useAlbumStore.getState().repoKey && (useAlbumStore.getState().loaded || loadingKey === key)) return;
   loadingKey = key;
   if (!key) {
-    useAlbumStore.setState({ ...initial(), repoKey: null, albums: [], loaded: false, lastError: null });
+    useAlbumStore.setState({ ...initial(), repoKey: null, albums: [], joined: [], loaded: false, lastError: null });
     return;
   }
   const saved = await readPersisted(key);
@@ -540,6 +572,7 @@ export async function loadAlbumsForRepo(repo: CurrentRepo | null): Promise<void>
     ...saved,
     repoKey: key,
     albums: applyOps(saved.doc, saved.ops).albums,
+    joined: applyOps(saved.doc, saved.ops).joined ?? [],
     loaded: true,
     lastError: null,
   });

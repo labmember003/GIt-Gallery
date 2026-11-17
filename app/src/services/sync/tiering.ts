@@ -10,6 +10,7 @@
  * library, so the timeline, albums, dedup and Merkle-diff sync never need to
  * know which tier a file lives in.
  */
+import { Image } from 'react-native';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { extractVideoFrameBase64, isVideoAsset } from './videoFrame';
 import { downloadReleaseAsset, ensureRelease, releaseTagForDate, uploadReleaseAsset } from './releases';
@@ -126,6 +127,25 @@ export function releaseAssetName(repoPath: string, contentHash: string | null | 
 const PREVIEW_WIDTH = 1280;
 const PREVIEW_COMPRESS = 0.72;
 
+/**
+ * Resize step for a preview: shrink to PREVIEW_WIDTH, never enlarge. An
+ * unconditional resize turned a 256 px wide photo into a 1280 x 10240
+ * "preview", several times the size of the original.
+ */
+export async function previewResize(uri: string, knownWidth?: number | null): Promise<Array<{ resize: { width: number } }>> {
+  let width = knownWidth && knownWidth > 0 ? knownWidth : null;
+  if (!width) {
+    width = await new Promise<number | null>((resolve) => {
+      try {
+        Image.getSize(uri, (w) => resolve(w), () => resolve(null));
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+  return width && width <= PREVIEW_WIDTH ? [] : [{ resize: { width: PREVIEW_WIDTH } }];
+}
+
 /** `…/x.mp4.ptr` -> `…/x.mp4.preview.jpg` */
 export function previewPathFor(repoPath: string): string {
   return `${repoPath}.preview.jpg`;
@@ -154,7 +174,7 @@ export async function buildPreviewBase64(localUri: string, isVideo = false): Pro
     if (isVideo) return await extractVideoFrameBase64(localUri, PREVIEW_WIDTH, PREVIEW_COMPRESS);
     const result = await manipulateAsync(
       localUri,
-      [{ resize: { width: PREVIEW_WIDTH } }],
+      await previewResize(localUri),
       { compress: PREVIEW_COMPRESS, format: SaveFormat.JPEG, base64: true },
     );
     return (result as any)?.base64 ?? null;

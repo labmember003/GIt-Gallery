@@ -1,0 +1,16 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.falcon.gitgallery",
+      "sha256_cert_fingerprints": [
+        "B8:79:39:C4:AB:86:34:FC:9E:0B:68:34:C9:FA:69:FE:AD:FE:A8:F8:A3:97:74:F2:80:2D:35:20:FB:E8:D2:F5",
+        "4F:C6:2E:61:34:D4:7A:9E:4D:55:59:BC:9C:AC:6B:DE:07:76:CB:E0:AE:07:1E:6C:76:7A:05:C8:25:39:E2:B1",
+        "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+      ]
+    }
+  }
+]

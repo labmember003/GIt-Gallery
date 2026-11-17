@@ -1868,6 +1868,7 @@ export default function GalleryScreen({ route }: any) {
         actions={viewerActions}
         onClose={closeViewer}
         onIndexChange={handleViewerIndexChange}
+        notice={toastVisible ? toastText : null}
       />
       {(() => {
         const baseFabStyle = { position: 'absolute' as const, right: 16, bottom: 16 };

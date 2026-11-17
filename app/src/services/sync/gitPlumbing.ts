@@ -17,6 +17,7 @@
  * they reach this module — see `tiering.ts`.
  */
 import { getOctokit, getRepoInfo } from './githubClient';
+import { NO_CACHE } from './githubClient';
 import { resolveBranch } from './utils';
 import { RepoInfo } from './types';
 
@@ -89,7 +90,7 @@ export async function commitBatch(params: {
   const repoName = repo.name;
 
   // 1. Current branch head (and its tree) to build on top of.
-  const ref = await octokit.git.getRef({ owner, repo: repoName, ref: `heads/${branch}` });
+  const ref = await octokit.git.getRef({ owner, repo: repoName, ref: `heads/${branch}`, headers: NO_CACHE });
   const parentSha = ref.data.object.sha;
   const parentCommit = await octokit.git.getCommit({ owner, repo: repoName, commit_sha: parentSha });
   const baseTreeSha = parentCommit.data.tree.sha;
