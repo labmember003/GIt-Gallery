@@ -122,9 +122,34 @@ export function partFile(itemId: string, kind: 'p' | 'o', part: number): string 
   return `${kind}/${itemId}.${part}.bin`;
 }
 
-/** Public, CDN-served location of a stored file. */
-export function rawUrl(owner: string, path: string): string {
-  return `https://raw.githubusercontent.com/${owner}/${SHARE_REPO}/HEAD/${path}`;
+/**
+ * Public, CDN-served location of a stored file at a commit. Viewers pin the
+ * commit once per load (`resolveShareCommit`): raw.githubusercontent.com can
+ * keep resolving `HEAD` to an older commit for a few minutes, which would show
+ * a stopped share or miss newly added photos. A commit SHA is never stale, and
+ * every file then comes from the same commit.
+ */
+export function rawUrl(owner: string, path: string, commit = 'HEAD'): string {
+  return `https://raw.githubusercontent.com/${owner}/${SHARE_REPO}/${commit}/${path}`;
+}
+
+/**
+ * The share repo's current commit, from the public API (no sign-in; the
+ * `Accept` value keeps it a simple CORS request). Falls back to `HEAD` when the
+ * API is unreachable or rate-limited, so viewing never depends on it.
+ */
+export async function resolveShareCommit(owner: string, fetcher: typeof fetch = fetch): Promise<string> {
+  try {
+    const res = await fetcher(`https://api.github.com/repos/${owner}/${SHARE_REPO}/commits/HEAD`, {
+      headers: { Accept: 'application/vnd.github.sha' },
+      cache: 'no-store',
+    } as RequestInit);
+    if (!res.ok) return 'HEAD';
+    const sha = (await res.text()).trim();
+    return /^[0-9a-f]{40}$/.test(sha) ? sha : 'HEAD';
+  } catch {
+    return 'HEAD';
+  }
 }
 
 // ── Sealing ──────────────────────────────────────────────────────────────────

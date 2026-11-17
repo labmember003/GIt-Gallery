@@ -26,6 +26,7 @@ import {
   openManifest,
   partFile,
   rawUrl,
+  resolveShareCommit,
   recordLength,
   sealChunk,
   sealManifest,
@@ -578,17 +579,29 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
 }
 
 const manifests = new Map<string, ShareManifest>();
+/** Commit each open share was read at, so its files all come from that commit. */
+const commits = new Map<string, string>();
 
 export async function fetchSharedAlbum(ref: ShareRef): Promise<ShareManifest> {
+  const shareKey = `${ref.owner}/${ref.id}`;
+  // Signed-in viewers ask with their own token (5,000 requests an hour instead of 60).
+  const token = useAppStore.getState().authToken;
+  const authed: typeof fetch = (input, init) =>
+    fetch(input, { ...init, headers: { ...(init?.headers as Record<string, string>), Authorization: `Bearer ${token}` } });
+  const commit = await resolveShareCommit(ref.owner, token ? authed : fetch);
   let bytes: Uint8Array;
   try {
-    bytes = await fetchBytes(`${rawUrl(ref.owner, sharePath(ref.id, 'manifest.bin'))}?t=${Date.now()}`);
+    bytes = await fetchBytes(`${rawUrl(ref.owner, sharePath(ref.id, 'manifest.bin'), commit)}?t=${Date.now()}`);
   } catch (error: any) {
-    if (error?.status === 404) manifests.delete(`${ref.owner}/${ref.id}`);
+    if (error?.status === 404) {
+      manifests.delete(shareKey);
+      commits.delete(shareKey);
+    }
     throw error;
   }
   const manifest = openManifest(fromBase64Url(ref.key), bytes);
-  manifests.set(`${ref.owner}/${ref.id}`, manifest);
+  manifests.set(shareKey, manifest);
+  commits.set(shareKey, commit);
   return manifest;
 }
 
@@ -648,7 +661,7 @@ async function openToFile(ref: ShareRef, item: ShareItem, kind: 'p' | 'o', onPro
         // Native download, then the bytes through JSI: RN's fetch().arrayBuffer() is slow for 8 MB bodies.
         if (download.exists) download.delete();
         try {
-          await File.downloadFileAsync(rawUrl(ref.owner, sharePath(ref.id, partFile(item.id, kind, p))), download);
+          await File.downloadFileAsync(rawUrl(ref.owner, sharePath(ref.id, partFile(item.id, kind, p)), commits.get(`${ref.owner}/${ref.id}`)), download);
         } catch (error: any) {
           throw Object.assign(new Error('Could not download this item'), { status: /404/.test(String(error?.message)) ? 404 : undefined });
         }

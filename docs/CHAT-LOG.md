@@ -2427,7 +2427,7 @@ Answers to the follow-up questions: anyone with the link can view; full quality,
 
 **Automated:** `web-tests/shared-album.spec.ts` builds an encrypted share with the real format code and checks the website viewer offline (decrypt, viewer, wrong key, stopped share, phone width); it found and fixed a bug where a link differing only after `#` didn't reload the album. All 28 Playwright tests, 19 native unit tests, 14 web unit tests and 49 server tests pass.
 
-`assetlinks.json` lists the Play app-signing key (from Play Console → App integrity), the upload key and the debug key, so Play installs, sideloaded release builds and debug builds all open links in the app. Committed and pushed to `main` at the user's request, which deploys the website.
+`assetlinks.json` lists the Play app-signing key (from Play Console → App integrity), the upload key and the debug key, so Play installs, sideloaded release builds and debug builds all open links in the app. Committed and pushed to `main` at the user's request, which deploys the website. Live checks: Google's Digital Asset Links API lists all three fingerprints, Apple's CDN serves the association file, and a real link shared from iOS opened on the live site. That check found raw.githubusercontent.com still serving a stopped share at `HEAD` for a few minutes; viewers now pin the current commit through the API, covered by a new Playwright test, and the stopped link showed as gone on iOS at once.
 
 **For the user:** the App Store encryption answer (`usesNonExemptEncryption`) before the next iOS submission; Play Console shows a "Declare your trader status by February 2027" banner on the Falcon Tech Lab account.
 

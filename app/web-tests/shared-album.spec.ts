@@ -35,10 +35,18 @@ async function buildShare() {
   return { key: toBase64Url(key), files };
 }
 
-async function serveShare(page: Page, files: Map<string, Uint8Array>) {
+const COMMIT = 'c0ffee'.padEnd(40, '0');
+
+/** `stale` serves an older commit at `HEAD`, as raw.githubusercontent.com can for a few minutes. */
+async function serveShare(page: Page, files: Map<string, Uint8Array>, stale?: Map<string, Uint8Array>) {
+  await page.route('https://api.github.com/**', (route) => route.fulfill({
+    status: 200, body: COMMIT, headers: { 'access-control-allow-origin': '*', 'content-type': 'application/vnd.github.sha' },
+  }));
   await page.route('https://raw.githubusercontent.com/**', async (route) => {
-    const path = new URL(route.request().url()).pathname.replace(`/${OWNER}/gitgallery-shares/HEAD/`, '');
-    const body = files.get(path);
+    const url = new URL(route.request().url()).pathname;
+    const atHead = url.startsWith(`/${OWNER}/gitgallery-shares/HEAD/`);
+    const path = url.replace(`/${OWNER}/gitgallery-shares/${atHead ? 'HEAD' : COMMIT}/`, '');
+    const body = (atHead && stale ? stale : files).get(path);
     await route.fulfill(body
       ? { status: 200, body: Buffer.from(body), headers: { 'access-control-allow-origin': '*', 'content-type': 'application/octet-stream' } }
       : { status: 404, body: '404: Not Found', headers: { 'access-control-allow-origin': '*' } });
@@ -80,6 +88,13 @@ test('a share link opens without sign-in, decrypts in the browser, and explains 
   await page.goto(`/s/${OWNER}/${SHARE_ID}`);
   await expect(page.getByText('This link is incomplete')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('a stopped share is gone at once, even while the CDN still serves the old commit at HEAD', async ({ page }) => {
+  const share = await buildShare();
+  await serveShare(page, new Map(), share.files);
+  await page.goto(`/s/${OWNER}/${SHARE_ID}#${share.key}`);
+  await expect(page.getByRole('heading', { name: 'Album not available' })).toBeVisible();
 });
 
 test('the shared album fits a phone screen', async ({ page }) => {

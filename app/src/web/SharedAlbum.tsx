@@ -32,9 +32,9 @@ export function SharedAlbum({ shareRef }: { shareRef: ShareRef | null }) {
     let opened: SharedSource | null = null;
     setError(null);
     loadSharedManifest(shareRef)
-      .then((m) => {
+      .then(({ manifest: m, commit }) => {
         if (!live) return;
-        opened = new SharedSource(shareRef, m);
+        opened = new SharedSource(shareRef, m, commit);
         setManifest(m);
         setSource(opened);
         document.title = `${m.title} · GitGallery`;

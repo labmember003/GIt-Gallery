@@ -1,5 +1,5 @@
 import {
-  chunkCount, fromBase64Url, objectId, openBytes, openManifest, partFile, rawUrl, sharePath,
+  chunkCount, fromBase64Url, objectId, openBytes, openManifest, partFile, rawUrl, resolveShareCommit, sharePath,
   type ShareItem, type ShareManifest, type ShareRef,
 } from '../services/share/format';
 import type { MediaSource, WebAsset } from './types';
@@ -31,10 +31,12 @@ async function fetchBytes(url: string, fetcher: typeof fetch): Promise<Uint8Arra
   return new Uint8Array(await res.arrayBuffer());
 }
 
-export async function loadSharedManifest(ref: ShareRef, fetcher: typeof fetch = fetch): Promise<ShareManifest> {
-  const bytes = await fetchBytes(`${rawUrl(ref.owner, sharePath(ref.id, 'manifest.bin'))}?t=${Date.now()}`, fetcher);
+/** The album's manifest and the commit it was read at (see `resolveShareCommit`). */
+export async function loadSharedManifest(ref: ShareRef, fetcher: typeof fetch = fetch): Promise<{ manifest: ShareManifest; commit: string }> {
+  const commit = await resolveShareCommit(ref.owner, fetcher);
+  const bytes = await fetchBytes(`${rawUrl(ref.owner, sharePath(ref.id, 'manifest.bin'), commit)}?t=${Date.now()}`, fetcher);
   try {
-    return openManifest(fromBase64Url(ref.key), bytes);
+    return { manifest: openManifest(fromBase64Url(ref.key), bytes), commit };
   } catch {
     throw new Error('This link could not be opened. Check that you copied the whole link.');
   }
@@ -60,7 +62,7 @@ export class SharedSource implements MediaSource {
   private urls = new Map<string, Promise<string>>();
   private byId: Map<string, ShareItem>;
   private key: Uint8Array;
-  constructor(private ref: ShareRef, manifest: ShareManifest, private fetcher: typeof fetch = fetch) {
+  constructor(private ref: ShareRef, manifest: ShareManifest, private commit = 'HEAD', private fetcher: typeof fetch = fetch) {
     this.byId = new Map(manifest.items.map((item) => [item.id, item]));
     this.key = fromBase64Url(ref.key);
   }
@@ -82,7 +84,7 @@ export class SharedSource implements MediaSource {
   private async decrypt(item: ShareItem, kind: 'p' | 'o'): Promise<string> {
     const info = kind === 'p' ? item.preview : item.original;
     const parts: Uint8Array[] = [];
-    for (let p = 0; p < info.parts; p++) parts.push(await fetchBytes(rawUrl(this.ref.owner, sharePath(this.ref.id, partFile(item.id, kind, p))), this.fetcher));
+    for (let p = 0; p < info.parts; p++) parts.push(await fetchBytes(rawUrl(this.ref.owner, sharePath(this.ref.id, partFile(item.id, kind, p)), this.commit), this.fetcher));
     if (chunkCount(info.size) === 0) throw new Error('Empty file');
     const plain = openBytes(this.key, objectId(item.id, kind), info.size, parts);
     const type = kind === 'p' ? 'image/jpeg' : MIME[item.ext] ?? 'application/octet-stream';
