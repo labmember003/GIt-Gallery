@@ -13,10 +13,48 @@ type TokenResponse = {
   access_token?: string;
   token_type?: string;
   scope?: string;
+  /** Sent when the OAuth app issues expiring tokens. */
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
   error?: string;
   error_description?: string;
   interval?: number;
 };
+
+/**
+ * What GitHub hands back on sign-in.
+ *
+ * The gitgallery-app OAuth app issues expiring tokens (✅ docs.github.com,
+ * "Authorizing OAuth apps"; measured 2026-11-18): the access token lasts eight
+ * hours and comes with a refresh token that lasts six months from its last
+ * use. Keeping only the access token signed everyone out after eight hours.
+ * Long-lived tokens have no refresh token and no expiry, so both are optional.
+ */
+export type GitHubGrant = {
+  accessToken: string;
+  refreshToken: string | null;
+  /** Epoch ms when the access token stops working, if it expires. */
+  expiresAt: number | null;
+  refreshExpiresAt: number | null;
+};
+
+const seconds = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+
+function grantFrom(data: TokenResponse, at: number): GitHubGrant {
+  const expiresIn = seconds(data.expires_in);
+  const refreshExpiresIn = seconds(data.refresh_token_expires_in);
+  return {
+    accessToken: data.access_token as string,
+    refreshToken: typeof data.refresh_token === 'string' && data.refresh_token ? data.refresh_token : null,
+    expiresAt: expiresIn == null ? null : at + expiresIn * 1000,
+    refreshExpiresAt: refreshExpiresIn == null ? null : at + refreshExpiresIn * 1000,
+  };
+}
+
+/** GitHub refused the refresh token: only signing in again helps. */
+export class RefreshRejectedError extends Error {}
 
 export type DeviceFlowStart = DeviceCodeResponse;
 
@@ -120,7 +158,7 @@ function defaultSleep(ms: number, signal?: AbortSignal, wake?: () => Promise<voi
  * background (iOS suspends it as soon as the browser opens) is simply retried,
  * until the code itself expires. Only GitHub's own answers end the loop.
  */
-export async function pollForToken(deviceCode: string, options: PollOptions): Promise<string> {
+export async function pollForToken(deviceCode: string, options: PollOptions): Promise<GitHubGrant> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = options.now ?? Date.now;
   const sleep = options.sleep ?? defaultSleep;
@@ -161,7 +199,7 @@ export async function pollForToken(deviceCode: string, options: PollOptions): Pr
       clearTimeout(requestTimer);
     }
 
-    if (data.access_token) return data.access_token;
+    if (data.access_token) return grantFrom(data, now());
     switch (data.error) {
       case 'authorization_pending':
         continue;
@@ -187,4 +225,44 @@ export async function pollForToken(deviceCode: string, options: PollOptions): Pr
         continue;
     }
   }
+}
+
+/**
+ * Trade a refresh token for a new access and refresh token. Once used, the old
+ * pair stops working (docs.github.com), so callers must store the result before
+ * anything else can use the old one. Device Flow tokens need no client secret.
+ *
+ * Throws `RefreshRejectedError` when GitHub answers with an error (expired or
+ * revoked refresh token) and a plain Error when GitHub couldn't be reached, so
+ * a phone that is offline doesn't sign itself out.
+ */
+export async function refreshGrant(
+  refreshToken: string,
+  options: { fetchImpl?: FetchLike; now?: () => number; requestTimeoutMs?: number } = {},
+): Promise<GitHubGrant> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const now = options.now ?? Date.now;
+  const params = new URLSearchParams();
+  params.append('client_id', GITHUB_CLIENT_ID());
+  params.append('grant_type', 'refresh_token');
+  params.append('refresh_token', refreshToken);
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS);
+  let data: TokenResponse;
+  try {
+    const res = await fetchImpl('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: params.toString(),
+      signal: abort.signal,
+    });
+    data = (await res.json()) as TokenResponse;
+  } catch {
+    throw new Error('Could not reach GitHub to renew the sign-in');
+  } finally {
+    clearTimeout(timer);
+  }
+  if (data.access_token) return grantFrom(data, now());
+  if (typeof data.error === 'string' && data.error) throw new RefreshRejectedError(data.error_description || data.error);
+  throw new Error('GitHub sent an unexpected answer while renewing the sign-in');
 }

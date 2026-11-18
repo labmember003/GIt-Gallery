@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { getDevRepo, getDevToken } from '@/services/config';
+import type { GitHubGrant } from '@/services/auth';
 import { DEFAULT_PRESET, type CompressionPreset } from '@/services/sync/compression';
 
 export type CurrentRepo = {
@@ -9,6 +10,9 @@ export type CurrentRepo = {
   branch: string;
   lastSyncedSha?: string;
 };
+
+/** How to renew `authToken`; null for tokens that don't expire. See services/authSession. */
+export type AuthRefresh = Omit<GitHubGrant, 'accessToken'> & { refreshToken: string };
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type GallerySource = 'local' | 'cloud';
@@ -24,6 +28,7 @@ type AppState = {
    */
   hydrated: boolean;
   authToken: string | null;
+  authRefresh: AuthRefresh | null;
   currentRepo: CurrentRepo | null;
   autoSync: boolean;
   autoDeleteAfterSync: boolean;
@@ -50,7 +55,10 @@ type AppState = {
    * `gitgallery/albums.json` and clears this.
    */
   userAlbums: Record<string, string[]>;
+  /** A bare token (or null to sign out); forgets any refresh token. */
   setAuthToken: (token: string | null) => void;
+  /** A sign-in or a renewal from GitHub; resolves once it is saved. */
+  setAuthGrant: (grant: GitHubGrant) => Promise<void>;
   setCurrentRepo: (repo: CurrentRepo | null) => void;
   setAutoSync: (enabled: boolean) => void;
   setAutoDeleteAfterSync: (enabled: boolean) => void;
@@ -68,6 +76,7 @@ type AppState = {
 export const useAppStore = create<AppState>((set, get) => ({
   hydrated: false,
   authToken: null,
+  authRefresh: null,
   currentRepo: null,
   autoSync: false,
   autoDeleteAfterSync: false,
@@ -83,7 +92,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAuthToken: (token) => {
     if (token == null) SecureStore.deleteItemAsync('authToken').catch(() => {});
     else SecureStore.setItemAsync('authToken', JSON.stringify(token)).catch(() => {});
-    set({ authToken: token });
+    SecureStore.deleteItemAsync('authRefresh').catch(() => {});
+    set({ authToken: token, authRefresh: null });
+  },
+  setAuthGrant: async ({ accessToken, refreshToken, expiresAt, refreshExpiresAt }) => {
+    const authRefresh = refreshToken ? { refreshToken, expiresAt, refreshExpiresAt } : null;
+    set({ authToken: accessToken, authRefresh });
+    // GitHub voids the old pair once a refresh token is used, so a renewal
+    // must reach disk. Refresh token first: if the app dies in between, the
+    // stale access token fails with 401 and the saved refresh token renews it.
+    try {
+      if (authRefresh) await SecureStore.setItemAsync('authRefresh', JSON.stringify(authRefresh));
+      else await SecureStore.deleteItemAsync('authRefresh');
+      await SecureStore.setItemAsync('authToken', JSON.stringify(accessToken));
+    } catch (error: any) {
+      console.warn('[appState] could not save the GitHub sign-in', error?.message ?? error);
+    }
   },
   setCurrentRepo: (repo) => {
     if (repo == null) SecureStore.deleteItemAsync('currentRepo').catch(() => {});
@@ -159,7 +183,7 @@ async function readStored<T>(key: string): Promise<T | null> {
 
 (async () => {
   try {
-    const [token0, repo0, autoSync0, autoDelete0, ids0, theme0, albumNames0, selInit0, preset0, fav0, albums0] = await Promise.all([
+    const [token0, repo0, autoSync0, autoDelete0, ids0, theme0, albumNames0, selInit0, preset0, fav0, albums0, refresh0] = await Promise.all([
       readStored<string>('authToken'),
       readStored<CurrentRepo>('currentRepo'),
       readStored<boolean>('autoSync'),
@@ -171,6 +195,7 @@ async function readStored<T>(key: string): Promise<T | null> {
       readStored<CompressionPreset>('compressionPreset'),
       readStored<string[]>('favorites'),
       readStored<Record<string, string[]>>('userAlbums'),
+      readStored<AuthRefresh>('authRefresh'),
     ]);
     let token = token0;
     let repo = repo0;
@@ -202,7 +227,8 @@ async function readStored<T>(key: string): Promise<T | null> {
       selectionInitialized = true;
       try { await SecureStore.setItemAsync('selectionInitialized', JSON.stringify(true)); } catch {}
     }
-    useAppStore.setState({ hydrated: true, authToken: token, currentRepo: repo, autoSync, autoDeleteAfterSync, selectedAlbumIds, selectionInitialized, theme, gallerySource, albumNameCache, compressionPreset, favorites, userAlbums });
+    const authRefresh = token0 && refresh0?.refreshToken ? refresh0 : null;
+    useAppStore.setState({ hydrated: true, authToken: token, authRefresh, currentRepo: repo, autoSync, autoDeleteAfterSync, selectedAlbumIds, selectionInitialized, theme, gallerySource, albumNameCache, compressionPreset, favorites, userAlbums });
   } catch (error: any) {
     // A failed read must still unblock the UI, otherwise the splash never ends.
     console.warn('[appState] hydration failed', error?.message ?? error);

@@ -25,13 +25,13 @@ async function buildShare() {
     const bytes = new Uint8Array(await readFile(`public/demo/${name}.webp`));
     const id = `item${index}`;
     for (const kind of ['p', 'o'] as const) {
-      sealBytes(key, objectId(id, kind), bytes, rnd).forEach((part, p) => files.set(sharePath(SHARE_ID, partFile(id, kind, p)), part));
+      (await sealBytes(key, objectId(id, kind), bytes, rnd)).forEach((part, p) => files.set(sharePath(SHARE_ID, partFile(id, kind, p)), part));
     }
     items.push({ id, src: `src${index}`, kind: 'photo', w: 1600, h: 1067, takenAt: Date.UTC(2026, 0, 26 - index, 12), ext: 'webp',
       preview: { size: bytes.length, parts: 1 }, original: { size: bytes.length, parts: 1 } });
   }
-  const manifest: ShareManifest = { v: 1, title: 'Trip fixture', owner: OWNER, createdAt: 1, updatedAt: 2, cover: 'item0', items };
-  files.set(sharePath(SHARE_ID, 'manifest.bin'), sealManifest(key, manifest, rnd).bytes);
+  const manifest: ShareManifest = { v: 2, title: 'Trip fixture', owner: OWNER, createdAt: 1, updatedAt: 2, cover: 'item0', items };
+  files.set(sharePath(SHARE_ID, 'manifest.bin'), (await sealManifest(key, manifest, rnd)).bytes);
   return { key: toBase64Url(key), files };
 }
 

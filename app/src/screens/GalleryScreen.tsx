@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo, memo } from 'react';
+import { SignInAgainBanner } from '@/components/SignInAgainBanner';
 import { View, Image, FlatList, SectionList, Dimensions, TouchableOpacity, Modal, BackHandler, Platform, TouchableWithoutFeedback, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { buildTimelineSections, groupingKey, formatDuration } from '@/components/timeline/grouping';
@@ -59,7 +60,8 @@ function describeSyncError(raw?: string | null): string {
     return 'no internet connection';
   }
   if (/rate limit/i.test(text)) return 'GitHub rate limit reached, try again shortly';
-  if (/Bad credentials|\b401\b|\b403\b/i.test(text)) return 'GitHub rejected the token, check Settings';
+  if (/Bad credentials|\b401\b/i.test(text)) return 'GitHub signed you out. Tap Sign in again at the top';
+  if (/\b403\b/i.test(text)) return 'GitHub refused access to this library. Check it in Settings';
   if (/does not match|\b409\b|\b422\b/i.test(text)) return 'the library changed during sync, try again';
   return 'some items could not be uploaded';
 }
@@ -1770,6 +1772,7 @@ export default function GalleryScreen({ route }: any) {
 
   return (
     <View style={{ flex: 1 }}>
+      <SignInAgainBanner style={{ marginHorizontal: 8, marginTop: 8 }} />
       {/* Source selector + favourites filter */}
       <View style={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flex: 1 }}>

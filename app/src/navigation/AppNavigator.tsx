@@ -104,10 +104,12 @@ function OnboardingStack() {
   const Onboarding = createNativeStackNavigator();
   const headerOptions = useImmichHeaderOptions();
   return (
-    <Onboarding.Navigator screenOptions={headerOptions}>
+    // With a library still selected this is "sign in again": open on the code screen.
+    <Onboarding.Navigator screenOptions={headerOptions} initialRouteName={useAppStore.getState().currentRepo ? 'SignIn' : 'Welcome'}>
       <Onboarding.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
       <Onboarding.Screen name="SignIn" component={SignInScreen} options={{ title: '', headerBackTitle: 'Back' }} />
-      <Onboarding.Screen name="RepoSetup" component={RepoSetupScreen} options={{ title: 'Choose library' }} />
+      {/* Welcome has no title, so iOS would label this back button "Welcome". */}
+      <Onboarding.Screen name="RepoSetup" component={RepoSetupScreen} options={{ title: 'Choose library', headerBackTitle: 'Back' }} />
     </Onboarding.Navigator>
   );
 }

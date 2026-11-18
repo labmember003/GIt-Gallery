@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import { ActivityIndicator, Button, Dialog, HelperText, Portal, Searchbar, Text, TextInput, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Octokit } from '@octokit/rest';
 import { useAppStore } from '@/store/appState';
+import { createGitHubClient } from '@/services/sync/githubClient';
 
 /**
  * Pick or create the repository the library lives in.
@@ -44,7 +44,8 @@ function updatedLabel(iso?: string | null): string {
 }
 
 export default function RepoSetupScreen({ navigation }: any) {
-  const token = useAppStore((s) => s.authToken);
+  // A renewed token is the same sign-in; only signing in or out reloads.
+  const signedIn = useAppStore((s) => !!s.authToken);
   const setCurrentRepo = useAppStore((s) => s.setCurrentRepo);
   const current = useAppStore((s) => s.currentRepo);
   const theme = useTheme();
@@ -60,10 +61,11 @@ export default function RepoSetupScreen({ navigation }: any) {
   const [createError, setCreateError] = useState<string | null>(null);
   const [confirmRepo, setConfirmRepo] = useState<Repo | null>(null);
 
-  const octokit = useMemo(() => new Octokit({ auth: token || undefined, log: { debug() {}, info() {}, warn() {}, error() {} } }), [token]);
+  // Always sends the current token, renewing it like every other GitHub call.
+  const octokit = useMemo(() => createGitHubClient({ quiet: true }), []);
 
   const loadRepos = useCallback(async () => {
-    if (!token) return;
+    if (!signedIn) return;
     setLoading(true);
     setLoadError(null);
     try {
@@ -85,7 +87,7 @@ export default function RepoSetupScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
-  }, [octokit, token]);
+  }, [octokit, signedIn]);
 
   useEffect(() => {
     void loadRepos();
@@ -134,7 +136,7 @@ export default function RepoSetupScreen({ navigation }: any) {
 
   async function createRepo() {
     const name = newName.trim();
-    if (!token || !name || nameTaken) return;
+    if (!signedIn || !name || nameTaken) return;
     setCreating(true);
     setCreateError(null);
     try {

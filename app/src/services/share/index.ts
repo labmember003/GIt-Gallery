@@ -12,8 +12,11 @@ import { parseCanonicalPath } from '@/services/sync/pathMetadata';
 import { useAppStore } from '@/store/appState';
 import { entryForPath } from '@/services/albums/previews';
 import { deleteAlbum, flushAlbums, setAlbumShare, useAlbumStore, type Album, type AlbumShare } from '@/services/albums';
+import GitGalleryCrypto from '../../../modules/gitgallery-crypto';
+import { freshToken } from '@/services/authSession';
 import {
   CHUNK_SIZE,
+  NONCE_SIZE,
   PART_CHUNKS,
   SHARE_REPO,
   SHARE_REPO_DESCRIPTION,
@@ -27,6 +30,7 @@ import {
   partFile,
   rawUrl,
   resolveShareCommit,
+  setAead,
   recordLength,
   sealChunk,
   sealManifest,
@@ -42,6 +46,9 @@ export { parseShareUrl, shareUrl } from './format';
 export type { ShareItem, ShareManifest, ShareRef } from './format';
 
 const random = (n: number) => Crypto.getRandomBytes(n);
+
+// Hermes has no WebCrypto: seal with the operating system's AES-GCM.
+setAead({ seal: GitGalleryCrypto.aesGcmSeal, open: GitGalleryCrypto.aesGcmOpen });
 /** Items written per commit, so progress is durable and a failure costs little. */
 const ITEMS_PER_COMMIT = 4;
 
@@ -61,7 +68,7 @@ function setStatus(albumId: string, status: ShareStatus) {
 function describe(error: any): string {
   const text = String(error?.message ?? error ?? '');
   if (/Network request failed|network connection|offline|timed out/i.test(text)) return 'You are offline. The share will finish when you are back online.';
-  if (error?.status === 401) return 'GitHub sign-in expired. Sign out and back in from Settings.';
+  if (error?.status === 401) return 'GitHub signed you out. Tap Sign in again.';
   if (error?.status === 403 && /rate limit/i.test(text)) return 'GitHub rate limit reached. Try again in a few minutes.';
   if (/private/i.test(text) && /gitgallery-shares/.test(text)) return text;
   return 'Could not update the shared album. Try again.';
@@ -173,7 +180,7 @@ async function readSnapshot(owner: string, branch: string, shareId: string, key:
   const manifestSha = files.get(sharePath(shareId, 'manifest.bin'));
   if (manifestSha) {
     const blob = await octokit.git.getBlob({ owner, repo: SHARE_REPO, file_sha: manifestSha });
-    manifest = openManifest(key, new Uint8Array(Buffer.from((blob.data.content ?? '').replace(/\s+/g, ''), 'base64')));
+    manifest = await openManifest(key, new Uint8Array(Buffer.from((blob.data.content ?? '').replace(/\s+/g, ''), 'base64')));
   }
   return { head, tree, files, manifest };
 }
@@ -245,7 +252,7 @@ async function sealFileToBlobs(
       }
       const len = i < count - 1 ? CHUNK_SIZE : size - CHUNK_SIZE * (count - 1);
       const plain = len > 0 ? source.readBytes(len) : new Uint8Array(0);
-      out.writeBytes(sealChunk(key, random(24), id, i, i === count - 1, plain));
+      out.writeBytes(await sealChunk(key, random(NONCE_SIZE), id, i, i === count - 1, plain));
       inPart += 1;
       if (inPart === PART_CHUNKS || i === count - 1) {
         out.close();
@@ -440,7 +447,7 @@ async function syncPass(albumId: string): Promise<void> {
 
     const snap = await readSnapshot(login, branch, share.id, key);
     const now = Date.now();
-    const base: ShareManifest = snap.manifest ?? { v: 1, title: album.name, owner: login, createdAt: now, updatedAt: now, cover: null, items: [] };
+    const base: ShareManifest = snap.manifest ?? { v: 2, title: album.name, owner: login, createdAt: now, updatedAt: now, cover: null, items: [] };
     const seen = new Set<string>();
     let items = base.items.filter((i) => wanted.has(i.src) && !seen.has(i.src) && seen.add(i.src));
     const toAdd = album.items.filter((p) => !seen.has(srcByPath.get(p)!));
@@ -470,7 +477,7 @@ async function syncPass(albumId: string): Promise<void> {
     if (unchanged) return;
 
     const next: ShareManifest = { ...base, title: album.name, owner: login, updatedAt: Date.now(), cover, items };
-    changes.push({ path: manifestPath, sha: await createBlob(login, sealManifest(key, next, random).bytes) });
+    changes.push({ path: manifestPath, sha: await createBlob(login, (await sealManifest(key, next, random)).bytes) });
     const message = batch.length > 0 ? `Share ${done + batch.length} of ${total} items in ${share.id}` : `Update shared album ${share.id}`;
     await commitOnSnapshot(login, branch, snap, changes, message);
     for (const path of batch) prepared.delete(`${share.id}:${srcByPath.get(path)}`);
@@ -585,7 +592,7 @@ const commits = new Map<string, string>();
 export async function fetchSharedAlbum(ref: ShareRef): Promise<ShareManifest> {
   const shareKey = `${ref.owner}/${ref.id}`;
   // Signed-in viewers ask with their own token (5,000 requests an hour instead of 60).
-  const token = useAppStore.getState().authToken;
+  const token = await freshToken();
   const authed: typeof fetch = (input, init) =>
     fetch(input, { ...init, headers: { ...(init?.headers as Record<string, string>), Authorization: `Bearer ${token}` } });
   const commit = await resolveShareCommit(ref.owner, token ? authed : fetch);
@@ -599,7 +606,7 @@ export async function fetchSharedAlbum(ref: ShareRef): Promise<ShareManifest> {
     }
     throw error;
   }
-  const manifest = openManifest(fromBase64Url(ref.key), bytes);
+  const manifest = await openManifest(fromBase64Url(ref.key), bytes);
   manifests.set(shareKey, manifest);
   commits.set(shareKey, commit);
   return manifest;
@@ -670,7 +677,7 @@ async function openToFile(ref: ShareRef, item: ShareItem, kind: 'p' | 'o', onPro
         let read = 0;
         while (read < bytes.length) {
           const len = recordLength(info.size, index);
-          handle.writeBytes(openChunk(key, id, index, index === count - 1, bytes.subarray(read, read + len)));
+          handle.writeBytes(await openChunk(key, id, index, index === count - 1, bytes.subarray(read, read + len)));
           read += len;
           index++;
           onProgress?.(index / count);

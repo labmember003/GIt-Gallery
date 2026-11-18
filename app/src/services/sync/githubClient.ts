@@ -2,14 +2,12 @@ import { Octokit } from '@octokit/rest';
 import { Buffer } from 'buffer';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAppStore } from '@/store/appState';
+import { freshToken, markSignInEnded, withFreshToken } from '@/services/authSession';
 import { RepoInfo } from './types';
 import { resolveBranch } from './utils';
 import { clearEtagCache, clearInFlight, coalesce, conditionalRequest } from './requestCache';
 
-let cachedClient: { token: string | null; client: Octokit | null } = {
-  token: null,
-  client: null,
-};
+let cachedClient: Octokit | null = null;
 
 /**
  * Every API call gets a deadline. Without one, a stalled request held a sync at
@@ -72,38 +70,77 @@ export function getRepoInfo(): RepoInfo {
   };
 }
 
+export { useAuthHealth } from '@/services/authSession';
+
+/**
+ * Authenticate every request with a fresh token (see services/authSession).
+ * The client gets no `auth` option: Octokit's token hook would overwrite the
+ * header with the token it was created with.
+ */
+function authenticateFreshly(client: Octokit): void {
+  client.hook.wrap('request', async (request, options) => {
+    const token = await freshToken();
+    if (!token) throw new Error('Not authenticated with GitHub.');
+    options.headers.authorization = `token ${token}`;
+    try {
+      return await request(options);
+    } catch (error: any) {
+      if (error?.status !== 401) throw error;
+      const next = await freshToken({ rejected: token });
+      if (!next || next === token) {
+        markSignInEnded(token);
+        throw error;
+      }
+      options.headers.authorization = `token ${next}`;
+      try {
+        return await request(options);
+      } catch (retryError: any) {
+        if (retryError?.status === 401) markSignInEnded(next);
+        throw retryError;
+      }
+    }
+  });
+}
+
+/** An Octokit for the signed-in user. `quiet` drops all of Octokit's logging. */
+export function createGitHubClient(options: { quiet?: boolean } = {}): Octokit {
+  const client = new Octokit({
+    request: { fetch: fetchWithTimeout },
+    log: options.quiet ? { debug() {}, info() {}, warn() {}, error() {} } : octokitLog,
+  });
+  authenticateFreshly(client);
+  return client;
+}
+
+/**
+ * Octokit logs every non-2xx as console.error. A large share of ours are
+ * *expected*: 404s from "does this file exist yet?" probes before a create,
+ * and 304s from the conditional branch-head check (`hasRemoteChanged`).
+ * In dev those pop LogBox over the app — over the viewer's action bar — and
+ * bury genuine failures in noise. Drop them and let everything else through.
+ */
+const octokitLog = {
+  debug: () => {},
+  info: () => {},
+  warn: (message: string) => {
+    if (/ - (304|404) /.test(message)) return;
+    console.warn(message);
+  },
+  error: (message: string) => {
+    if (/ - (304|404) /.test(message)) return;
+    // A 401 is renewed, or shown on screen by the "Sign in again" banner.
+    if (/ - 401 /.test(message)) return console.warn(message);
+    console.error(message);
+  },
+};
+
 export function getOctokit(): Octokit {
-  const token = useAppStore.getState().authToken;
-  if (!token) {
+  if (!useAppStore.getState().authToken) {
     throw new Error('Not authenticated with GitHub.');
   }
-  if (cachedClient.client && cachedClient.token === token) {
-    return cachedClient.client;
-  }
-  const client = new Octokit({
-    auth: token,
-    request: { fetch: fetchWithTimeout },
-    /**
-     * Octokit logs every non-2xx as console.error. A large share of ours are
-     * *expected*: 404s from "does this file exist yet?" probes before a create,
-     * and 304s from the conditional branch-head check (`hasRemoteChanged`).
-     * In dev those pop LogBox over the app — over the viewer's action bar — and
-     * bury genuine failures in noise. Drop them and let everything else through.
-     */
-    log: {
-      debug: () => {},
-      info: () => {},
-      warn: (message: string) => {
-        if (/ - (304|404) /.test(message)) return;
-        console.warn(message);
-      },
-      error: (message: string) => {
-        if (/ - (304|404) /.test(message)) return;
-        console.error(message);
-      },
-    },
-  });
-  cachedClient = { token, client };
+  if (cachedClient) return cachedClient;
+  const client = createGitHubClient();
+  cachedClient = client;
   return client;
 }
 
@@ -214,16 +251,12 @@ export async function resetBranchToEmptyCommit(message = 'Reset repository'): Pr
  */
 export async function downloadRepoFileToPath(path: string, destUri: string, repo?: RepoInfo): Promise<string> {
   const repoInfo = repo ?? getRepoInfo();
-  const token = useAppStore.getState().authToken;
-  if (!token) {
-    throw new Error('Not authenticated with GitHub.');
-  }
   const branch = resolveBranch(repoInfo.branch);
   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
   const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.name}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`;
-  const result = await FileSystem.downloadAsync(url, destUri, {
+  const result = await withFreshToken((token) => FileSystem.downloadAsync(url, destUri, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw' },
-  });
+  }));
   if (result.status !== 200) {
     await FileSystem.deleteAsync(destUri, { idempotent: true }).catch(() => {});
     throw new Error(`Download failed (HTTP ${result.status})`);
@@ -303,7 +336,7 @@ export async function getBranchHead(repo?: RepoInfo): Promise<{ sha: string; fro
 }
 
 export function invalidateClient(): void {
-  cachedClient = { token: null, client: null };
+  cachedClient = null;
   // A different token means a different identity; cached etags and in-flight
   // requests from the previous session must not leak across it.
   clearInFlight();

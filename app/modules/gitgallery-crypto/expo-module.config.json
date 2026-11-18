@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["GitGalleryCryptoModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.gitgallerycrypto.GitGalleryCryptoModule"]
+  }
+}

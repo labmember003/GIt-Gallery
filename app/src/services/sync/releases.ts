@@ -13,6 +13,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { getOctokit, getRepoInfo } from './githubClient';
 import { RepoInfo } from './types';
+import { withFreshToken } from '@/services/authSession';
 
 /** GitHub allows 1000 assets per release; roll over well before that. */
 const MAX_ASSETS_PER_RELEASE = 900;
@@ -124,22 +125,19 @@ export async function uploadReleaseAsset(params: {
   repo?: RepoInfo;
 }): Promise<ReleaseAssetRef> {
   const repoInfo = params.repo ?? getRepoInfo();
-  const token = (getOctokit() as any).auth?.token ?? null;
-  const authToken = token ?? (await resolveToken());
-
   const url =
     `https://uploads.github.com/repos/${repoInfo.owner}/${repoInfo.name}` +
     `/releases/${params.releaseId}/assets?name=${encodeURIComponent(params.name)}`;
 
-  const result = await FileSystem.uploadAsync(url, params.localUri, {
+  const result = await withFreshToken((token) => FileSystem.uploadAsync(url, params.localUri, {
     httpMethod: 'POST',
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     headers: {
-      Authorization: `Bearer ${authToken}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': params.contentType ?? 'application/octet-stream',
       Accept: 'application/vnd.github+json',
     },
-  });
+  }));
 
   if (result.status !== 201) {
     throw new Error(`Release asset upload failed (HTTP ${result.status}): ${result.body?.slice(0, 200)}`);
@@ -177,14 +175,6 @@ function bumpAssetCount(repo: RepoInfo, releaseId: number): void {
   }
 }
 
-/** Octokit hides the token; fall back to the store when it isn't exposed. */
-async function resolveToken(): Promise<string> {
-  const { useAppStore } = await import('@/store/appState');
-  const token = useAppStore.getState().authToken;
-  if (!token) throw new Error('Not authenticated with GitHub.');
-  return token;
-}
-
 /**
  * Download a release asset to a local file.
  *
@@ -198,12 +188,11 @@ export async function downloadReleaseAsset(params: {
   repo?: RepoInfo;
 }): Promise<string> {
   const repoInfo = params.repo ?? getRepoInfo();
-  const authToken = await resolveToken();
   const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.name}/releases/assets/${params.assetId}`;
 
-  const result = await FileSystem.downloadAsync(url, params.destUri, {
-    headers: { Authorization: `Bearer ${authToken}`, Accept: 'application/octet-stream' },
-  });
+  const result = await withFreshToken((token) => FileSystem.downloadAsync(url, params.destUri, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/octet-stream' },
+  }));
 
   if (result.status !== 200) {
     throw new Error(`Release asset download failed (HTTP ${result.status})`);

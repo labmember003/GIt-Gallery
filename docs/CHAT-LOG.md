@@ -2416,7 +2416,7 @@ Answers to the follow-up questions: anyone with the link can view; full quality,
 - **Choose library:** existing GitGallery libraries are listed with Open, the one in use is marked, "Create another library" is collapsed and suggests a free name (`gitgallery-photos-2`), other repositories have a search box. Names no longer cut off here or in Settings; the screen uses the app's header from Settings too.
 
 **Album sharing (view-only), D15:**
-- Share → Create link encrypts copies on the phone (XChaCha20-Poly1305) into a public `gitgallery-shares` repo in the owner's GitHub. The key is only in the link `https://gitgallery-umber.vercel.app/s/<owner>/<id>#<key>`.
+- Share → Create link encrypts copies on the phone into a public `gitgallery-shares` repo in the owner's GitHub. The key is only in the link `https://gitgallery-umber.vercel.app/s/<owner>/<id>#<key>`.
 - The link opens the app (Android App Links / iOS universal links, or the website's "Open in the app") or the website. Viewers need no account, see the album grouped by day, and can save full-quality photos and videos. Signed-in viewers can "Add to my albums" ("Shared with you" on the Albums tab, long-press to remove).
 - The owner's album shows "Shared by link". Adding or removing photos, renaming or changing the cover republishes automatically, from any of the owner's devices. Stop sharing (or deleting the album) deletes the copies and rewrites that repo's history.
 - Verified: photos and a 98 MB 4K video shared, decrypted byte-identical, and the video plays from the link; add/remove/stop/delete on GitHub; viewer join/remove in a second library; video plays from a link; website viewer at phone width, light and dark, with the production CSP.
@@ -2431,6 +2431,30 @@ Answers to the follow-up questions: anyone with the link can view; full quality,
 
 **For the user:** the App Store encryption answer (`usesNonExemptEncryption`) before the next iOS submission; Play Console shows a "Declare your trader status by February 2027" banner on the Falcon Tech Lab account.
 
+
+---
+
+## The ⋮ menu, "GitHub sign-in expired", and the App Store encryption answer — 2026-11-18
+
+> "[Image #10] iOS: I sometimes used the 3 dot icon, did rename etc now i again i click that 3 dot icon, nothing even happens, like nothing happens on click, and also observe prooperly in screenshot icon are not vertically centred, [Image #11] Why this is coming "github sigin expired", even one day haven't passed yet, and why there isn't re-auth button?
+>
+> and regarding 'App Store encryption answer', what do you think? is there any need to do so, if yes,tell me its answwer bro, i dont know the answer"
+
+Then "continue" three times (usage-limit resets), and four GitHub code approvals for the test account.
+
+**The ⋮ menu (iOS).** The popup menu was anchored inside the native iOS header and stopped opening after its first use there; the icons sat low because Paper's IconButton adds margins inside iOS's header pill. ⋮ now opens an options dialog (Share, Rename, Sync now, Delete album) and both header icons are plain 40×40 buttons. Verified on iOS and Android: ⋮ opens again after Rename, after Sync now and after dismissing; the icons are centred. Opening it no longer re-runs the header setup (a leftover dependency), which made it lag on the busy Android emulator; six of six opens now show within 0.8 s.
+
+**"GitHub sign-in expired".** My first explanation (GitHub's limit of ten tokens per app) was wrong. Measured with GitHub's token-expiration header: the gitgallery-app OAuth app issues tokens that expire after 8 hours, with a 6-month refresh token, and the app kept only the access token (D16). Fix:
+- Sign-in keeps the refresh token in the keychain, and every GitHub call renews 5 minutes before expiry or after a 401, one renewal at a time. "Sign in again" appears only when GitHub refuses the refresh token.
+- The **Sign in again** banner (Gallery, Albums, album) goes straight to the code screen and back to the same library.
+- Verified against GitHub on iOS and Android: renewal while running, after a full relaunch (from the keychain), and after a rejected call (two concurrent 401s shared one renewal and retried). Renewal answers in about 0.5 s, the new token works at once and the old one is refused at once. 11 new unit tests.
+- One test failed first: killing the app 2 s after a renewal (before the new pair was saved) signed it out, because GitHub voids the old pair on use. Real use can only hit that in a sub-second window every 8 hours.
+- Shipped versions (1.1.0, 1.2.0) still sign out every 8 hours until 1.3.0 ships. Switching token expiry off for the OAuth app would stop that at once; it's the user's call (steps given). The website keeps its existing 8-hour session cap.
+- Also fixed: the Choose library back button on iOS read "Welcome"; it reads "Back".
+
+**App Store encryption.** Sharing now encrypts with the platform's AES-256-GCM (iOS CryptoKit, Android javax.crypto through the local `modules/gitgallery-crypto` module, WebCrypto on the web) instead of bundled XChaCha20 code, and is about 90× faster on Android (8 MB in 66 ms instead of about 6 s). Apple: "Typically, the use of encryption that's built into the operating system … is exempt from export documentation upload requirements". So `usesNonExemptEncryption: false` stays and no documents are needed; if App Store Connect ever asks, the answer is the exempt one ("None of the algorithms mentioned above"). Verified: the phone ciphers match Node's AES-GCM; a share made on Android opens on iOS and on the website.
+
+All 31 native unit, 14 web unit, 49 server and 29 Playwright tests pass. Test share `vbife5c493pitfpl` was stopped and is gone. Nothing committed yet; the phones need a store release (1.3.0) for the native module.
 ---
 
 ## Decisions reached
@@ -2460,6 +2484,6 @@ Answers to the follow-up questions: anyone with the link can view; full quality,
 | App Store | ✅ **1.1.0 on sale; 1.2.0 (3) Waiting for Review since 13 Nov 2026, uploaded and submitted with the team API key.** GitGallery 1.1.0 for iPhone, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
 | Google Play | ✅ **1.1.0 live; 1.2.0 (3) sent for review 13 Nov 2026, with R8 shrinking and obfuscation on (install 18.5 MB).** 1.1.0 was submitted 10 Nov 2026. **GitGallery: Photo Backup (`com.falcon.gitgallery`; `com.gitgallery.app` is taken on Play) on the Falcon Tech Lab account.** It uses a new upload key (Play App Signing holds the app key), with the same alias, names and passwords as Droply's, at `~/Downloads/GitGallery`. Gradle reads it from the gitignored `android/keystore.properties`. The store listing is from the App Store copy. Policy declarations are the user's |
 | Albums | ✅ **Stored in the repo as `gitgallery/albums.json`** (library paths without `.ptr`; local operation log replayed on the latest file, so devices merge). Albums open to their own screen with Add photos; phone photos are uploaded first and then join. Favourites stay on the device. The web shows phone albums; its own album edits stay in the browser |
-| Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (labmember003); moving the app to an organization changes that and is the user's step |
-| Album sharing | ✅ **View-only links, like Google Photos** (D15): encrypted copies in a public `gitgallery-shares` repo in the owner's GitHub, key only in the link; viewers need no account and can save full quality; opens in the app (App Links / universal links) or the website. Contributions are the next milestone |
+| Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (gitgallery-app). **The app renews GitHub's 8-hour tokens with the refresh token** (D16) and shows "Sign in again" only when GitHub ends the sign-in |
+| Album sharing | ✅ **View-only links, like Google Photos** (D15): encrypted copies in a public `gitgallery-shares` repo in the owner's GitHub, key only in the link; viewers need no account and can save full quality; opens in the app (App Links / universal links) or the website. Encryption is the platform's AES-256-GCM, so App Store export compliance stays exempt (`usesNonExemptEncryption: false`). Contributions are the next milestone |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

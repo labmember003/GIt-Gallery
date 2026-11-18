@@ -46,7 +46,7 @@ function formatRemaining(ms: number): string {
 export default function SignInScreen({ navigation }: any) {
   const theme = useTheme();
   const colors = theme.colors as typeof theme.colors & { surfaceContainerHigh?: string };
-  const setAuthToken = useAppStore((s) => s.setAuthToken);
+  const setAuthGrant = useAppStore((s) => s.setAuthGrant);
   const [phase, setPhase] = useState<Phase>({ name: 'idle' });
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -87,7 +87,7 @@ export default function SignInScreen({ navigation }: any) {
         verifyUrl: flow.verification_uri_complete ?? flow.verification_uri,
         expiresAt: Date.now() + flow.expires_in * 1000,
       });
-      const token = await pollForToken(flow.device_code, {
+      const grant = await pollForToken(flow.device_code, {
         intervalSec: flow.interval,
         expiresInSec: flow.expires_in,
         signal: abort.signal,
@@ -96,15 +96,17 @@ export default function SignInScreen({ navigation }: any) {
       if (abort.signal.aborted) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setPhase({ name: 'done' });
-      setAuthToken(token);
-      navigation.replace('RepoSetup');
+      await setAuthGrant(grant);
+      // Signing in again after GitHub ended the old sign-in: the library is
+      // still selected, so the app returns to it by itself.
+      if (!useAppStore.getState().currentRepo) navigation.replace('RepoSetup');
     } catch (error: any) {
       if (abort.signal.aborted) return;
       const kind: DeviceFlowErrorKind = error instanceof DeviceFlowError ? error.kind : 'start-failed';
       console.warn('[sign-in] device flow ended', kind, error?.message);
       setPhase({ name: 'error', kind });
     }
-  }, [navigation, setAuthToken]);
+  }, [navigation, setAuthGrant]);
 
   const copyAndOpen = useCallback(async () => {
     if (phase.name !== 'waiting') return;
@@ -180,7 +182,7 @@ export default function SignInScreen({ navigation }: any) {
             <View style={{ marginTop: 20, padding: 14, borderRadius: 16, backgroundColor: theme.colors.surface }}>
               {[
                 'Paste the code on GitHub and tap Continue.',
-                'Tap the green Authorize button. It shows the developer’s GitHub name; that is normal.',
+                'Tap the green “Authorize gitgallery-app” button. Your photos still go only to your own GitHub.',
                 'Come back here. You will be signed in automatically.',
               ].map((step, index) => (
                 <View key={step} style={{ flexDirection: 'row', marginTop: index === 0 ? 0 : 10 }}>

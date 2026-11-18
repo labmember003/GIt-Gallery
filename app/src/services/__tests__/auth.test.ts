@@ -31,7 +31,7 @@ test('keeps polling through network failures (iOS suspends the app while GitHub 
     intervalSec: 5, expiresInSec: 900, now: c.now, sleep: c.sleep,
     fetchImpl: async () => answers.shift()!(),
   });
-  assert.equal(token, 'gho_ok');
+  assert.equal(token.accessToken, 'gho_ok');
   assert.equal(c.sleeps.length, 4);
 });
 
@@ -49,7 +49,7 @@ test('a poll request that hangs is abandoned and retried', async () => {
       return Promise.resolve(json({ access_token: 'after-hang' }));
     },
   });
-  assert.equal(token, 'after-hang');
+  assert.equal(token.accessToken, 'after-hang');
   assert.equal(calls, 2);
 });
 
@@ -101,7 +101,7 @@ test('wake() cuts the wait short so returning to the app polls at once', async (
     fetchImpl: async () => { calls += 1; return json({ access_token: 'woken' }); },
   });
   setTimeout(() => wakeResolve(), 20);
-  assert.equal(await promise, 'woken');
+  assert.equal((await promise).accessToken, 'woken');
   assert.equal(calls, 1);
   assert.ok(Date.now() - started < 5000);
 });

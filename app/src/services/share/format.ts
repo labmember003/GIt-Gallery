@@ -1,5 +1,3 @@
-import { xchacha20poly1305 } from '@noble/ciphers/chacha';
-
 /**
  * Shared albums: format, links and encryption. Pure, so phone, web and tests
  * share it.
@@ -10,8 +8,11 @@ import { xchacha20poly1305 } from '@noble/ciphers/chacha';
  * link's fragment (after `#`), which browsers never send to a server, so
  * GitHub, the website and anyone browsing the repository see ciphertext.
  *
- * Stored objects are sequences of independently sealed chunks
- * (XChaCha20-Poly1305, random 24-byte nonce each). The associated data binds
+ * Stored objects are sequences of independently sealed chunks (AES-256-GCM,
+ * random 12-byte nonce each). The cipher always comes from the platform
+ * (iOS CryptoKit, Android javax.crypto, the browser's WebCrypto), never app
+ * code: faster, and it keeps App Store export compliance at "exempt". The
+ * associated data binds
  * each chunk to its object, its position and whether it is the last one, so
  * chunks cannot be swapped between files, reordered or cut off unnoticed.
  * Chunking lets a 500 MB video be encrypted and decrypted a megabyte at a
@@ -24,9 +25,10 @@ export const SHARE_WEB_ORIGIN = 'https://gitgallery-umber.vercel.app';
 export const CHUNK_SIZE = 1024 * 1024;
 /** Chunks per stored part: keeps each Git blob around 8 MB. */
 export const PART_CHUNKS = 8;
-const NONCE = 24;
+const NONCE = 12;
 const TAG = 16;
 export const RECORD_OVERHEAD = NONCE + TAG;
+export const NONCE_SIZE = NONCE;
 
 export type ShareRef = { owner: string; id: string; key: string };
 
@@ -45,7 +47,7 @@ export type ShareItem = {
 };
 
 export type ShareManifest = {
-  v: 1;
+  v: 2;
   title: string;
   owner: string;
   createdAt: number;
@@ -154,21 +156,63 @@ export async function resolveShareCommit(owner: string, fetcher: typeof fetch = 
 
 // ── Sealing ──────────────────────────────────────────────────────────────────
 
-function aad(objectId: string, index: number, last: boolean): Uint8Array {
-  return new TextEncoder().encode(`gitgallery-share:v1:${objectId}:${index}:${last ? 1 : 0}`);
+/** AES-256-GCM from the platform. `seal` returns ciphertext + tag; `open` throws if anything changed. */
+export type Aead = {
+  seal(key: Uint8Array, nonce: Uint8Array, aad: Uint8Array, plain: Uint8Array): Promise<Uint8Array> | Uint8Array;
+  open(key: Uint8Array, nonce: Uint8Array, aad: Uint8Array, sealed: Uint8Array): Promise<Uint8Array> | Uint8Array;
+};
+
+const subtleKeys = new Map<string, Promise<CryptoKey>>();
+
+/** WebCrypto: browsers and Node (tests). */
+export const webCryptoAead: Aead = {
+  async seal(key, nonce, aad, plain) {
+    const k = await subtleKey(key);
+    return new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce as BufferSource, additionalData: aad as BufferSource, tagLength: 128 }, k, plain as BufferSource));
+  },
+  async open(key, nonce, aad, sealed) {
+    const k = await subtleKey(key);
+    return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: nonce as BufferSource, additionalData: aad as BufferSource, tagLength: 128 }, k, sealed as BufferSource));
+  },
+};
+
+function subtleKey(key: Uint8Array): Promise<CryptoKey> {
+  const id = toBase64Url(key);
+  let k = subtleKeys.get(id);
+  if (!k) {
+    k = crypto.subtle.importKey('raw', key as BufferSource, 'AES-GCM', false, ['encrypt', 'decrypt']);
+    subtleKeys.set(id, k);
+  }
+  return k;
 }
 
-export function sealChunk(key: Uint8Array, nonce: Uint8Array, objectId: string, index: number, last: boolean, plain: Uint8Array): Uint8Array {
-  const sealed = xchacha20poly1305(key, nonce, aad(objectId, index, last)).encrypt(plain);
+let aead: Aead | null = typeof crypto !== 'undefined' && crypto.subtle ? webCryptoAead : null;
+
+/** The phone app installs its native implementation at startup. */
+export function setAead(next: Aead): void {
+  aead = next;
+}
+
+function cipher(): Aead {
+  if (!aead) throw new Error('No encryption is available on this device');
+  return aead;
+}
+
+function aad(objectId: string, index: number, last: boolean): Uint8Array {
+  return new TextEncoder().encode(`gitgallery-share:v2:${objectId}:${index}:${last ? 1 : 0}`);
+}
+
+export async function sealChunk(key: Uint8Array, nonce: Uint8Array, objectId: string, index: number, last: boolean, plain: Uint8Array): Promise<Uint8Array> {
+  const sealed = await cipher().seal(key, nonce, aad(objectId, index, last), plain);
   const out = new Uint8Array(NONCE + sealed.length);
   out.set(nonce, 0);
   out.set(sealed, NONCE);
   return out;
 }
 
-export function openChunk(key: Uint8Array, objectId: string, index: number, last: boolean, record: Uint8Array): Uint8Array {
-  const nonce = record.subarray(0, NONCE);
-  return xchacha20poly1305(key, nonce, aad(objectId, index, last)).decrypt(record.subarray(NONCE));
+export async function openChunk(key: Uint8Array, objectId: string, index: number, last: boolean, record: Uint8Array): Promise<Uint8Array> {
+  if (record.length < RECORD_OVERHEAD) throw new Error('Shared file is incomplete');
+  return cipher().open(key, record.subarray(0, NONCE), aad(objectId, index, last), record.subarray(NONCE));
 }
 
 /** Number of chunks for a plaintext size (an empty file is one empty chunk). */
@@ -187,13 +231,13 @@ export function partCount(size: number): number {
   return Math.ceil(chunkCount(size) / PART_CHUNKS);
 }
 
-/** Seal a small object held in memory (manifest, previews) as one part. */
-export function sealBytes(key: Uint8Array, objectId: string, plain: Uint8Array, randomBytes: (n: number) => Uint8Array): Uint8Array[] {
+/** Seal an object held in memory (manifest, previews), split into parts. */
+export async function sealBytes(key: Uint8Array, objectId: string, plain: Uint8Array, randomBytes: (n: number) => Uint8Array): Promise<Uint8Array[]> {
   const count = chunkCount(plain.length);
   const records: Uint8Array[] = [];
   for (let i = 0; i < count; i++) {
     const chunk = plain.subarray(i * CHUNK_SIZE, Math.min(plain.length, (i + 1) * CHUNK_SIZE));
-    records.push(sealChunk(key, randomBytes(NONCE), objectId, i, i === count - 1, chunk));
+    records.push(await sealChunk(key, randomBytes(NONCE), objectId, i, i === count - 1, chunk));
   }
   const parts: Uint8Array[] = [];
   for (let p = 0; p < records.length; p += PART_CHUNKS) parts.push(concat(records.slice(p, p + PART_CHUNKS)));
@@ -201,7 +245,7 @@ export function sealBytes(key: Uint8Array, objectId: string, plain: Uint8Array, 
 }
 
 /** Open an object from its parts, given its plaintext size. */
-export function openBytes(key: Uint8Array, objectId: string, size: number, parts: Uint8Array[]): Uint8Array {
+export async function openBytes(key: Uint8Array, objectId: string, size: number, parts: Uint8Array[]): Promise<Uint8Array> {
   const all = concat(parts);
   const count = chunkCount(size);
   const out = new Uint8Array(size);
@@ -209,7 +253,7 @@ export function openBytes(key: Uint8Array, objectId: string, size: number, parts
   let written = 0;
   for (let i = 0; i < count; i++) {
     const len = recordLength(size, i);
-    const plain = openChunk(key, objectId, i, i === count - 1, all.subarray(read, read + len));
+    const plain = await openChunk(key, objectId, i, i === count - 1, all.subarray(read, read + len));
     out.set(plain, written);
     read += len;
     written += plain.length;
@@ -229,19 +273,19 @@ export function concat(chunks: Uint8Array[]): Uint8Array {
   return out;
 }
 
-export function sealManifest(key: Uint8Array, manifest: ShareManifest, randomBytes: (n: number) => Uint8Array): { bytes: Uint8Array; size: number } {
+export async function sealManifest(key: Uint8Array, manifest: ShareManifest, randomBytes: (n: number) => Uint8Array): Promise<{ bytes: Uint8Array; size: number }> {
   const plain = new TextEncoder().encode(JSON.stringify(manifest));
-  // The manifest is stored as size (8 hex chars) + one part, so it opens alone.
+  // The manifest is stored as size (8 hex chars) + its sealed chunks, so it opens alone.
   const header = new TextEncoder().encode(plain.length.toString(16).padStart(8, '0'));
-  return { bytes: concat([header, ...sealBytes(key, 'manifest', plain, randomBytes)]), size: plain.length };
+  return { bytes: concat([header, ...(await sealBytes(key, 'manifest', plain, randomBytes))]), size: plain.length };
 }
 
-export function openManifest(key: Uint8Array, bytes: Uint8Array): ShareManifest {
+export async function openManifest(key: Uint8Array, bytes: Uint8Array): Promise<ShareManifest> {
   const size = parseInt(new TextDecoder().decode(bytes.subarray(0, 8)), 16);
   if (!Number.isFinite(size) || size < 0) throw new Error('Not a GitGallery shared album');
-  const plain = openBytes(key, 'manifest', size, [bytes.subarray(8)]);
+  const plain = await openBytes(key, 'manifest', size, [bytes.subarray(8)]);
   const value = JSON.parse(new TextDecoder().decode(plain)) as ShareManifest;
-  if (value?.v !== 1 || !Array.isArray(value.items)) throw new Error('Unsupported shared album');
+  if (value?.v !== 2 || !Array.isArray(value.items)) throw new Error('Unsupported shared album');
   return value;
 }
 

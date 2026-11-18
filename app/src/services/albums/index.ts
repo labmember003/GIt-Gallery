@@ -238,7 +238,7 @@ function describeError(error: any): string {
   if (/Network request failed|network connection|offline|timed out|ENOTFOUND|getaddrinfo/i.test(text)) {
     return 'Offline. Album changes are saved on this phone and will sync when you are back online.';
   }
-  if (error?.status === 401) return 'GitHub sign-in expired. Sign out and back in from Settings.';
+  if (error?.status === 401) return 'GitHub signed you out. Tap Sign in again.';
   if (error?.status === 403 && /rate limit/i.test(text)) return 'GitHub rate limit reached. Albums will sync shortly.';
   if (error?.status === 403 || error?.status === 404) return 'GitHub refused the album update. Check that you can write to this repository.';
   return 'Album changes could not be synced yet. They are saved on this phone.';

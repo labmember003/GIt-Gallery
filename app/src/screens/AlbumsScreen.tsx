@@ -21,6 +21,8 @@ import { getMetaEntriesForPaths } from '@/services/sync/index';
 import { thumbHashDataUrl } from '@/services/sync/thumbhash';
 import type { MetaEntry } from '@/services/sync/types';
 import { AlbumNameDialog } from '@/components/albums/AlbumNameDialog';
+import { SignInAgainBanner } from '@/components/SignInAgainBanner';
+import { useAuthHealth } from '@/services/sync/githubClient';
 import { ShareAlbumDialog } from '@/components/albums/ShareAlbumDialog';
 
 /**
@@ -194,6 +196,9 @@ function SyncLine() {
   const syncing = useAlbumStore((s) => s.syncing);
   const lastError = useAlbumStore((s) => s.lastError);
   const unsynced = useAlbumStore((s) => s.ops.length);
+  const authEnded = useAuthHealth((s) => s.ended);
+  // The sign-in banner above explains a rejected sign-in; don't repeat it here.
+  if (authEnded) return <SignInAgainBanner style={{ marginHorizontal: H_PADDING, marginBottom: 12 }} />;
   const icon = lastError ? 'cloud-off-outline' : syncing || unsynced > 0 ? 'cloud-sync-outline' : 'cloud-check-outline';
   const text = lastError
     ? lastError

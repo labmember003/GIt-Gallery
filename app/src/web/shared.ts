@@ -36,7 +36,7 @@ export async function loadSharedManifest(ref: ShareRef, fetcher: typeof fetch = 
   const commit = await resolveShareCommit(ref.owner, fetcher);
   const bytes = await fetchBytes(`${rawUrl(ref.owner, sharePath(ref.id, 'manifest.bin'), commit)}?t=${Date.now()}`, fetcher);
   try {
-    return { manifest: openManifest(fromBase64Url(ref.key), bytes), commit };
+    return { manifest: await openManifest(fromBase64Url(ref.key), bytes), commit };
   } catch {
     throw new Error('This link could not be opened. Check that you copied the whole link.');
   }
@@ -86,7 +86,7 @@ export class SharedSource implements MediaSource {
     const parts: Uint8Array[] = [];
     for (let p = 0; p < info.parts; p++) parts.push(await fetchBytes(rawUrl(this.ref.owner, sharePath(this.ref.id, partFile(item.id, kind, p)), this.commit), this.fetcher));
     if (chunkCount(info.size) === 0) throw new Error('Empty file');
-    const plain = openBytes(this.key, objectId(item.id, kind), info.size, parts);
+    const plain = await openBytes(this.key, objectId(item.id, kind), info.size, parts);
     const type = kind === 'p' ? 'image/jpeg' : MIME[item.ext] ?? 'application/octet-stream';
     return URL.createObjectURL(new Blob([plain as BlobPart], { type }));
   }

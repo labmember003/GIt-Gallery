@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Pressable, SectionList, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { ActivityIndicator, Button, Dialog, IconButton, Menu, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Button, Dialog, IconButton, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/appState';
@@ -25,6 +25,8 @@ import { AssetViewer, type ViewerAction, type ViewerItem } from '@/components/vi
 import { AlbumTile } from '@/components/albums/AlbumTile';
 import { AlbumNameDialog } from '@/components/albums/AlbumNameDialog';
 import { ShareAlbumDialog } from '@/components/albums/ShareAlbumDialog';
+import { SignInAgainBanner } from '@/components/SignInAgainBanner';
+import { useAuthHealth } from '@/services/sync/githubClient';
 import { deleteAlbumEverywhere, useShareStore } from '@/services/share';
 
 const COLUMNS = 3;
@@ -96,6 +98,7 @@ export default function AlbumScreen({ navigation, route }: any) {
   const uploading = useAlbumStore((s) => s.uploading);
   const loaded = useAlbumStore((s) => s.loaded);
   const lastError = useAlbumStore((s) => s.lastError);
+  const authEnded = useAuthHealth((s) => s.ended);
   const favorites = useAppStore((s) => s.favorites);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
   const { width } = useWindowDimensions();
@@ -206,24 +209,21 @@ export default function AlbumScreen({ navigation, route }: any) {
     navigation.setOptions({
       headerTitle: titleInHeader ? album?.name ?? '' : '',
       headerLeft: undefined,
+      // Plain fixed-size buttons: IconButton's built-in margins pushed the icons
+      // off-centre inside iOS's header pill, and a popup Menu anchored in the
+      // native header stopped opening after its first use on iOS.
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <IconButton icon="image-plus" iconColor={theme.colors.primary} accessibilityLabel="Add photos" onPress={openPicker} />
-          <Menu
-            visible={menuVisible}
-            onDismiss={() => setMenuVisible(false)}
-            anchor={<IconButton icon="dots-vertical" iconColor={theme.colors.onSurfaceVariant} accessibilityLabel="Album options" onPress={() => setMenuVisible(true)} />}
-            contentStyle={{ borderRadius: 16 }}
-          >
-            <Menu.Item leadingIcon="share-variant-outline" title="Share" onPress={() => { setMenuVisible(false); setShareVisible(true); }} />
-            <Menu.Item leadingIcon="pencil-outline" title="Rename" onPress={() => { setMenuVisible(false); setRenameVisible(true); }} />
-            <Menu.Item leadingIcon="refresh" title="Sync now" onPress={() => { setMenuVisible(false); void syncAlbums(); }} />
-            <Menu.Item leadingIcon="delete-outline" title="Delete album" titleStyle={{ color: theme.colors.error }} onPress={() => { setMenuVisible(false); setDeleteVisible(true); }} />
-          </Menu>
+          <Pressable onPress={openPicker} hitSlop={6} accessibilityRole="button" accessibilityLabel="Add photos" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="image-plus" size={24} color={theme.colors.primary} />
+          </Pressable>
+          <Pressable onPress={() => setMenuVisible(true)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Album options" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="dots-vertical" size={24} color={theme.colors.onSurfaceVariant} />
+          </Pressable>
         </View>
       ),
     });
-  }, [navigation, selectionMode, selected.size, album?.name, titleInHeader, menuVisible, theme, openPicker, clearSelection, flat]);
+  }, [navigation, selectionMode, selected.size, album?.name, titleInHeader, theme, openPicker, clearSelection, flat]);
 
   const toggle = useCallback((id: string) => {
     setSelected((prev) => {
@@ -455,7 +455,8 @@ export default function AlbumScreen({ navigation, route }: any) {
           ) : null}
         </View>
       ) : null}
-      {lastError ? (
+      <SignInAgainBanner style={{ marginTop: 12 }} />
+      {lastError && !authEnded ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
           <MaterialCommunityIcons name="cloud-off-outline" size={16} color={theme.colors.error} />
           <Text variant="bodySmall" style={{ flex: 1, marginLeft: 6, color: theme.colors.error }}>{lastError}</Text>
@@ -554,6 +555,32 @@ export default function AlbumScreen({ navigation, route }: any) {
           void loadForViewer(index);
         }}
       />
+
+      <Portal>
+        <Dialog visible={menuVisible} onDismiss={() => setMenuVisible(false)} style={{ borderRadius: 28, backgroundColor: theme.colors.surface }}>
+          <Dialog.Title numberOfLines={1}>{album.name}</Dialog.Title>
+          <Dialog.Content style={{ paddingHorizontal: 8 }}>
+            {[
+              { icon: 'share-variant-outline', label: album.share ? 'Share link' : 'Share', onPress: () => setShareVisible(true) },
+              { icon: 'pencil-outline', label: 'Rename', onPress: () => setRenameVisible(true) },
+              { icon: 'refresh', label: 'Sync now', onPress: () => void syncAlbums() },
+              { icon: 'delete-outline', label: 'Delete album', danger: true, onPress: () => setDeleteVisible(true) },
+            ].map((row) => (
+              <Pressable
+                key={row.label}
+                onPress={() => {
+                  setMenuVisible(false);
+                  row.onPress();
+                }}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderRadius: 16, backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent' })}
+              >
+                <MaterialCommunityIcons name={row.icon as any} size={22} color={row.danger ? theme.colors.error : theme.colors.onSurfaceVariant} />
+                <Text variant="bodyLarge" style={{ marginLeft: 16, color: row.danger ? theme.colors.error : theme.colors.onSurface }}>{row.label}</Text>
+              </Pressable>
+            ))}
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
 
       <ShareAlbumDialog visible={shareVisible} album={album} onDismiss={() => setShareVisible(false)} onToast={setToast} />
 
