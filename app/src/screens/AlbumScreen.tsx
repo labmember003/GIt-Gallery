@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Pressable, SectionList, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { ActivityIndicator, Button, Dialog, IconButton, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import { BackHandler, Platform, Pressable, SectionList, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Button, Dialog, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/appState';
@@ -28,6 +28,7 @@ import { ShareAlbumDialog } from '@/components/albums/ShareAlbumDialog';
 import { SignInAgainBanner } from '@/components/SignInAgainBanner';
 import { useAuthHealth } from '@/services/sync/githubClient';
 import { deleteAlbumEverywhere, useShareStore } from '@/services/share';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 const COLUMNS = 3;
 const SPACING = 1;
@@ -190,39 +191,42 @@ export default function AlbumScreen({ navigation, route }: any) {
     return () => sub.remove();
   }, [selecting, selected.size, clearSelection]);
 
+  // Which set of header buttons is showing, to spot a switch between them.
+  const headerMode = useRef<'select' | 'album' | null>(null);
+
   useLayoutEffect(() => {
-    if (selectionMode) {
-      navigation.setOptions({
-        headerTitle: selected.size > 0 ? `${selected.size} selected` : 'Select items',
-        headerLeft: () => <IconButton icon="close" iconColor={theme.colors.onSurface} accessibilityLabel="Cancel selection" onPress={clearSelection} />,
-        headerRight: () => (
-          <IconButton
-            icon="select-all"
-            iconColor={theme.colors.primary}
-            accessibilityLabel="Select all"
-            onPress={() => setSelected(new Set(flat.map((i) => i.id)))}
-          />
-        ),
-      });
-      return;
+    const mode = selectionMode ? 'select' : 'album';
+    const options = selectionMode
+      ? {
+          headerTitle: selected.size > 0 ? `${selected.size} selected` : 'Select items',
+          headerLeft: () => <HeaderIconButton icon="close" color={theme.colors.onSurface} label="Cancel selection" onPress={clearSelection} />,
+          headerRight: () => (
+            <HeaderIconButton icon="select-all" color={theme.colors.primary} label="Select all" onPress={() => setSelected(new Set(flat.map((i) => i.id)))} />
+          ),
+        }
+      : {
+          headerTitle: titleInHeader ? album?.name ?? '' : '',
+          headerLeft: undefined,
+          // Options open a dialog: a popup Menu anchored in the native header
+          // stopped opening after its first use on iOS.
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <HeaderIconButton icon="image-plus" color={theme.colors.primary} label="Add photos" onPress={openPicker} />
+              <HeaderIconButton icon="dots-vertical" color={theme.colors.onSurfaceVariant} label="Album options" onPress={() => setMenuVisible(true)} />
+            </View>
+          ),
+        };
+    const switched = headerMode.current !== null && headerMode.current !== mode;
+    headerMode.current = mode;
+    // iOS builds the new bar button before the new buttons are measured, so
+    // going from one button (select all) back to two kept the old width and
+    // pushed ⋮ off screen. Dropping the buttons for a frame makes a fresh one.
+    if (Platform.OS === 'ios' && switched) {
+      navigation.setOptions({ ...options, headerRight: undefined });
+      const frame = requestAnimationFrame(() => navigation.setOptions({ headerRight: options.headerRight }));
+      return () => cancelAnimationFrame(frame);
     }
-    navigation.setOptions({
-      headerTitle: titleInHeader ? album?.name ?? '' : '',
-      headerLeft: undefined,
-      // Plain fixed-size buttons: IconButton's built-in margins pushed the icons
-      // off-centre inside iOS's header pill, and a popup Menu anchored in the
-      // native header stopped opening after its first use on iOS.
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={openPicker} hitSlop={6} accessibilityRole="button" accessibilityLabel="Add photos" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name="image-plus" size={24} color={theme.colors.primary} />
-          </Pressable>
-          <Pressable onPress={() => setMenuVisible(true)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Album options" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name="dots-vertical" size={24} color={theme.colors.onSurfaceVariant} />
-          </Pressable>
-        </View>
-      ),
-    });
+    navigation.setOptions(options);
   }, [navigation, selectionMode, selected.size, album?.name, titleInHeader, theme, openPicker, clearSelection, flat]);
 
   const toggle = useCallback((id: string) => {

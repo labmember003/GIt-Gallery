@@ -2455,6 +2455,33 @@ Then "continue" three times (usage-limit resets), and four GitHub code approvals
 **App Store encryption.** Sharing now encrypts with the platform's AES-256-GCM (iOS CryptoKit, Android javax.crypto through the local `modules/gitgallery-crypto` module, WebCrypto on the web) instead of bundled XChaCha20 code, and is about 90× faster on Android (8 MB in 66 ms instead of about 6 s). Apple: "Typically, the use of encryption that's built into the operating system … is exempt from export documentation upload requirements". So `usesNonExemptEncryption: false` stays and no documents are needed; if App Store Connect ever asks, the answer is the exempt one ("None of the algorithms mentioned above"). Verified: the phone ciphers match Node's AES-GCM; a share made on Android opens on iOS and on the website.
 
 All 31 native unit, 14 web unit, 49 server and 29 Playwright tests pass. Test share `vbife5c493pitfpl` was stopped and is gone. Nothing committed yet; the phones need a store release (1.3.0) for the native module.
+
+---
+
+## Token expiry switched off; 1.3.0 waits for 1.2.0 on iOS — 2026-11-18
+
+> "opted out of token expiry, before pusing 1.3 to store lets wait for 1.2 to approve on ios"
+
+- **Opt-out verified:** a fresh Device Flow sign-in for the test account (approved by the user) returned only `access_token`, `token_type` and `scope`: no refresh token, no `expires_in`, and no `github-authentication-token-expiration` header on `GET /user`. Users of 1.1.0 and 1.2.0 who sign in from now on stay signed in; anyone still holding an 8-hour token signs in once more. The token was not stored.
+- **1.2.0 on iOS:** App Store Connect (team API key, read only) shows 1.2.0 **Ready for Sale**, so the condition for 1.3.0 is met. Play was not checked.
+- Docs and code comments updated: D16 now records expiry as off, with a warning not to turn it back on while 1.1.0/1.2.0 are in use; 1.3.0 still renews expiring tokens in case it is ever switched on.
+
+---
+
+## Re-check of the ⋮ menu, header alignment and the sign-in message — 2026-11-18
+
+> "[Image #12] iOS: I sometimes used the 3 dot icon, did rename etc now i again i click that 3 dot icon, nothing even happens, like nothing happens on click, and also observe prooperly in screenshot icon are not vertically centred, was this fixed? if not, fix it"
+
+> "[Image #13]Why this is coming "github sigin expired", even one day haven't passed yet, and why there isn't re-auth button?, what this fixed? if not do it"
+
+Both screenshots are from builds before the fixes (1.2.0 on iPhone: no Share chip; the old "GitHub sign-in expired. Sign out and back in from Settings." text on Android, which no longer exists in the code). Measured rather than eyeballed this time, at full resolution on the iOS simulator in dark mode:
+
+- **Icons still sat low:** 2 pt for ⋮ and 3 pt for add-photo. iOS pins a custom header view's top edge instead of centring it in the glass pill (a 12 pt taller button moved the icons down exactly 6 pt). At 36 pt tall the icons are on the pill's centre line (⋮ 0 px off; the add-photo glyph's "+" hangs 1 pt below by design). New `HeaderIconButton` (36 pt on iOS, 40 pt on Android, 48 pt touch target, dimming/ripple feedback) now draws every native-header icon: album add/options, selection cancel/select-all, and the picker's close button, which was 8 pt low (Paper's IconButton is 52 pt with margins).
+- **A real way for ⋮ to "do nothing":** after selection mode, iOS kept the one-button width for the two-button group, pushing ⋮ off screen (a tap there opened Add photos). On iOS the buttons are now dropped for one frame when the header switches modes, so a correctly sized bar item is built. Verified: identical positions after two selection rounds; ⋮ opens on first tap, after closing, and after Rename → Cancel; light and dark.
+- Android re-checked: album, selection and picker headers aligned; ⋮ opens after selection mode; picker × closes.
+- Sign-in: already fixed (D16, token expiry off for the OAuth app; "Sign in again" banner in 1.3.0).
+
+All 31 unit tests pass. Not committed yet.
 ---
 
 ## Decisions reached
@@ -2481,9 +2508,9 @@ All 31 native unit, 14 web unit, 49 server and 29 Playwright tests pass. Test sh
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | iOS builds on Xcode 27 | ✅ **UIScene life cycle via a forwarding `SceneDelegate`.** iOS 27 SDK builds refuse to launch without it. AppDelegate still creates the window and starts React Native (Expo's dev launcher needs that window); the scene delegate attaches it and forwards links. The Podfile raises pod targets below the app minimum (SDWebImage's resource bundle declares 9.0), which Xcode 27 rejects. |
 | Release publishing | ✅ **By hand on the GitHub website** while Actions is locked by billing. No gh CLI token for the main account: the user declined a `repo`-scope OAuth grant. Files are built and checksummed locally, then attached on the release page |
-| App Store | ✅ **1.1.0 on sale; 1.2.0 (3) Waiting for Review since 13 Nov 2026, uploaded and submitted with the team API key.** GitGallery 1.1.0 for iPhone, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
+| App Store | ✅ **1.2.0 (3) Ready for Sale (seen 18 Nov 2026); 1.3.0 is next.** 1.2.0 was uploaded and submitted on 13 Nov 2026 with the team API key. GitGallery 1.1.0 for iPhone, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
 | Google Play | ✅ **1.1.0 live; 1.2.0 (3) sent for review 13 Nov 2026, with R8 shrinking and obfuscation on (install 18.5 MB).** 1.1.0 was submitted 10 Nov 2026. **GitGallery: Photo Backup (`com.falcon.gitgallery`; `com.gitgallery.app` is taken on Play) on the Falcon Tech Lab account.** It uses a new upload key (Play App Signing holds the app key), with the same alias, names and passwords as Droply's, at `~/Downloads/GitGallery`. Gradle reads it from the gitignored `android/keystore.properties`. The store listing is from the App Store copy. Policy declarations are the user's |
 | Albums | ✅ **Stored in the repo as `gitgallery/albums.json`** (library paths without `.ptr`; local operation log replayed on the latest file, so devices merge). Albums open to their own screen with Add photos; phone photos are uploaded first and then join. Favourites stay on the device. The web shows phone albums; its own album edits stay in the browser |
-| Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (gitgallery-app). **The app renews GitHub's 8-hour tokens with the refresh token** (D16) and shows "Sign in again" only when GitHub ends the sign-in |
+| Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (gitgallery-app). **Token expiry is off for the OAuth app** (2026-11-18), so sign-ins last; from 1.3.0 the app also renews expiring tokens itself (D16) and shows "Sign in again" when GitHub ends a sign-in |
 | Album sharing | ✅ **View-only links, like Google Photos** (D15): encrypted copies in a public `gitgallery-shares` repo in the owner's GitHub, key only in the link; viewers need no account and can save full quality; opens in the app (App Links / universal links) or the website. Encryption is the platform's AES-256-GCM, so App Store export compliance stays exempt (`usesNonExemptEncryption: false`). Contributions are the next milestone |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

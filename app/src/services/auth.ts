@@ -25,11 +25,12 @@ type TokenResponse = {
 /**
  * What GitHub hands back on sign-in.
  *
- * The gitgallery-app OAuth app issues expiring tokens (✅ docs.github.com,
- * "Authorizing OAuth apps"; measured 2026-11-18): the access token lasts eight
- * hours and comes with a refresh token that lasts six months from its last
- * use. Keeping only the access token signed everyone out after eight hours.
- * Long-lived tokens have no refresh token and no expiry, so both are optional.
+ * An OAuth app with token expiry on issues an access token that lasts eight
+ * hours plus a refresh token that lasts six months from its last use (✅
+ * docs.github.com, "Authorizing OAuth apps"). gitgallery-app had it on until
+ * 2026-11-18, which signed 1.1.0 and 1.2.0 out every eight hours; it is off
+ * now, so GitHub sends a long-lived token with neither field. Both are
+ * optional here so the app works whichever way the setting is.
  */
 export type GitHubGrant = {
   accessToken: string;

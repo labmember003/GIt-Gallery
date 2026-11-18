@@ -4,8 +4,10 @@ import { RefreshRejectedError, type GitHubGrant } from './auth';
  * Renewing an expiring GitHub sign-in, without the app's store, so it can be
  * tested on its own. services/authSession wires it to the app.
  *
- * The access token lasts eight hours; the refresh token trades for a new pair
- * and stops working once used (docs.github.com, "Authorizing OAuth apps").
+ * Only applies when GitHub sends a refresh token (token expiry on for the
+ * OAuth app; it is off for gitgallery-app). Then the access token lasts eight
+ * hours, and the refresh token trades for a new pair and stops working once
+ * used (docs.github.com, "Authorizing OAuth apps").
  */
 
 /** Renew this long before the access token runs out. */

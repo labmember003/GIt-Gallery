@@ -6,10 +6,11 @@ import { createRenewer } from './authRenewal';
 /**
  * Keeps the GitHub sign-in alive (see services/authRenewal).
  *
- * Every GitHub call asks `freshToken()` first, which renews the token a few
- * minutes before it runs out; a call that still gets a 401 renews once and
- * retries. Only when GitHub refuses the refresh token itself (unused for six
- * months, or access revoked) is the sign-in over.
+ * Every GitHub call asks `freshToken()` first, which renews an expiring token
+ * a few minutes before it runs out; a call that still gets a 401 renews once
+ * and retries. A token that can't be renewed (long-lived ones, or a refresh
+ * token GitHub refuses) ends the sign-in on its first 401, and screens offer
+ * "Sign in again".
  */
 
 /**

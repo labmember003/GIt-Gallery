@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View, useWindowDimensions } from 'react-native';
-import { ActivityIndicator, Button, IconButton, SegmentedButtons, Snackbar, Text, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Button, SegmentedButtons, Snackbar, Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
@@ -9,6 +9,7 @@ import { getCloudEntriesEnsured, getUploadIndex, isAssetUploadedAsset, loadMoreC
 import { ensureMediaLibraryPermissions } from '@/services/mediaPermissions';
 import type { MetaEntry } from '@/services/sync/types';
 import { AlbumTile } from '@/components/albums/AlbumTile';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 /**
  * Pick photos for an album, from this phone or from what is already on
@@ -149,7 +150,7 @@ export default function AlbumPickerScreen({ navigation, route }: any) {
       headerTitle: total > 0 ? `${total} selected` : `Add to ${album?.name ?? 'album'}`,
       // Presented as a sheet on iOS, which has no back button of its own.
       headerLeft: () => (
-        <IconButton icon="close" iconColor={theme.colors.onSurface} accessibilityLabel="Cancel" onPress={() => navigation.goBack()} />
+        <HeaderIconButton icon="close" color={theme.colors.onSurface} label="Cancel" onPress={() => navigation.goBack()} />
       ),
       headerRight: () => (
         <Button mode="text" disabled={total === 0 || busy} loading={busy} onPress={confirm} labelStyle={{ fontWeight: '700' }}>
