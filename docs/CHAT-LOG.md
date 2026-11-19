@@ -2481,7 +2481,45 @@ Both screenshots are from builds before the fixes (1.2.0 on iPhone: no Share chi
 - Android re-checked: album, selection and picker headers aligned; ⋮ opens after selection mode; picker × closes.
 - Sign-in: already fixed (D16, token expiry off for the OAuth app; "Sign in again" banner in 1.3.0).
 
-All 31 unit tests pass. Not committed yet.
+All 31 unit tests pass.
+
+> "yes push all to main bro"
+
+Committed and pushed to `main` as `ae69f1b` (author and committer Avishisht Gupta), which redeployed the website.
+
+---
+
+## 1.3.0 to Google Play — 2026-11-19
+
+> "push to play store, not on app store as of now"
+
+**Version 1.3.0** in `app.json`, `build.gradle` (code 5) and `Info.plist` (build 4, for the later iOS release). Nothing was uploaded to the App Store.
+
+**Tested on the release build** (upload-key signed, R8) on the Android emulator, signed in to the test library after the user approved the GitHub code (the first code expired: the emulator's Play Store updated Android WebView in the background and that restarted the app). The checks are now Maestro flows in `app/maestro/android/` (README alongside), all passing on the final build:
+- `album-lifecycle`: create an album, add photos, rename, the ⋮ menu reopening after rename, Sync now and selection mode, share link create and stop, delete.
+- `gallery-viewer-sync`: photo and video viewer, favourite and unfavourite, Add to album, manual sync of a new photo, a Cloud item downloaded, two Cloud items downloaded at once, favourites filter.
+- `share-link`: a share link opens in the app (App Links verified for the upload key), a photo saves from it, and after Stop sharing the same link says the album is gone.
+- `settings-dark-mode`: library row, Choose library, the reset and logout confirmations (cancelled), and every main screen in dark mode.
+- `logout-demo`: log out, the no-sign-in demo, and a fresh GitHub code.
+
+**Fixed while testing:**
+- **Tapping a photo sometimes selected it.** Gallery tiles counted 150 ms as a long press (album tiles 250 ms); a normal tap on a busy phone took longer. Both now use the standard 500 ms, like Immich and iOS.
+- **Download from GitHub opened Android's folder picker,** which on Android 17 refuses the Download folder itself; a cancelled picker left the photo in hidden app storage while the app said "Download completed". Downloads now go straight to the phone's gallery, like Google Photos and like videos already did; a folder chosen in Settings still applies, and the Settings row reads "Phone gallery" otherwise.
+- **Download results were not always true.** Every caller said "completed" even when nothing was saved, and downloading several Cloud items said nothing at all. Failures now explain what to do, success always confirms, and the wording is the same everywhere ("Saved to your phone", "Saved 2 to your phone").
+- Saved photos were named `photo.jpg-123.jpg`; now `photo-123.jpg`.
+- The gallery's floating buttons had no accessibility labels ("Sync to GitHub", "Stop syncing", "Delete selected", "Download selected").
+- **Play blocked the submission** because portrait-only implied a required portrait screen. The manifest now marks `android.hardware.screen.portrait` optional: Play counts 27 newly supported devices (7 tablets, 3 TVs, 17 cars) and none lost. That needed a new version code, so build 4 was replaced by 5 before review.
+
+**Google Play:** bundle 1.3.0 (5), 64.6 MB, signed with the upload key, R8 mapping attached, uploaded through the one-off localhost relay (stopped afterwards). API 24+, target 36, four ABIs; install 18.5 MB, update 3.78 MB. Released as "1.3.0 (5)" with en-US notes, full rollout, sent for review on 19 Nov 2026 and **live on Google Play the same morning** (released 11:20). 1.2.0 (3) was live before it.
+
+Play recommends two things (advisory, not blocking): the deprecated status/navigation bar colour APIs reported come from React Native's StatusBarModule and react-native-screens, so they go with a framework upgrade; and fuller R8 (optimisation, optimised resource shrinking, Android Gradle Plugin 9), a build change that needs its own regression pass.
+
+All 31 unit tests pass. The web app still builds and its 14 unit tests pass.
+
+> "push everything bro to main, dont ask, only ask for app store play store deployement, rest pushing to main/dev, deploying backend you dont have to ask also put in your root claude md and account memory as well"
+
+Recorded as a standing rule in the global `~/.claude/CLAUDE.md`, this project's `CLAUDE.md` (section 2) and Claude's memory for this project: commit, push to main/dev and deploy backends or the website without asking; ask only before App Store or Google Play submissions. Then committed and pushed everything to `main`, which redeployed the website.
+
 ---
 
 ## Decisions reached
@@ -2501,16 +2539,18 @@ All 31 unit tests pass. Not committed yet.
 | Docs upkeep | ✅ Updated every exchange; dropped ideas deleted, not archived |
 | iOS dependency manager | ✅ **CocoaPods** — user chose it over SPM when asked; Expo's autolinking targets Pods and an SPM port would have been a rewrite |
 | Testing | ✅ **Self-tested on emulator/simulator** — nothing reported done without being run; visual parity with Immich counts as correctness; bugs found get fixed, not just logged |
-| Git | ✅ **Never commit/push without an explicit ask.** Use terminal Git commands, with `Avishisht Gupta <avishishtgupta@gmail.com>` as both author and committer (`labmember003`); no assistant identity or AI co-author trailers. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
+| Git | ✅ **Commit and push to `main` without asking (2026-11-19); only App Store / Google Play submissions need a yes first.** Use terminal Git commands, with `Avishisht Gupta <avishishtgupta@gmail.com>` as both author and committer (`labmember003`); no assistant identity or AI co-author trailers. Push via the `github-personal` SSH host alias; plain `git@github.com` is the *work* account |
 | Repo root | ✅ **The workspace root**, so `README`/`CLAUDE.md`/`docs/` ship with the code. `reference/` stays out — AGPL bulk and an upstream duplicate |
 | Web companion | ✅ **Web gallery with server-backed sign-in and browser uploads.** Automatic private library creation/reuse, custom-library discovery, restored sessions and browser-local collections; demo is opt-in. Uploads use 3 MiB chunks, progress/retry/stop, original preservation and mobile-compatible storage up to 500 MiB per file. Real sign-in and an empty library are confirmed by the user; real private upload/download verification and shared collections remain. Optional redirect OAuth supports larger deployments. See `WEB-PLAN.md`. |
 | Web hosting | ✅ **Live at https://gitgallery-umber.vercel.app** on one Vercel Hobby project, with static frontend, Node API and free Upstash Redis sessions. Paid auto-upgrades disabled. Public desktop/phone onboarding, demo and video checks passed. Git integration connects `labmember003/GIt-Gallery`, production branch `main`, root `app`; keep GitHub App access limited to that repository. Real private upload/download verification remains; the user has confirmed real sign-in and an empty library. |
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | iOS builds on Xcode 27 | ✅ **UIScene life cycle via a forwarding `SceneDelegate`.** iOS 27 SDK builds refuse to launch without it. AppDelegate still creates the window and starts React Native (Expo's dev launcher needs that window); the scene delegate attaches it and forwards links. The Podfile raises pod targets below the app minimum (SDWebImage's resource bundle declares 9.0), which Xcode 27 rejects. |
 | Release publishing | ✅ **By hand on the GitHub website** while Actions is locked by billing. No gh CLI token for the main account: the user declined a `repo`-scope OAuth grant. Files are built and checksummed locally, then attached on the release page |
-| App Store | ✅ **1.2.0 (3) Ready for Sale (seen 18 Nov 2026); 1.3.0 is next.** 1.2.0 was uploaded and submitted on 13 Nov 2026 with the team API key. GitGallery 1.1.0 for iPhone, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
-| Google Play | ✅ **1.1.0 live; 1.2.0 (3) sent for review 13 Nov 2026, with R8 shrinking and obfuscation on (install 18.5 MB).** 1.1.0 was submitted 10 Nov 2026. **GitGallery: Photo Backup (`com.falcon.gitgallery`; `com.gitgallery.app` is taken on Play) on the Falcon Tech Lab account.** It uses a new upload key (Play App Signing holds the app key), with the same alias, names and passwords as Droply's, at `~/Downloads/GitGallery`. Gradle reads it from the gitignored `android/keystore.properties`. The store listing is from the App Store copy. Policy declarations are the user's |
+| App Store | ✅ **1.2.0 (3) Ready for Sale (seen 18 Nov 2026). 1.3.0 is on Google Play only for now, at the user's request (19 Nov 2026).** 1.2.0 was uploaded and submitted on 13 Nov 2026 with the team API key. GitGallery 1.1.0 for iPhone, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
+| Google Play | ✅ **1.3.0 (5) live (19 Nov 2026, full rollout).** R8 shrinking and obfuscation on (install 18.5 MB). The portrait screen is declared optional, so portrait-only doesn't filter devices. 1.1.0 was submitted 10 Nov 2026. **GitGallery: Photo Backup (`com.falcon.gitgallery`; `com.gitgallery.app` is taken on Play) on the Falcon Tech Lab account.** It uses a new upload key (Play App Signing holds the app key), with the same alias, names and passwords as Droply's, at `~/Downloads/GitGallery`. Gradle reads it from the gitignored `android/keystore.properties`. The store listing is from the App Store copy. Policy declarations are the user's |
 | Albums | ✅ **Stored in the repo as `gitgallery/albums.json`** (library paths without `.ptr`; local operation log replayed on the latest file, so devices merge). Albums open to their own screen with Add photos; phone photos are uploaded first and then join. Favourites stay on the device. The web shows phone albums; its own album edits stay in the browser |
 | Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (gitgallery-app). **Token expiry is off for the OAuth app** (2026-11-18), so sign-ins last; from 1.3.0 the app also renews expiring tokens itself (D16) and shows "Sign in again" when GitHub ends a sign-in |
+| Downloads | ✅ **Straight to the phone's gallery, like Google Photos** — no folder picker (Android 17's picker refuses the Download folder itself). On Android a folder picked in Settings still applies. Any file not saved is reported, never "completed" |
+| Release checks | ✅ **Maestro flows on the release build** before every store upload (`app/maestro/`); the test library and test account only |
 | Album sharing | ✅ **View-only links, like Google Photos** (D15): encrypted copies in a public `gitgallery-shares` repo in the owner's GitHub, key only in the link; viewers need no account and can save full quality; opens in the app (App Links / universal links) or the website. Encryption is the platform's AES-256-GCM, so App Store export compliance stays exempt (`usesNonExemptEncryption: false`). Contributions are the next milestone |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

@@ -60,11 +60,11 @@ If a test fails, say it failed and show the output. If something couldn't be tes
 
 ---
 
-## 2. Git: never commit or push unless explicitly asked
+## 2. Git: commit and push to main without asking
 
-Write and edit files freely — but `git commit` and `git push` are **the user's call, every time**. The standing "don't ask, just execute" rule covers doing the work, not version control.
+Commit and push finished work straight to `main` without asking (the user's standing instruction, 2026-11-19). Pushing `main` deploys the website on Vercel; that needs no ask either, just say it happened. **Ask first only before an App Store or Google Play submission.**
 
-When authorized, use terminal `git commit` and `git push` commands. Set both author and committer to the user's personal identity below; never use an assistant/bot identity or add AI co-author trailers. Verify both identities on the resulting commit before pushing through the `github-personal` SSH alias.
+Use terminal `git commit` and `git push` commands. Set both author and committer to the user's personal identity below; never use an assistant/bot identity or add AI co-author trailers. Verify both identities on the resulting commit before pushing through the `github-personal` SSH alias.
 
 This repo is a **personal** project. Its identity is set locally and must stay that way:
 

@@ -359,8 +359,10 @@ async function ensureDownloadDirectory(): Promise<string> {
 
 export async function temporaryDownloadPath(filename: string): Promise<string> {
   const baseDir = await ensureDownloadDirectory();
-  const safe = sanitizeFilename(filename);
-  const ext = filename.includes('.') ? filename.split('.').pop() : 'bin';
-  const finalName = `${safe}-${Date.now()}.${ext}`;
+  // The saved copy keeps this name, so keep one extension: photo-123.jpg, not photo.jpg-123.jpg.
+  const dot = filename.lastIndexOf('.');
+  const stem = sanitizeFilename(dot > 0 ? filename.slice(0, dot) : filename) || 'download';
+  const ext = dot > 0 ? filename.slice(dot + 1) : 'bin';
+  const finalName = `${stem}-${Date.now()}.${ext}`;
   return `${baseDir}${finalName}`;
 }

@@ -20,7 +20,7 @@ const UPLOAD_BATCH_SIZE = 40;
 import { loadMetaIndex, upsertMetaEntry, upsertMetaEntries, getCachedMetaEntries, getMetaEntryFromCache, invalidateMetaCache, removeMetaEntries, ensureMetaShardsForPaths, loadMoreMetaShards } from './metaIndex';
 import type { Octokit } from '@octokit/rest';
 import { ensureMediaLibraryPermissions } from '../mediaPermissions';
-import { ensureAndroidDownloadsDirectory } from './androidDownloads';
+import { getPersistedAndroidDownloadsDirectory } from './androidDownloads';
 
 const uploadIndexEmitter = new SimpleEmitter();
 const syncStatusEmitter = new SimpleEmitter();
@@ -1403,25 +1403,24 @@ async function downloadLargeOriginal(path: string, repo: RepoInfo): Promise<stri
   }
 }
 
+/**
+ * Save files from the library to the phone, like Google Photos' Download:
+ * into the phone's gallery, with no folder picker. On Android a folder chosen
+ * in Settings is used for photos instead. Throws a message for the user when
+ * any file could not be saved.
+ */
 export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
   const repo = getRepoInfo();
   const downloaded: string[] = [];
 
   const isAndroid = Platform.OS === 'android';
-  let androidDirectoryUri: string | null = null;
   const saf = isAndroid ? FileSystem.StorageAccessFramework : null;
+  const androidDirectoryUri = isAndroid ? await getPersistedAndroidDownloadsDirectory() : null;
 
-  if (isAndroid) {
-    androidDirectoryUri = await ensureAndroidDownloadsDirectory();
-    if (!androidDirectoryUri) {
-      setSyncStatus({ lastError: 'Download directory permission not granted' });
-    }
-  } else {
-    const permission = await ensureMediaLibraryPermissions();
-    if (!permission.granted) {
-      setSyncStatus({ lastError: 'Media library permission not granted' });
-      return downloaded;
-    }
+  const permission = await ensureMediaLibraryPermissions();
+  if (!permission.granted) {
+    setSyncStatus({ lastError: 'Media library permission not granted' });
+    throw new Error('GitGallery needs access to your photos to save them. Allow it in your phone\'s settings, then try again.');
   }
   setSyncStatus({ running: true, lastBatchType: 'download', lastBatchTotal: paths.length, lastBatchUploaded: 0 });
   let processed = 0;
@@ -1456,20 +1455,18 @@ export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
       }
       const localPath = await temporaryDownloadPath(baseName);
       await FileSystem.writeAsStringAsync(localPath, file.content, { encoding: FileSystem.EncodingType.Base64 });
-      if (!isAndroid) {
-        try {
-          const asset = await MediaLibrary.createAssetAsync(localPath);
-          await placeDownloadedAssetInAlbum(asset);
-          downloaded.push(asset.id);
-          await rememberDownloadedCopy([`id:${asset.id}`, ...(asset.filename ? [`name:${asset.filename}`] : [])], path);
-          try {
-            await FileSystem.deleteAsync(localPath, { idempotent: true });
-          } catch (_cleanupError) {}
-          continue;
-        } catch (_assetError) {}
+      try {
+        const asset = await MediaLibrary.createAssetAsync(localPath);
+        // Android puts it in the phone's photo folder; moving it into an
+        // album there would need another permission prompt.
+        if (!isAndroid) await placeDownloadedAssetInAlbum(asset);
+        downloaded.push(asset.id);
+        await rememberDownloadedCopy([`id:${asset.id}`, ...(asset.filename ? [`name:${asset.filename}`] : [])], path);
+      } finally {
+        await FileSystem.deleteAsync(localPath, { idempotent: true }).catch(() => {});
       }
-      downloaded.push(localPath);
-    } catch (_error) {
+    } catch (error) {
+      console.warn('[download] failed', path, error);
     } finally {
       processed += 1;
       setSyncStatus({ lastBatchUploaded: processed });
@@ -1477,7 +1474,13 @@ export async function downloadRepoFiles(paths: string[]): Promise<string[]> {
   }
 
   setSyncStatus({ running: false, lastBatchType: null, lastBatchTotal: 0, lastBatchUploaded: 0 });
-  recordCompletion({ type: 'download', total: paths.length, failed: paths.length - downloaded.length, timestamp: Date.now() });
+  const failed = paths.length - downloaded.length;
+  recordCompletion({ type: 'download', total: paths.length, failed, timestamp: Date.now() });
+  if (failed > 0) {
+    throw new Error(downloaded.length === 0
+      ? `Couldn't save ${paths.length === 1 ? 'this' : 'these'} to your phone. Check your connection and try again.`
+      : `Saved ${downloaded.length} of ${paths.length}. Check your connection and try again for the rest.`);
+  }
   return downloaded;
 }
 

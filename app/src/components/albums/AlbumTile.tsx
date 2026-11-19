@@ -59,7 +59,6 @@ function AlbumTileImpl({ size, spacing, source, selectionMode, selected, disable
     <Pressable
       onPress={disabled ? onDisabledPress : onPress}
       onLongPress={disabled ? undefined : onLongPress}
-      delayLongPress={250}
       accessibilityRole="imagebutton"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: !!selected, disabled: !!disabled }}

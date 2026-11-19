@@ -66,7 +66,7 @@ export async function clearAndroidDownloadsDirectory(): Promise<void> {
 
 export function describeAndroidDownloadsDirectory(uri: string | null): string {
   if (!uri) {
-    return 'App private storage (prompt on download)';
+    return 'Phone gallery';
   }
   try {
     const decoded = decodeURIComponent(uri);
@@ -79,17 +79,4 @@ export function describeAndroidDownloadsDirectory(uri: string | null): string {
   } catch {
     return uri;
   }
-}
-
-export async function ensureAndroidDownloadsDirectory(): Promise<string | null> {
-  const saf = getSaf();
-  if (!saf) {
-    return null;
-  }
-  const persisted = await getPersistedUri();
-  if (persisted) {
-    return persisted;
-  }
-  const rootUri = saf.getUriForDirectoryInRoot ? saf.getUriForDirectoryInRoot('downloads') : undefined;
-  return requestDirectory(rootUri);
 }

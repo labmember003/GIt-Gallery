@@ -1316,7 +1316,6 @@ export default function GalleryScreen({ route }: any) {
       <TouchableOpacity
         onPress={() => handleItemPress(item)}
         onLongPress={() => handleItemLongPress(item)}
-        delayLongPress={150}
         activeOpacity={0.8}
         style={itemContainerStyle}
       >
@@ -1369,7 +1368,6 @@ export default function GalleryScreen({ route }: any) {
       <TouchableOpacity
         onPress={() => handleCloudItemPress(item)}
         onLongPress={() => handleCloudItemLongPress(item)}
-        delayLongPress={150}
         activeOpacity={0.8}
         style={cloudItemContainerStyle}
       >
@@ -1615,10 +1613,11 @@ export default function GalleryScreen({ route }: any) {
         label: 'Download',
         onPress: async () => {
           try {
-            await downloadRepoFiles([selectedCloudPath] as any);
-            showToast('Download completed');
+            showToast('Saving…');
+            await downloadRepoFiles([selectedCloudPath]);
+            showToast('Saved to your phone');
           } catch (error: any) {
-            showToast(`Download failed: ${error?.message ?? 'unknown error'}`);
+            showToast(error?.message ?? "Couldn't save this to your phone. Try again.");
           }
         },
       });
@@ -1881,6 +1880,7 @@ export default function GalleryScreen({ route }: any) {
             return (
               <FAB
                 icon="close"
+                accessibilityLabel="Stop syncing"
                 style={[baseFabStyle, { backgroundColor: theme.colors.errorContainer }]}
                 color={theme.colors.onErrorContainer}
                 onPress={handleCancelSyncPress}
@@ -1891,6 +1891,7 @@ export default function GalleryScreen({ route }: any) {
             <>
               <FAB
                 icon="cloud-upload"
+                accessibilityLabel={selectedIds.size > 0 ? 'Sync selected to GitHub' : 'Sync to GitHub'}
                 style={[baseFabStyle, { backgroundColor: primaryContainerColor }]}
                 color={onPrimaryContainerColor}
                 onPress={manualSync}
@@ -1898,6 +1899,7 @@ export default function GalleryScreen({ route }: any) {
               {selectedIds.size > 0 ? (
                 <FAB
                   icon="delete"
+                  accessibilityLabel="Delete selected"
                   style={{ position: 'absolute', right: 16, bottom: 86, backgroundColor: theme.colors.errorContainer }}
                   color={theme.colors.onErrorContainer}
                   onPress={deleteSelected}
@@ -1912,17 +1914,27 @@ export default function GalleryScreen({ route }: any) {
             <>
               <FAB
                 icon="delete"
+                accessibilityLabel="Delete selected from GitHub"
                 style={{ position: 'absolute', right: 16, bottom: 16, backgroundColor: theme.colors.errorContainer }}
                 color={theme.colors.onErrorContainer}
                 onPress={deleteSelected}
               />
               <FAB
                 icon="download"
+                accessibilityLabel="Download selected"
                 style={{ position: 'absolute', right: 16, bottom: 86, backgroundColor: primaryContainerColor }}
                 color={onPrimaryContainerColor}
                 onPress={safeAsync('Download', async () => {
                   const paths = Array.from(selectedIds);
-                  if (paths.length > 0) await downloadRepoFiles(paths as any);
+                  if (paths.length === 0) return;
+                  cancelSelection();
+                  showToast(`Downloading ${paths.length}…`);
+                  try {
+                    await downloadRepoFiles(paths);
+                    showToast(`Saved ${paths.length} to your phone`);
+                  } catch (error: any) {
+                    showToast(error?.message ?? "Couldn't save these to your phone. Try again.");
+                  }
                 })}
               />
             </>

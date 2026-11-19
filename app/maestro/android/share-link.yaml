@@ -1,0 +1,94 @@
+# A share link opens in the app (Android App Links), shows the album and
+# saves a photo from it, and stops working once sharing stops. (Joining
+# "Shared with you" needs a second account, so it isn't covered here.)
+# Signed-in build, test library open, photos on the phone.
+#
+#   maestro --device emulator-5554 test maestro/android/share-link.yaml
+appId: com.falcon.gitgallery
+name: Share link
+env:
+  ALBUM: Link check
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Gallery"
+    timeout: 30000
+- tapOn: "Albums"
+- tapOn: "New album"
+- inputText: ${ALBUM}
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible: "Add to ${ALBUM}"
+    timeout: 15000
+- tapOn:
+    text: "Photo"
+    index: 2
+- tapOn: "Add"
+- extendedWaitUntil:
+    notVisible: "Photo waiting to upload"
+    timeout: 120000
+
+# Create the link and copy it from the dialog.
+- tapOn: "Share"
+- tapOn: "Create link"
+- extendedWaitUntil:
+    visible: "Sharing text"
+    timeout: 180000
+- back
+- copyTextFrom:
+    text: "https://gitgallery-umber\\.vercel\\.app/s/.*"
+# "Copied" shows for 2 s, so don't wait for the screen to settle.
+- waitForAnimationToEnd
+- tapOn:
+    text: "Copy link"
+    waitToSettleTimeoutMs: 300
+- assertVisible: "Copied"
+- pressKey: back
+
+# Opening the link lands in the app's viewer for the shared album.
+- openLink: ${maestro.copiedText}
+- extendedWaitUntil:
+    visible: "View only · end-to-end encrypted"
+    timeout: 60000
+- assertVisible: "${ALBUM}"
+- takeScreenshot: share-01-viewer
+# The owner sees no "Add to my albums" on their own album.
+- assertNotVisible: "Add to my albums"
+- tapOn: "Photo"
+- tapOn: "Save to phone"
+- extendedWaitUntil:
+    visible: "Saved to your phone"
+    timeout: 60000
+- takeScreenshot: share-02-saved
+- tapOn: "Close viewer"
+- back
+
+# Back returns to the owner's album; stop sharing there.
+- assertVisible: "Shared by link"
+- tapOn: "Share"
+- tapOn: "Stop sharing"
+- tapOn:
+    text: "Stop sharing"
+    waitToSettleTimeoutMs: 300
+- extendedWaitUntil:
+    visible: "Sharing stopped. The link no longer works."
+    timeout: 120000
+
+# The old link now says it's gone.
+- openLink: ${maestro.copiedText}
+- extendedWaitUntil:
+    visible: "This shared album is no longer available. The owner may have stopped sharing it."
+    timeout: 60000
+- takeScreenshot: share-03-stopped
+- back
+
+# Clean up: delete the album.
+- assertVisible: "${ALBUM}"
+- assertNotVisible: "Shared by link"
+- tapOn: "Album options"
+- tapOn: "Delete album"
+- tapOn: "Delete"
+- extendedWaitUntil:
+    notVisible: "${ALBUM}.*"
+    timeout: 30000

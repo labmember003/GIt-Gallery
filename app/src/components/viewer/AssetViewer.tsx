@@ -61,7 +61,7 @@ type Props = {
    */
   onIndexChange?: (index: number) => void;
   /**
-   * A short message shown inside the viewer, e.g. "Saved to this device". The
+   * A short message shown inside the viewer, e.g. "Saved to your phone". The
    * screen's own snackbar sits behind this full-screen modal, so feedback for
    * viewer actions has to be drawn here or the tap looks ignored.
    */

@@ -1,0 +1,103 @@
+# Gallery, photo and video viewer, favourites, Add to album, manual sync,
+# and the Cloud tab, on a signed-in build with the test library open.
+#
+# Before running, put one new photo on the phone so the sync has work to do:
+#   adb push new.jpg /sdcard/DCIM/Camera/ && adb shell am broadcast \
+#     -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/new.jpg
+#   maestro --device emulator-5554 test maestro/android/gallery-viewer-sync.yaml
+appId: com.falcon.gitgallery
+name: Gallery, viewer and sync
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Gallery"
+    timeout: 30000
+- takeScreenshot: gallery-00-grid
+
+# The newest photo opens in the viewer.
+- tapOn:
+    point: "17%,37%"
+- extendedWaitUntil:
+    visible: "Close viewer"
+    timeout: 10000
+- takeScreenshot: gallery-01-viewer
+- tapOn: "Favourite"
+- assertVisible: "Favourited"
+- tapOn: "Favourited"
+- assertVisible: "Favourite"
+# Add to album closes the viewer and lists the albums over the grid.
+- tapOn: "Add to album"
+- assertVisible: "New album"
+- takeScreenshot: gallery-02-add-to-album
+- tapOn: "Cancel"
+- assertNotVisible: "New album"
+- assertNotVisible: "Close viewer"
+
+# A video plays in the viewer.
+- scrollUntilVisible:
+    element:
+      text: "1:30"
+    direction: DOWN
+- tapOn:
+    text: "1:30"
+    index: 0
+- extendedWaitUntil:
+    visible: "Close viewer"
+    timeout: 10000
+- takeScreenshot: gallery-03-video
+- tapOn: "Close viewer"
+
+- scrollUntilVisible:
+    element:
+      text: "Cloud"
+    direction: UP
+
+# Manual sync uploads the new photo.
+- tapOn: "Sync to GitHub"
+- assertVisible: "Sync all photos and videos?"
+- tapOn: "Sync all"
+- extendedWaitUntil:
+    notVisible: "Stop syncing"
+    timeout: 300000
+- takeScreenshot: gallery-04-synced
+
+# Cloud tab: open an item from GitHub and download it to the phone.
+- tapOn: "Cloud"
+- extendedWaitUntil:
+    visible: ".*20\\d\\d"
+    timeout: 60000
+- tapOn:
+    point: "17%,37%"
+- extendedWaitUntil:
+    visible: "Download"
+    timeout: 60000
+- takeScreenshot: gallery-05-cloud-viewer
+# Saved straight to the phone's gallery: no folder picker.
+- tapOn: "Download"
+- extendedWaitUntil:
+    visible: "Saved to your phone"
+    timeout: 120000
+- assertNotVisible: "USE THIS FOLDER"
+- takeScreenshot: gallery-05b-saved
+- tapOn: "Close viewer"
+
+# Select two items on GitHub and download both; the result is confirmed.
+- longPressOn:
+    point: "17%,37%"
+- tapOn:
+    point: "50%,37%"
+- assertVisible: "2 selected"
+- tapOn: "Download selected"
+- extendedWaitUntil:
+    visible: "Saved 2 to your phone"
+    timeout: 120000
+- takeScreenshot: gallery-05c-saved-two
+- tapOn: "Local"
+
+# Favourites filter on and off.
+- tapOn: "Show favourites only"
+- assertVisible: "Show all photos"
+- takeScreenshot: gallery-06-favourites
+- tapOn: "Show all photos"
+- assertVisible: "Show favourites only"

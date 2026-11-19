@@ -144,7 +144,7 @@ export default function SharedAlbumScreen({ navigation, route }: any) {
           await MediaLibrary.saveToLibraryAsync(uri);
           setToast('Saved to your phone');
         } catch {
-          setToast('Could not save this item.');
+          setToast("Couldn't save this. Check your connection and try again.");
         }
       },
     }];

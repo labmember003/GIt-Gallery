@@ -1,0 +1,85 @@
+# Settings rows and dialogs (opened and cancelled, nothing destructive), and
+# every main screen in dark mode. Signed-in build, test library open.
+#
+#   maestro --device emulator-5554 test maestro/android/settings-dark-mode.yaml
+appId: com.falcon.gitgallery
+name: Settings and dark mode
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Gallery"
+    timeout: 30000
+- tapOn: "Settings"
+- assertVisible: "gitgallery-e2e-nov7"
+- assertVisible: "Download folder"
+- assertVisible: "Phone gallery"
+- takeScreenshot: settings-01
+
+# Choose library opens from Settings and comes back.
+- tapOn:
+    text: "Change"
+    index: 0
+- extendedWaitUntil:
+    visible: "Choose library"
+    timeout: 20000
+- takeScreenshot: settings-02-choose-library
+- back
+- assertVisible: "Download folder"
+
+# Dangerous actions ask first, and Cancel leaves everything as it was.
+- scrollUntilVisible:
+    element:
+      text: "Reset all \\(dangerous\\)"
+    direction: DOWN
+- tapOn: "Reset"
+- assertVisible: "Reset everything?"
+- takeScreenshot: settings-03-reset
+- tapOn: "Cancel"
+- assertNotVisible: "Reset everything?"
+- scrollUntilVisible:
+    element:
+      text: "Logout"
+    direction: DOWN
+- tapOn: "Logout"
+- assertVisible: "Log out?"
+- tapOn: "Cancel"
+- assertNotVisible: "Log out?"
+
+# Dark mode on every main screen.
+- scrollUntilVisible:
+    element:
+      text: "Dark"
+    direction: UP
+- tapOn: "Dark"
+- takeScreenshot: dark-01-settings
+- tapOn: "Gallery"
+- takeScreenshot: dark-02-gallery
+- tapOn: "Cloud"
+- extendedWaitUntil:
+    visible: ".*20\\d\\d"
+    timeout: 60000
+- takeScreenshot: dark-03-cloud
+- tapOn: "Local"
+- tapOn: "Albums"
+- takeScreenshot: dark-04-albums
+- tapOn: "Goa 2026.*"
+- takeScreenshot: dark-05-album
+- tapOn: "Album options"
+- takeScreenshot: dark-06-album-menu
+- back
+- tapOn: "Share"
+- takeScreenshot: dark-07-share
+- back
+- tapOn: "Add photos"
+- takeScreenshot: dark-08-picker
+- tapOn: "Cancel"
+- back
+
+# Back to following the phone's setting.
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element:
+      text: "System"
+    direction: DOWN
+- tapOn: "System"

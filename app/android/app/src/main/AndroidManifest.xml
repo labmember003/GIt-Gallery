@@ -15,6 +15,12 @@
   <uses-permission android:name="android.permission.CAMERA" tools:node="remove"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <!--
+    The app asks for portrait, which on its own makes Play treat a portrait
+    screen as required and hide the app from devices without one (Play
+    Console flags it). Portrait is preferred, not required.
+  -->
+  <uses-feature android:name="android.hardware.screen.portrait" android:required="false"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>

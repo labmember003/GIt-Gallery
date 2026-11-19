@@ -1,0 +1,49 @@
+# Log out, try the demo library, and start a new sign-in (up to the GitHub
+# code, which needs a person to approve). Run last: it ends the sign-in.
+#
+#   maestro --device emulator-5554 test maestro/android/logout-demo.yaml
+appId: com.falcon.gitgallery
+name: Logout and demo
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Gallery"
+    timeout: 30000
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element:
+      text: "Logout"
+    direction: DOWN
+- tapOn: "Logout"
+- assertVisible: "Log out?"
+- tapOn: "Log out"
+- extendedWaitUntil:
+    visible: "Get Started"
+    timeout: 15000
+- takeScreenshot: out-01-welcome
+
+# The demo works without an account.
+- tapOn: "Try the demo, no sign-in"
+- extendedWaitUntil:
+    visible: "This is a sample library"
+    timeout: 15000
+- takeScreenshot: out-02-demo
+- tapOn: "Photo: .*"
+- extendedWaitUntil:
+    visible: "Close viewer"
+    timeout: 10000
+- takeScreenshot: out-03-demo-viewer
+- tapOn: "Back up yours"
+
+# Signing in again shows a fresh GitHub code.
+- extendedWaitUntil:
+    visible: "Continue with GitHub"
+    timeout: 15000
+- tapOn: "Continue with GitHub"
+- extendedWaitUntil:
+    visible: "Your code"
+    timeout: 30000
+- assertVisible: "Waiting for you to approve on GitHub"
+- takeScreenshot: out-04-code
+- back

@@ -318,9 +318,9 @@ export default function AlbumScreen({ navigation, route }: any) {
           try {
             setToast('Saving…');
             await downloadRepoFiles([current.entry?.repoPath ?? current.path]);
-            setToast('Saved to this device');
+            setToast('Saved to your phone');
           } catch (error: any) {
-            setToast(/Network request failed|timed out/i.test(String(error?.message)) ? "Couldn't download. Check your connection and try again." : "Couldn't save this to the device. Try again.");
+            setToast(error?.message ?? "Couldn't save this to your phone. Try again.");
           }
         },
       });
@@ -356,9 +356,9 @@ export default function AlbumScreen({ navigation, route }: any) {
     setToast(`Downloading ${paths.length}…`);
     try {
       await downloadRepoFiles(paths);
-      setToast(`Saved ${paths.length} to this device`);
+      setToast(`Saved ${paths.length} to your phone`);
     } catch (error: any) {
-      setToast(`Download failed: ${error?.message ?? 'unknown error'}`);
+      setToast(error?.message ?? "Couldn't save these to your phone. Try again.");
     }
   }, [selectedItems, clearSelection]);
   const coverFromSelection = selectedItems.length === 1 && selectedItems[0].kind === 'cloud' ? (selectedItems[0] as any).path as string : null;

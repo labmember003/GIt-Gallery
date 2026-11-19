@@ -1,0 +1,103 @@
+# Albums end to end on a signed-in build with a library open and photos on
+# the phone: create, add photos, rename, the ⋮ menu reopening after each
+# action (the 1.2.0 bug), selection mode, share link create/stop, delete.
+#
+#   maestro --device emulator-5554 test maestro/android/album-lifecycle.yaml
+#
+# Run it against the test library (applicationsplit/gitgallery-e2e-nov7) only:
+# it creates and deletes an album and a share link in the signed-in account.
+appId: com.falcon.gitgallery
+name: Album lifecycle
+env:
+  ALBUM: Release check
+  RENAMED: Release check renamed
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Gallery"
+    timeout: 30000
+- tapOn: "Albums"
+- tapOn: "New album"
+- inputText: ${ALBUM}
+- tapOn: "Create"
+
+# A new album opens the photo picker straight away.
+- extendedWaitUntil:
+    visible: "Add to ${ALBUM}"
+    timeout: 15000
+- tapOn:
+    text: "Photo"
+    index: 0
+- tapOn:
+    text: "Photo"
+    index: 1
+- assertVisible: "2 selected"
+- takeScreenshot: album-01-picker
+- tapOn: "Add"
+- extendedWaitUntil:
+    visible: "${ALBUM}"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible: "Photo waiting to upload"
+    timeout: 120000
+- takeScreenshot: album-02-album
+
+# Rename from the ⋮ menu, then the menu must open again.
+- tapOn: "Album options"
+- assertVisible: "Rename"
+- takeScreenshot: album-03-menu
+- tapOn: "Rename"
+- eraseText: 40
+- inputText: ${RENAMED}
+- tapOn: "Rename"
+- extendedWaitUntil:
+    visible: "${RENAMED}"
+    timeout: 10000
+- tapOn: "Album options"
+- assertVisible: "Sync now"
+- tapOn: "Sync now"
+- tapOn: "Album options"
+- assertVisible: "Delete album"
+- back
+- assertNotVisible: "Delete album"
+
+# Selection mode swaps the header buttons; ⋮ must come back and work.
+- tapOn: "Select"
+- assertVisible: "Cancel selection"
+- takeScreenshot: album-04-select
+- tapOn: "Cancel selection"
+- tapOn: "Album options"
+- assertVisible: "Rename"
+- back
+
+# Share by link, then stop sharing.
+- tapOn: "Share"
+- tapOn: "Create link"
+# The system share sheet opens by itself once the link exists.
+- extendedWaitUntil:
+    visible: "Sharing text"
+    timeout: 180000
+- back
+- assertVisible: "Shared by link"
+- takeScreenshot: album-05-link
+- tapOn: "Stop sharing"
+- assertVisible: "Stop sharing?"
+# Don't wait for the screen to settle: the confirmation shows for 2.6 s.
+- tapOn:
+    text: "Stop sharing"
+    waitToSettleTimeoutMs: 300
+- extendedWaitUntil:
+    visible: "Sharing stopped. The link no longer works."
+    timeout: 120000
+- assertNotVisible: "Shared by link"
+
+# Delete the album; it disappears from the Albums tab.
+- tapOn: "Album options"
+- tapOn: "Delete album"
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible: "Albums"
+    timeout: 30000
+- assertNotVisible: "${RENAMED}.*"
+- takeScreenshot: album-06-deleted
