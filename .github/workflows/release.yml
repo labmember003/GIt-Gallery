@@ -2,9 +2,9 @@ name: Release
 
 # Builds the Android APK and an unsigned iOS IPA for a version tag and publishes
 # both as a GitHub Release. Pushing a tag such as v1.1.0 is the whole release.
+# Manual only (Avi, 2026-11-21): Actions is locked by a billing issue on this account and Play builds come from the
+# ops agent, so tag pushes only produced failure emails.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
