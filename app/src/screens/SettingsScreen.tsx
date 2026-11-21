@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAdPrivacyChoices } from '@/ads/ads';
 import { View, ScrollView, Platform, Linking } from 'react-native';
 import { PRIVACY_POLICY_URL, SUPPORT_URL, SOURCE_CODE_URL } from '@/services/links';
 import { Button, List, Switch, Divider, ActivityIndicator, Checkbox, RadioButton, Portal, Dialog, Text, useTheme } from 'react-native-paper';
@@ -107,6 +108,7 @@ const selectPreferredAlbumTitle = (
 };
 
 export default function SettingsScreen({ navigation }: any) {
+  const adPrivacyChoices = useAdPrivacyChoices(); // Android, EEA/UK only
   const { currentRepo, setCurrentRepo, setAuthToken } = useAppStore();
   const autoSync = useAppStore((s) => s.autoSync);
   const setAutoSync = useAppStore((s) => s.setAutoSync);
@@ -742,6 +744,9 @@ export default function SettingsScreen({ navigation }: any) {
       <List.Section>
         <List.Subheader>About</List.Subheader>
         <List.Item title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} left={(props) => <List.Icon {...props} icon="shield-account-outline" />} right={(props) => <List.Icon {...props} icon="open-in-new" />} />
+        {adPrivacyChoices && (
+          <List.Item title="Ad privacy choices" onPress={adPrivacyChoices} left={(props) => <List.Icon {...props} icon="shield-check-outline" />} />
+        )}
         <List.Item title="Help & support" onPress={() => Linking.openURL(SUPPORT_URL)} left={(props) => <List.Icon {...props} icon="help-circle-outline" />} right={(props) => <List.Icon {...props} icon="open-in-new" />} />
         <List.Item title="Source code" onPress={() => Linking.openURL(SOURCE_CODE_URL)} left={(props) => <List.Icon {...props} icon="github" />} right={(props) => <List.Icon {...props} icon="open-in-new" />} />
       </List.Section>

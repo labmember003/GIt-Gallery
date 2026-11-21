@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityIndicator, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomTabBar from '@/navigation/CustomTabBar';
+import AdBanner from '@/ads/AdBanner';
 import WelcomeScreen from '@/screens/WelcomeScreen';
 import SignInScreen from '@/screens/SignInScreen';
 import RepoSetupScreen from '@/screens/RepoSetupScreen';
@@ -40,7 +41,13 @@ function MainTabs() {
   const headerOptions = useImmichHeaderOptions();
   return (
     <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={(props) => (
+        // The banner sits just above the tab bar on every tab (Android only); no space until an ad loads.
+        <View>
+          <AdBanner />
+          <CustomTabBar {...props} />
+        </View>
+      )}
       screenOptions={{
         ...headerOptions,
         headerShown: true,

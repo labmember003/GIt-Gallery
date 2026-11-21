@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useColorScheme } from 'react-native';
@@ -7,11 +7,13 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef, useShareLinks } from './src/navigation/shareLinks';
 import { useAppStore } from '@/store/appState';
 import { immichDarkTheme, immichLightTheme } from '@/theme/immichTheme';
+import { startAds } from '@/ads/ads';
 
 export default function App() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   useShareLinks();
+  useEffect(startAds, []); // Android: ad consent, then ads (no-op elsewhere)
 
   const themePref = useAppStore((s) => s.theme);
   const effectiveDark = themePref === 'system' ? isDark : themePref === 'dark';
