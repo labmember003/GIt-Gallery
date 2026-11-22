@@ -22,6 +22,7 @@
         { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }
       ]
     },
+    { "source": "/", "headers": [{ "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://*.googlesyndication.com https://*.google.com https://adservice.google.co.in https://*.gstatic.com https://*.doubleclick.net https://*.googletagservices.com https://*.adtrafficquality.google; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' blob: data: https:; media-src 'self' blob:; frame-src https:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://*.googlesyndication.com https://*.google.com https://adservice.google.co.in https://*.doubleclick.net https://*.adtrafficquality.google https://*.gstatic.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }] },
     { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] },
     { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
     { "source": "/s/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },

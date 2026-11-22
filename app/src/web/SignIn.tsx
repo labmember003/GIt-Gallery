@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import { DeviceSignIn } from './DeviceSignIn';
+import { AdSlot } from './AdSlot';
 import { sessionRequest, type DeviceChallenge, type SignInStart, type WebSession } from './session';
 
 export function SignIn({ session, initialError, onSession, onDemo, onPublic }: {
@@ -59,7 +60,7 @@ export function SignIn({ session, initialError, onSession, onDemo, onPublic }: {
           {tokenForm && <form className="form-stack token-form" onSubmit={signIn}><label>Personal access token<input autoFocus type="password" value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" spellCheck={false} placeholder="github_pat_…" required disabled={busy} /></label><p className="field-help">Choose a fine-grained token with <strong>Contents: read and write</strong> for your photo repository. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create a token</a></p><button className="button primary full-width" disabled={busy}>{working === 'token' ? 'Signing in…' : 'Sign in with token'}</button></form>}</details>}
         <div className="signin-divider"><span>Take a look around</span></div><button className="button secondary full-width" onClick={onDemo} disabled={busy}><Icon name="photos" size={18} />Try the demo</button><button className="text-button public-link" onClick={onPublic} disabled={busy}>Open a public repository <Icon name="arrow" size={14} /></button><p className="signin-note"><Icon name="shield" size={15} />Sign in securely on GitHub. Your password stays with GitHub.</p>
       </section>
-    </main><footer className="auth-footer">Your photos stay in your GitHub repository.</footer>
+    </main><AdSlot /><footer className="auth-footer">Your photos stay in your GitHub repository.</footer>
     {device && <DeviceSignIn challenge={device.challenge} csrf={device.csrf} onSession={onSession} onClose={() => setDevice(null)} onRestart={() => { setDevice(null); void oauth(); }} />}
   </div>;
 }

@@ -6,6 +6,7 @@ import { ConnectDialog } from './ConnectDialog';
 import { RepositoryPicker } from './RepositoryPicker';
 import { LibrarySetup } from './LibrarySetup';
 import { SignIn } from './SignIn';
+import { adsLoaded } from './AdSlot';
 import { sessionFetch, sessionRequest, type WebSession } from './session';
 import type { Library, MediaSource } from './types';
 import { SharedAlbum } from './SharedAlbum';
@@ -98,6 +99,9 @@ function LibraryApp() {
     })();
     return () => { generation.current++; source?.dispose(); };
   }, [key, retry]);
+  // Google's ad script only ever loads on the signed-out page. Once someone is signed in, start a fresh page so it never
+  // runs next to their library.
+  useEffect(() => { if (session?.user && adsLoaded()) location.reload(); }, [session?.user]);
   function accept(next: WebSession) {
     sessionRevision.current++;
     setSession(next); setPicker(false); setDemo(false); setDemoUrl(false); setGuest(null); guestRef.current?.source.dispose(); guestRef.current = null; setError('');
