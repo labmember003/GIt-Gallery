@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useAdsReady } from '@/ads/ads';
 
 // Debug builds show Google's test banner so we never click our own ads.
-const UNIT_ID = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-7683902216769416/6781181014';
+// Each platform has its own AdMob app and banner unit.
+const RELEASE_UNIT = Platform.select({
+  ios: 'ca-app-pub-7683902216769416/4819458588',
+  default: 'ca-app-pub-7683902216769416/6781181014', // Android
+});
+const UNIT_ID = __DEV__ ? TestIds.ADAPTIVE_BANNER : RELEASE_UNIT;
 
 /** Anchored adaptive banner above the tab bar. Takes no space until an ad has loaded. */
 export default function AdBanner() {
