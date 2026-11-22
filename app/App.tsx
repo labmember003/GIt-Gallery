@@ -13,7 +13,7 @@ export default function App() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   useShareLinks();
-  useEffect(startAds, []); // Android: ad consent, then ads (no-op elsewhere)
+  useEffect(startAds, []); // Android + iOS: ad consent (and the iOS tracking prompt), then ads; no-op on the web
 
   const themePref = useAppStore((s) => s.theme);
   const effectiveDark = themePref === 'system' ? isDark : themePref === 'dark';

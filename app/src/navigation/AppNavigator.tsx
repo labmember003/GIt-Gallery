@@ -42,7 +42,7 @@ function MainTabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => (
-        // The banner sits just above the tab bar on every tab (Android only); no space until an ad loads.
+        // The banner sits just above the tab bar on every tab (Android and iOS); no space until an ad loads.
         <View>
           <AdBanner />
           <CustomTabBar {...props} />

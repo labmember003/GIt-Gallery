@@ -1,4 +1,4 @@
-// No ads on iOS or the web for now (see AdBanner.android.tsx).
+// No ads on the web (Android and iOS use AdBanner.native.tsx).
 export default function AdBanner(): null {
   return null;
 }

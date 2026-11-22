@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import mobileAds, { AdsConsent, AdsConsentPrivacyOptionsRequirementStatus } from 'react-native-google-mobile-ads';
 
-// Consent first (Google UMP shows the GDPR form only where the law needs it), then the Mobile Ads SDK.
+// Emulators and simulators always get test ads ("EMULATOR"); our own phones are registered as test devices in AdMob.
+const TEST_DEVICES = ['EMULATOR'];
+
+// Consent first (Google UMP shows the GDPR form only where the law needs it; on iOS it also shows the IDFA explainer
+// and Apple's tracking prompt, configured in AdMob), then the Mobile Ads SDK.
 // Banners wait for `ready`, so nothing is requested before consent is known.
 let ready = false;
 let privacyRequired = false;
@@ -15,6 +19,7 @@ async function refresh(): Promise<void> {
     privacyRequired =
       info.privacyOptionsRequirementStatus === AdsConsentPrivacyOptionsRequirementStatus.REQUIRED;
     if (info.canRequestAds && !ready) {
+      await mobileAds().setRequestConfiguration({ testDeviceIdentifiers: TEST_DEVICES });
       await mobileAds().initialize();
       ready = true;
     }

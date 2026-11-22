@@ -28,3 +28,11 @@ that will ship (release signing, R8) before every store upload.
 Messages that show for about 2 seconds (such as "Copied" or "Sharing
 stopped") are tapped with `waitToSettleTimeoutMs`, because Maestro otherwise
 waits for the screen to settle and the message is gone before it checks.
+
+## iOS
+
+`maestro/ios/ads-consent-banner.yaml` checks Google's IDFA explainer, Apple's tracking prompt and the test banner
+from a fresh install (`xcrun simctl uninstall booted com.gitgallery.app` first: the tracking prompt shows once per
+install). Debug builds load only Google's test ads; simulators are test devices automatically (their advertising ID is
+all zeros, so they can't be added in AdMob, and the code also marks them with `EMULATOR`). A real iPhone must be added
+in AdMob > Settings > Test devices first: a debug build prints its ID as `[GitGallery] AdMob test device IDFA: ...`.

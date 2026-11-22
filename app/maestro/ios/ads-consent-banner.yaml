@@ -1,0 +1,42 @@
+# iOS ads: from a fresh install, Google's IDFA explainer and Apple's tracking prompt appear once, then the test banner
+# shows above the tab bar (demo library, no sign-in needed). Debug builds only ever load Google's test ads.
+#
+#   xcrun simctl uninstall booted com.gitgallery.app   # the tracking prompt shows once per install
+#   maestro --device <simulator udid> test maestro/ios/ads-consent-banner.yaml
+appId: com.gitgallery.app
+name: iOS ads consent and banner
+---
+- launchApp:
+    clearState: true
+# Google's explainer (configured in AdMob > Privacy & messaging > IDFA explainer), then Apple's prompt.
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 30000
+    optional: true
+- takeScreenshot: ads-01-idfa-explainer
+- tapOn:
+    text: "Continue"
+    optional: true
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 15000
+    optional: true
+- takeScreenshot: ads-02-att-prompt
+- tapOn:
+    text: "Allow"
+    optional: true
+- extendedWaitUntil:
+    visible: "Try the demo, no sign-in"
+    timeout: 30000
+- takeScreenshot: ads-03-welcome
+- tapOn: "Try the demo, no sign-in"
+- extendedWaitUntil:
+    visible: "This is a sample library"
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "ad-banner"
+    timeout: 30000
+- takeScreenshot: ads-04-demo-with-test-banner
+- tapOn: "Settings"
+- takeScreenshot: ads-05-settings

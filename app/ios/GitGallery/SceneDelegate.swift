@@ -1,4 +1,8 @@
 import UIKit
+#if DEBUG
+import AdSupport
+import AppTrackingTransparency
+#endif
 
 // Apps built with the iOS 27 SDK must adopt the UIScene life cycle or UIKit refuses to
 // launch them. AppDelegate still creates the window and starts React Native, because
@@ -24,6 +28,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     self.scene(scene, openURLContexts: connectionOptions.urlContexts)
     connectionOptions.userActivities.forEach { self.scene(scene, continue: $0) }
   }
+
+#if DEBUG
+  // Debug builds print this device's advertising ID once tracking is allowed, so it can be added as a test device in
+  // AdMob (Settings > Test devices) before any real ad is ever requested on it.
+  func sceneDidBecomeActive(_ scene: UIScene) {
+    if ATTrackingManager.trackingAuthorizationStatus == .authorized {
+      NSLog("[GitGallery] AdMob test device IDFA: %@", ASIdentifierManager.shared().advertisingIdentifier.uuidString)
+    }
+  }
+#endif
 
   // Linking API
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

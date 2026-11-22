@@ -108,7 +108,7 @@ const selectPreferredAlbumTitle = (
 };
 
 export default function SettingsScreen({ navigation }: any) {
-  const adPrivacyChoices = useAdPrivacyChoices(); // Android, EEA/UK only
+  const adPrivacyChoices = useAdPrivacyChoices(); // Android + iOS, EEA/UK only
   const { currentRepo, setCurrentRepo, setAuthToken } = useAppStore();
   const autoSync = useAppStore((s) => s.autoSync);
   const setAutoSync = useAppStore((s) => s.setAutoSync);
