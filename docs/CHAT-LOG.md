@@ -2522,6 +2522,44 @@ Recorded as a standing rule in the global `~/.claude/CLAUDE.md`, this project's 
 
 ---
 
+## Ads on Android, iPhone and the web; the Android sign-in fix; a public README — 2026-11-21 to 2026-11-23
+
+> "and can we add atleast banner ads in all app? accordingly update declaration etc also, for now only in android"
+
+**Android 1.4.0 (6):** one AdMob anchored adaptive banner above the tab bar, Google's consent form (UMP) where the law
+needs it, "Ad privacy choices" in Settings, app-ads.txt on the website, Play's Ads / Advertising ID / Data safety
+declarations updated. Debug builds load only Google's test ads.
+
+> "lets implement ads in gitgallery as of now on ios"
+
+**iPhone 1.4.0 (4):** the same ads code now runs on iOS (`ads.native.ts`, `AdBanner.native.tsx`; the web gets no-ops).
+AdMob iOS app ~6168199276, banner unit /4819458588 (each platform uses its own unit via `Platform.select`). Google's
+IDFA explainer appears before Apple's tracking prompt; ads still load if tracking is declined. Simulators are marked as
+test devices (their advertising ID is all zeros, so they can't be added in AdMob); debug builds log a real iPhone's ID.
+Tested on the iPhone 18 Pro simulator: explainer, Allow and Ask App Not to Track, Google's test banner. Age rating:
+Advertising = Yes (stays 4+). The user filled App Privacy; 1.4.0 was submitted on 22 Nov and is Waiting for Review.
+
+**Android 1.4.1 (7):** the ops agent's release build of 1.4.0 had read `app/.env` from the Keychain as hex, so the
+shipped bundle had no `EXPO_PUBLIC_GITHUB_CLIENT_ID` and new GitHub sign-ins failed. The agent now decodes it; 1.4.1 was
+verified to contain the client ID and sent to production at 100% on 22 Nov.
+
+> "yes lets go with google ads only, we already use admob, and keep ads minimum thats it"
+
+**Web:** one 320×100 AdSense unit (8164641375) on the signed-out sign-in page only. Google's script loads there and
+nowhere else; the page reloads after sign-in so it never runs next to a library. The main page's Content-Security-Policy
+allows Google's ad hosts; shared-album and static pages keep the strict policy. AdSense site verified via `ads.txt`,
+review requested; Auto ads off; EU consent message published.
+
+> "bro for gitgallery app on github in the main readme file also put play store app store redirect urls bro, and make readme like for public its currently like for me, it has my some weird my shit, move that readme to like maybe some other name same place, readme should be for public"
+
+**README.md is now the public page:** Google Play and App Store badges, the web app and demo, screenshots, features,
+how it works, privacy (including the one small banner ad), an FAQ and trademark notes. The developer README moved,
+unchanged, to `DEVELOPMENT.md`. GitHub limits stated in the FAQ were checked against docs.github.com: each release file
+must be under 2 GiB ✅; repositories ideally under 1 GB, under 5 GB strongly recommended ✅; the `repo` OAuth scope
+covers all of a user's repositories ✅.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
@@ -2546,11 +2584,13 @@ Recorded as a standing rule in the global `~/.claude/CLAUDE.md`, this project's 
 | Build status | ✅ **v1 complete.** Android + iOS, emulator/simulator and real hardware (iPhone 13, Galaxy S24 Ultra, ~15k-asset library). 16 bugs found and fixed. GitHub Device Flow sign-in verified end to end. |
 | iOS builds on Xcode 27 | ✅ **UIScene life cycle via a forwarding `SceneDelegate`.** iOS 27 SDK builds refuse to launch without it. AppDelegate still creates the window and starts React Native (Expo's dev launcher needs that window); the scene delegate attaches it and forwards links. The Podfile raises pod targets below the app minimum (SDWebImage's resource bundle declares 9.0), which Xcode 27 rejects. |
 | Release publishing | ✅ **By hand on the GitHub website** while Actions is locked by billing. No gh CLI token for the main account: the user declined a `repo`-scope OAuth grant. Files are built and checksummed locally, then attached on the release page |
-| App Store | ✅ **1.2.0 (3) Ready for Sale (seen 18 Nov 2026). 1.3.0 is on Google Play only for now, at the user's request (19 Nov 2026).** 1.2.0 was uploaded and submitted on 13 Nov 2026 with the team API key. GitGallery 1.1.0 for iPhone, published by FALCON DIGITAL (team PZ6PXVCSDN). App Review uses the built-in demo library instead of a demo account, because GitHub verifies new devices by email. iPhone only. The icon is original; the earlier cat resembled GitHub's logo. Free, all regions except China mainland. **Submitted 8 Nov 2026 and Waiting for Review**: build 1.1.0 (2), rated 4+, Data Not Collected, auto-release on approval. The upload and submission used the team's App Store Connect API key, which is not stored in the repo. The user answered the legal declarations. EU trader status is unset, so the app won't show in the EU until it is |
-| Google Play | ✅ **1.3.0 (5) live (19 Nov 2026, full rollout).** R8 shrinking and obfuscation on (install 18.5 MB). The portrait screen is declared optional, so portrait-only doesn't filter devices. 1.1.0 was submitted 10 Nov 2026. **GitGallery: Photo Backup (`com.falcon.gitgallery`; `com.gitgallery.app` is taken on Play) on the Falcon Tech Lab account.** It uses a new upload key (Play App Signing holds the app key), with the same alias, names and passwords as Droply's, at `~/Downloads/GitGallery`. Gradle reads it from the gitignored `android/keystore.properties`. The store listing is from the App Store copy. Policy declarations are the user's |
+| App Store | ✅ **1.4.0 (4) with ads submitted 22 Nov 2026 (Waiting for Review, release after approval); 1.2.0 (3) live.** App Privacy declares the ads SDK data (filled by the user); age rating Advertising = Yes, still 4+. |
+| Google Play | ✅ **1.4.1 (7) sent to production at 100% on 22 Nov 2026** (fixes 1.4.0's missing GitHub client ID). 1.4.0 (6) added the banner ad. R8 on; the portrait screen is declared optional. |
 | Albums | ✅ **Stored in the repo as `gitgallery/albums.json`** (library paths without `.ptr`; local operation log replayed on the latest file, so devices merge). Albums open to their own screen with Add photos; phone photos are uploaded first and then join. Favourites stay on the device. The web shows phone albums; its own album edits stay in the browser |
 | Device Flow sign-in | ✅ **Polling survives the app being suspended**: network errors retry until the code expires, 20 s cap per request, immediate poll on return to the foreground. The Authorize button names the OAuth app owner (gitgallery-app). **Token expiry is off for the OAuth app** (2026-11-18), so sign-ins last; from 1.3.0 the app also renews expiring tokens itself (D16) and shows "Sign in again" when GitHub ends a sign-in |
 | Downloads | ✅ **Straight to the phone's gallery, like Google Photos** — no folder picker (Android 17's picker refuses the Download folder itself). On Android a folder picked in Settings still applies. Any file not saved is reported, never "completed" |
 | Release checks | ✅ **Maestro flows on the release build** before every store upload (`app/maestro/`); the test library and test account only |
 | Album sharing | ✅ **View-only links, like Google Photos** (D15): encrypted copies in a public `gitgallery-shares` repo in the owner's GitHub, key only in the link; viewers need no account and can save full quality; opens in the app (App Links / universal links) or the website. Encryption is the platform's AES-256-GCM, so App Store export compliance stays exempt (`usesNonExemptEncryption: false`). Contributions are the next milestone |
+| Ads | ✅ **One small banner, nothing more:** Android and iPhone above the tab bar (AdMob, consent first), web one 320×100 AdSense ad on the sign-in page only. No ads next to photos. |
+| README | ✅ **Public page** (store badges, features, privacy, FAQ); developer notes in `DEVELOPMENT.md`. |
 | Estimate | **~4–6 weeks** for v1 (+1–2 weeks for the ML stretch) |

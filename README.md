@@ -1,276 +1,109 @@
-# GitGallery
+<h1 align="center">GitGallery</h1>
 
-A photo/video gallery app that stores your library in **your own private GitHub repo**, with an **Immich-quality UI**.
+<p align="center"><b>Back up your photos and videos to your own private GitHub repository.</b><br>
+A beautiful gallery for your memories, stored in a repo that only you own.</p>
 
-**[Open GitGallery Web](https://gitgallery-umber.vercel.app)** · [Try the demo](https://gitgallery-umber.vercel.app/?demo=1)
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.falcon.gitgallery&referrer=utm_source%3Dgithub%26utm_medium%3Dreadme%26utm_campaign%3Dreadme"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="62"></a>
+  &nbsp;
+  <a href="https://apps.apple.com/app/gitgallery/id6832190075"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="42"></a>
+</p>
 
-Your media lives in GitHub. Android and iOS connect directly; the web app uses a small Node server for secure sign-in.
-
-> **Status: v1 complete.** Android + iOS, tested on emulator/simulator and on real hardware
-> (iPhone 13, Galaxy S24 Ultra, ~15,000-asset library). GitHub sign-in works end to end.
+<p align="center">
+  <a href="https://gitgallery-umber.vercel.app"><b>Open the web app</b></a> ·
+  <a href="https://gitgallery-umber.vercel.app/?demo=1">Try the demo (no sign-in)</a> ·
+  <a href="https://gitgallery-umber.vercel.app/support.html">Help</a>
+</p>
 
 ---
+
+## Why GitGallery
+
+- **Your photos stay yours.** They go straight from your phone to a private repository in *your* GitHub account.
+  There is no GitGallery server holding your pictures, and nobody else can see them.
+- **No storage plan to buy.** GitHub keeps your library; GitGallery just makes it look and feel like a real photo app.
+- **Every device, one library.** Android, iPhone and the web all open the same library, albums included.
 
 ## Screenshots
 
-Android and iOS apps, followed by the web app in a desktop browser, with a curated demo library. Click any screenshot to open the full-resolution image.
-
-### Android
-
 <table>
   <tr>
-    <th>Gallery — light</th>
-    <th>Gallery — dark</th>
-    <th>Travel timeline</th>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/01-gallery-light.webp" alt="Gallery timeline, light" width="220"></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/13-gallery-dark.webp" alt="Gallery timeline, dark" width="220"></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/03-riviera-viewer.webp" alt="Photo viewer" width="220"></td>
+    <td><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/18-mountain-album-dark.webp" alt="An album on iPhone" width="220"></td>
   </tr>
   <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/01-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/01-gallery-light.webp" alt="Android — Gallery — light" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/13-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/13-gallery-dark.webp" alt="Android — Gallery — dark" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/21-travel-timeline-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/21-travel-timeline-dark.webp" alt="Android — Travel timeline" width="240" /></a></td>
-  </tr>
-  <tr>
-    <th>Mountain album — dark</th>
-    <th>Favourites — dark</th>
-    <th>Multi-selection — dark</th>
-  </tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/18-mountain-album-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/18-mountain-album-dark.webp" alt="Android — Mountain album — dark" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/15-favourites-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/15-favourites-dark.webp" alt="Android — Favourites — dark" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/16-multi-select-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/16-multi-select-dark.webp" alt="Android — Multi-selection — dark" width="240" /></a></td>
-  </tr>
-  <tr>
-    <th>Riviera photo viewer</th>
-    <th>Video playback</th>
-    <th>Upload quality — light</th>
-  </tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/03-riviera-viewer.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/03-riviera-viewer.webp" alt="Android — Riviera photo viewer" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/08-ocean-video-player.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/08-ocean-video-player.webp" alt="Android — Video playback" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/android/11-upload-quality-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/android/11-upload-quality-light.webp" alt="Android — Upload quality — light" width="240" /></a></td>
+    <td align="center">Your timeline</td>
+    <td align="center">Dark mode</td>
+    <td align="center">Full-quality viewer</td>
+    <td align="center">Albums on iPhone</td>
   </tr>
 </table>
 
-### iOS
+<p align="center">
+  <img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/01-gallery-light.webp" alt="The web app in a desktop browser" width="700"><br>
+  <sub>The web app: your library in any browser.</sub>
+</p>
 
-<table>
-  <tr>
-    <th>Gallery — light</th>
-    <th>Gallery — dark</th>
-    <th>Travel timeline</th>
-  </tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/01-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/01-gallery-light.webp" alt="iOS — Gallery — light" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/13-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/13-gallery-dark.webp" alt="iOS — Gallery — dark" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/21-travel-timeline-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/21-travel-timeline-dark.webp" alt="iOS — Travel timeline" width="240" /></a></td>
-  </tr>
-  <tr>
-    <th>Mountain album — dark</th>
-    <th>Favourites — dark</th>
-    <th>Multi-selection — dark</th>
-  </tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/18-mountain-album-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/18-mountain-album-dark.webp" alt="iOS — Mountain album — dark" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/15-favourites-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/15-favourites-dark.webp" alt="iOS — Favourites — dark" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/16-multi-select-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/16-multi-select-dark.webp" alt="iOS — Multi-selection — dark" width="240" /></a></td>
-  </tr>
-  <tr>
-    <th>Riviera photo viewer</th>
-    <th>Video playback</th>
-    <th>Upload quality — light</th>
-  </tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/03-riviera-viewer.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/03-riviera-viewer.webp" alt="iOS — Riviera photo viewer" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/08-ocean-video-player.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/08-ocean-video-player.webp" alt="iOS — Video playback" width="240" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/ios/11-upload-quality-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/ios/11-upload-quality-light.webp" alt="iOS — Upload quality — light" width="240" /></a></td>
-  </tr>
-</table>
+[See all screenshots](screenshots/README.md)
 
-### Web
+## Features
 
-Desktop browser captures of the demo library.
+- **Automatic backup** of the photos and videos you choose, in original or space-saving quality.
+- **A fast timeline** grouped by day, with a smooth full-screen viewer and video playback.
+- **Albums** that follow you to every phone you sign in on and to the web app.
+- **Share an album by link.** Anyone with the link can view and save the photos, no GitHub account needed. Copies
+  are encrypted on your phone, and **Stop sharing** deletes them.
+- **Large videos stay fast:** they're stored as release files in your repository (up to 2 GiB each), so your library
+  stays quick to load.
+- **Favourites, multi-select, download to your phone's gallery**, light and dark mode.
+- **Web app** with search, albums, drag-and-drop upload and downloads.
+- **Try it first:** a demo library shows how everything works without signing in.
 
-<table>
-  <tr><th>Gallery — light</th><th>Gallery — dark</th></tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/01-gallery-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/01-gallery-light.webp" alt="Web — Gallery — light" width="420" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/02-gallery-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/02-gallery-dark.webp" alt="Web — Gallery — dark" width="420" /></a></td>
-  </tr>
-  <tr><th>Albums — light</th><th>Favourites — dark</th></tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/03-albums-light.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/03-albums-light.webp" alt="Web — Albums — light" width="420" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/06-favourites-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/06-favourites-dark.webp" alt="Web — Favourites — dark" width="420" /></a></td>
-  </tr>
-  <tr><th>Ocean video playback</th><th>Multi-selection — dark</th></tr>
-  <tr>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/10-ocean-video-player.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/10-ocean-video-player.webp" alt="Web — Ocean video playback" width="420" /></a></td>
-    <td><a href="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/web/12-multi-select-dark.webp"><img src="https://raw.githubusercontent.com/labmember003/GIt-Gallery/refs/heads/main/screenshots/previews/web/12-multi-select-dark.webp" alt="Web — Multi-selection — dark" width="420" /></a></td>
-  </tr>
-</table>
+## How it works
 
-[View the web app on mobile browsers](screenshots/README.md#mobile-browser).
+1. **Sign in with GitHub.** You approve GitGallery on GitHub's own page; your password never touches the app.
+2. **GitGallery finds your library**, or creates a private repository called `gitgallery-photos` for you.
+3. **Pick what to back up.** Photos are saved into the repository, sorted by date. Large videos are stored as
+   release files in the same repository, so your library stays fast.
 
-[Browse all 68 screenshots](screenshots/README.md), including all 24 web captures, cloud views, albums, settings, and iOS onboarding.
+## Privacy
 
----
+- Your photos, videos and GitHub data are **never sent to us** and never used for ads.
+- The Android and iPhone apps show **one small banner ad** to keep GitGallery free. In Europe you're asked for consent
+  first, and on iPhone you choose whether ads may use your device's advertising identifier.
+- Full details: [privacy policy](https://gitgallery-umber.vercel.app/privacy.html).
 
-## The idea in one paragraph
+## FAQ
 
-Immich is a brilliant self-hosted photo app, but it needs a server (Postgres + Redis + S3 + an ML service). GitGalleryApp is a tiny Expo app that commits photos straight into a private GitHub repo — no server at all — but its UI is plain. This project takes **GitGalleryApp's architecture** and gives it **Immich's interface**, plus the storage optimizations needed to make GitHub behave like a real photo backend.
+**Is GitGallery free?**
+Yes. It's free to download and use, with a single small banner ad in the mobile apps.
+
+**Do I need to know Git or code?**
+No. You only need a free GitHub account. GitGallery does the rest.
+
+**How much can I store?**
+GitHub recommends keeping a repository under 1 GB (and under 5 GB at most). GitGallery keeps photos in the repository
+and stores large videos as release files (each up to 2 GiB), which don't count toward the repository itself. Very large
+libraries can still run into GitHub's limits, so keep that in mind if you shoot a lot of video.
+
+**Why does sign-in ask for access to my repositories?**
+GitHub's sign-in for apps like this can only ask for access to all of your repositories, not just one. GitGallery only
+reads and writes its own library repository, and you can revoke access any time at
+[github.com/settings/applications](https://github.com/settings/applications).
+
+**Can I see my photos without the app?**
+Yes. They're ordinary files in your repository, so you can always open or download them on GitHub.
+
+**Something isn't working.**
+See [Help](https://gitgallery-umber.vercel.app/support.html) or [open an issue](https://github.com/labmember003/GIt-Gallery/issues).
+
+## For developers
+
+Building GitGallery yourself, the storage design and the project history are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ---
 
-## Start here
-
-| Doc | What's in it |
-|---|---|
-| **[docs/PROJECT-DOC.md](docs/PROJECT-DOC.md)** | What we're building and why. Architecture, hard constraints, feature scope, decisions log. |
-| **[docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md)** | How and in what order. 6 phases, with risks and a definition of done. |
-| **[docs/BIG-BRAIN-IDEAS.md](docs/BIG-BRAIN-IDEAS.md)** | ⚡ Architecture exploits that beat most of the constraints below. **Read before starting Phase 1** — two of them reshape the plan. |
-| **[docs/CHAT-LOG.md](docs/CHAT-LOG.md)** | The full conversation this came from, start to finish. |
-| **[docs/REGRESSION-2026-09-19.md](docs/REGRESSION-2026-09-19.md)** | Android regression pass — results, regressions caught, known gaps. |
-| **[docs/REGRESSION-2026-09-20-ios.md](docs/REGRESSION-2026-09-20-ios.md)** | iOS regression pass — the 16 bugs found on device and how each was fixed. |
-
----
-
-## Reference code
-
-Two repos are read alongside this one. **Neither is committed here** — `reference/` is gitignored.
-Recreate them locally if you want them:
-
-| Repo | Size | Role | Get it |
-|---|---|---|---|
-| GitGalleryApp | 2.9 MB | **The fork base.** Expo + RN + Octokit, ~6,250 LOC. | `git fetch upstream` |
-| immich | 162 MB | **UI reference only.** The Flutter timeline & theme. | `git clone --depth 1 https://github.com/immich-app/immich reference/immich` |
-
-> ⚠️ **GitGalleryApp has no LICENSE file** — default copyright applies. Fine for private use;
-> resolve before publishing. Immich is AGPL-3.0 (strong copyleft — learn from it, don't paste
-> from it), which is why its tree is never vendored into this repo.
-
----
-
-## How storage works
-
-Files are **tiered by size**, and the git tree stays the single source of truth for both tiers:
-
-```
-library/2026/09/17/143022_4032x3024_a1b2c3.jpg       ← tier 1: the photo itself, in git
-library/2026/09/17/150811_3840x2160_62s_d4e5f6.mp4.ptr ← tier 2: 200-byte pointer in git
-                                                        └→ 500 MB video in release "media-2026"
-```
-
-Tier 1 (photos, ~95% of files) lives in git, so it keeps the sorted tree, free dedup, zero-cost albums and Merkle sync. Tier 2 (video, RAW — anything over the threshold) goes to **release assets**, which allow **2 GiB per file** and don't touch git history. The `.ptr` stub keeps the folder, date and dimensions in the tree, so one API call still returns the whole library correctly ordered — and nothing above the fetcher knows tiers exist.
-
-*(Same pattern Git LFS uses: pointer in the tree, bytes elsewhere.)*
-
-Albums live next to the library in `gitgallery/albums.json`, as lists of library paths. An album costs no extra storage, follows you to every phone you sign in to, and shows up in the web gallery. Edits are saved on the phone first and replayed on top of the latest file when they sync, so two phones editing at once merge instead of overwriting each other. Favourites stay on the device.
-
-**Share an album by link.** Anyone with the link can view and save its photos and videos in full quality, in the app or a browser, without a GitHub account. GitGallery encrypts copies on your phone and stores them in a public `gitgallery-shares` repository in your own GitHub; the key is only in the link, so the repository holds nothing readable. Photos you add later are shared too, and **Stop sharing** deletes the copies.
-
----
-
-## The core challenge
-
-GitHub is not a database. It cannot answer *"give me photos 500–550, sorted by date."* Everything in this project follows from working around that:
-
-| Constraint | Our answer |
-|---|---|
-| No query engine | Path encodes capture date, dimensions & content hash → one `git/trees?recursive=1` call returns a pre-sorted, pre-laid-out library |
-| 5,000 API req/hour | Batch commits via git plumbing + **304 conditional requests are free** |
-| 100 MB file cap | **Release assets allow 2 GiB** and don't touch git history |
-| History keeps every binary forever | Largely moot if blobs live outside git; rolling compaction otherwise |
-| Repo size ceiling | Index-only repo stays tiny; shard by year beyond that |
-| No ML / vector search | **Not dead** — move the ML on-device (Phase 6 stretch) |
-
-See **[BIG-BRAIN-IDEAS.md](docs/BIG-BRAIN-IDEAS.md)** for how each of these is actually beaten.
-
----
-
-## Platforms
-
-Android and iOS, both shipped and both tested on real hardware. A **web companion** now lives in the same Expo project: a responsive gallery with search, photo/video viewing, downloads, light/dark themes, favourites, and albums (including the ones made in the phone app). After sign-in, it opens your existing GitGallery library or creates a private one automatically. Your selected library survives page reloads; sample photos appear only when you choose **Try the demo**.
-
-Users sign in with GitHub; GitGallery reuses `gitgallery-photos`, discovers custom libraries, or creates a private repository for a first-time user. Multiple custom libraries offer a choice. No token or developer setup is required from visitors. Authentication uses a server session with an HttpOnly cookie. Credentials stay on the server. Public repositories can also be opened without signing in. Upload photos and videos from your browser with the **Upload** button or drag and drop (up to 500 MB per file). Progress, retry and stop controls are included; originals use the same library format as mobile backups. Albums made on the phone appear on the web; favourites and album edits made in the browser stay in that browser. See **[the web scope and development guide](docs/WEB-PLAN.md)**. A native desktop application remains out of scope.
-
-**Get it:** the web gallery is live at **https://gitgallery-umber.vercel.app**. The Android APK and an unsigned iOS IPA are on the **[Releases page](https://github.com/labmember003/GIt-Gallery/releases)**. The IPA must be re-signed with your own Apple ID (Sideloadly, AltStore) to install.
-
----
-
-## Running it
-
-**Web preview:**
-
-```bash
-cd app
-npm install
-npm run web             # http://127.0.0.1:8082 (Node + Metro)
-# Production preview instead:
-npm run build:web
-npm run preview:web     # http://127.0.0.1:8082
-```
-
-**Website operator setup, once for all users:** set the existing registration’s client ID in `app/.env.web` and enable Device Flow on GitHub. Visitors click **Continue with GitHub**, follow the on-screen copy-code/approval steps, and return to their automatically prepared library. No client secret is needed for this flow. A configured client secret enables optional direct browser redirects. [Plain-language setup guide](docs/WEB-AUTH-SETUP.md). Run `npm run check:web` from `app/` to check configuration without exposing secrets. Token login is an optional advanced feature, disabled by default.
-
-The web scripts exclude native development credentials and `.env` from website builds. The Node backend is required for sign-in; publishing `dist-web` alone is insufficient. Frontend and API are configured for one Vercel project, with shared Redis sessions. [Vercel deployment guide](docs/WEB-DEPLOYMENT.md) · [Web setup and limitations](docs/WEB-PLAN.md).
-
-**Android / iOS:**
-
-```bash
-cd app
-npm install
-npx expo run:android     # or: npx expo run:ios
-```
-
-iOS needs CocoaPods (`cd ios && pod install`) and a signing team in Xcode for a physical device.
-
-Android needs `android/local.properties` pointing at your SDK — it is gitignored, and `gradlew`
-fails with *SDK location not found* without it:
-
-```bash
-echo "sdk.dir=$HOME/Library/Android/sdk" > app/android/local.properties
-```
-
-**Release APK:**
-
-```bash
-cd app/android && ./gradlew assembleRelease
-# -> app/build/outputs/apk/release/app-release.apk
-```
-
-**Publishing a release:** bump the version in `app/app.json`, `app/android/app/build.gradle` and
-`app/ios/GitGallery/Info.plist`, add `.github/release-notes/vX.Y.Z.md`, then push a `vX.Y.Z` tag.
-[`release.yml`](.github/workflows/release.yml) builds the APK and the unsigned IPA and publishes
-the GitHub Release. If GitHub Actions is unavailable for the account, build both locally
-(`assembleRelease` above; `xcodebuild … archive` with `CODE_SIGNING_ALLOWED=NO`, then zip
-`Payload/GitGallery.app`) and upload them with `gh release create`.
-
-> ⚠️ Two things about that APK. It is signed with the **debug keystore** (`signingConfig
-> signingConfigs.debug`, the Expo template default) — fine for sideloading, not for distribution.
-> And `EXPO_PUBLIC_*` values are **inlined into the JS bundle at build time**, so remove
-> `EXPO_PUBLIC_GITHUB_TOKEN` from `.env` before building or your PAT ships inside the APK.
-> `__DEV__` gates the code path, not the string literal.
-
-Sign-in is GitHub **Device Flow** — the app shows a code, you approve it at
-`github.com/login/device`. That needs an OAuth App client ID in `app/.env`:
-
-```
-EXPO_PUBLIC_GITHUB_CLIENT_ID=Ov23li...      # OAuth App, "Device Flow" enabled
-EXPO_PUBLIC_GITHUB_TEST_REPO=you/some-repo  # dev only
-EXPO_PUBLIC_GITHUB_TOKEN=github_pat_...     # dev only — skips the sign-in screen
-```
-
-`.env` is gitignored. The two dev keys are a convenience for local builds; the token fallback is
-guarded by `if (!token)`, so a real signed-in session always wins.
-
-> ⚠️ Sign-in currently requests the `repo` scope, which is **read/write to every repository you
-> own** — GitHub OAuth Apps have no narrower option. Scoping it to one repo means switching to a
-> GitHub App with per-repository installation. Revoke any time at
-> `github.com/settings/applications`.
-
----
-
-## What's not done
-
-- **Web:** albums made in the phone app appear on the web, but album edits made in the browser stay in that browser; persistent background uploads, and broader browser coverage. Originals above the 80 MiB browser limit use an Open on GitHub fallback. Real-account sign-in and an empty library are confirmed by the user. Uploads, downloads and large-video pointers are tested with isolated fixtures; real private-library upload verification remains. Public deployments should configure redirect sign-in for scale. See [WEB-PLAN.md](docs/WEB-PLAN.md).
-- **Select All** only covers the page of the timeline that has loaded, not the whole library.
-- **Scope narrowing** — see the warning above.
-- On-device ML search / face grouping — deliberately deferred (Phase 6 stretch).
+<sub>Google Play and the Google Play logo are trademarks of Google LLC. Apple, the Apple logo and App Store are
+trademarks of Apple Inc. GitHub is a trademark of GitHub, Inc. GitGallery is not affiliated with GitHub.</sub>

@@ -87,7 +87,8 @@ After **every** substantive exchange, update the docs in the same turn.
 | `docs/BIG-BRAIN-IDEAS.md` | An idea is added, promoted, demoted, or dropped |
 | `docs/PROJECT-DOC.md` | Scope, architecture, constraints, or a decision (D-number) changes |
 | `docs/IMPLEMENTATION-PLAN.md` | Phases, tasks, estimates, or risks change |
-| `README.md` | The one-paragraph story or storage model changes |
+| `README.md` | Public page: what the app does, store links, features, privacy, FAQ |
+| `DEVELOPMENT.md` | The one-paragraph story, storage model, build/run/release steps change |
 
 ## 4. Docs hold the *current* design, not the history
 
