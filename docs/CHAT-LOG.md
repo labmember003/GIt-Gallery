@@ -2560,6 +2560,20 @@ covers all of a user's repositories ✅.
 
 ---
 
+## Store text no longer says "no ads" — 2026-11-24
+
+> "… is it true? if yes fix it"
+
+True: since 1.4 the app shows a banner ad, but the Play listing still said "No subscription, no ads" (short description)
+and "No ads, no analytics and no tracking". Fixed in Play Console (the ops agent's service account may upload releases
+but not edit store text): short description "Back up your photos & videos to a private GitHub repo you own. Open
+source." (no price words, which Google flags), the full description says "No analytics in the app; one small banner ad
+keeps it free", and the title is now "GitGallery: Photo Cloud Backup" (the user approved it). All three are in Google's
+review. The App Store description of 1.4.0, waiting for Apple's review, still has "No ads, no analytics, no tracking";
+the user chose to leave it and fix it only if Apple rejects the build.
+
+---
+
 ## Decisions reached
 
 | Decision | Outcome |
